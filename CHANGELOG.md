@@ -7,6 +7,18 @@ to use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-08-23
+
+### Added
+
+- Reproducible package builds and validation in CI.
+- Trusted Publishing workflow for passwordless PyPI releases with provenance attestations.
+- PyPI project metadata and maintainer release documentation.
+
+### Changed
+
+- Packaging metadata now uses an SPDX license expression and declares Python 3.13 and 3.14.
+
 ## [0.2.0] - 2026-08-23
 
 ### Added

@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/rezerpaul-crypto/llmsafe/actions/workflows/ci.yml/badge.svg)](https://github.com/rezerpaul-crypto/llmsafe/actions/workflows/ci.yml)
 [![Code scanning](https://github.com/rezerpaul-crypto/llmsafe/actions/workflows/code-scanning.yml/badge.svg)](https://github.com/rezerpaul-crypto/llmsafe/actions/workflows/code-scanning.yml)
+[![PyPI](https://img.shields.io/pypi/v/llmsafe.svg)](https://pypi.org/project/llmsafe/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/Python-3.9%2B-3776AB.svg)](pyproject.toml)
 
@@ -11,7 +12,7 @@ code execution, shells, SQL, outbound requests, and dynamic tool dispatch.
 
 It runs locally. Source code is not uploaded to a model or external analysis service.
 
-> **Status:** `v0.2.0` is an early release. LLMSafe provides reviewable security signals, not a
+> **Status:** `v0.2.1` is an early release. LLMSafe provides reviewable security signals, not a
 > guarantee that an AI system is secure.
 
 ## Why another security scanner?
@@ -69,7 +70,7 @@ LLMSafe supports Python 3.9 and newer.
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-python -m pip install "llmsafe @ git+https://github.com/rezerpaul-crypto/llmsafe.git@v0.2.0"
+python -m pip install llmsafe
 ```
 
 For development:
@@ -154,7 +155,7 @@ steps:
       python-version: "3.12"
   - id: llmsafe
     continue-on-error: true
-    uses: rezerpaul-crypto/llmsafe@v0.2.0
+    uses: rezerpaul-crypto/llmsafe@v0.2.1
     with:
       path: .
       fail-on: high
@@ -173,7 +174,7 @@ The workflow uses only `contents: read` and `security-events: write`.
 ```yaml
 repos:
   - repo: https://github.com/rezerpaul-crypto/llmsafe
-    rev: v0.2.0
+    rev: v0.2.1
     hooks:
       - id: llmsafe
 ```
