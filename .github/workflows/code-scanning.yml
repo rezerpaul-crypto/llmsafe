@@ -1,0 +1,36 @@
+name: LLMSafe Code Scanning
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "17 4 * * 1"
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install LLMSafe
+        run: python -m pip install .
+      - name: Generate SARIF
+        continue-on-error: true
+        run: llmsafe . --format sarif --output llmsafe.sarif
+      - name: Upload SARIF
+        if: >-
+          always() &&
+          (github.event_name != 'pull_request' ||
+          github.event.pull_request.head.repo.full_name == github.repository)
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: llmsafe.sarif
+          category: llmsafe

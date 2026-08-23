@@ -1,0 +1,8 @@
+- id: llmsafe
+  name: LLMSafe security scan
+  description: Scan AI and agentic application files for security risks.
+  entry: llmsafe
+  language: python
+  pass_filenames: true
+  types_or: [python, json, yaml, toml, text]
+  args: ["--fail-on", "high"]

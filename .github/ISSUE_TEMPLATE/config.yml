@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/rezerpaul-crypto/llmsafe/security/advisories/new
+    about: Privately report a vulnerability in LLMSafe itself.
+  - name: Usage questions
+    url: https://github.com/rezerpaul-crypto/llmsafe/discussions
+    about: Ask for help or discuss scanner behavior without exposing sensitive code.

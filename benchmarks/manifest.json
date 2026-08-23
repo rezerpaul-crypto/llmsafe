@@ -1,0 +1,27 @@
+{
+  "cases": [
+    {
+      "path": "cases/vulnerable_agent.py",
+      "expected_rules": [
+        "AGENT001",
+        "AGENT003",
+        "FLOW001",
+        "FLOW002",
+        "FLOW003",
+        "FLOW004",
+        "FLOW005",
+        "LLM001",
+        "PY001",
+        "SHELL002"
+      ]
+    },
+    {
+      "path": "cases/safe_agent.py",
+      "expected_rules": []
+    },
+    {
+      "path": "cases/insecure_mcp.json",
+      "expected_rules": ["MCP001", "MCP002", "MCP003"]
+    }
+  ]
+}

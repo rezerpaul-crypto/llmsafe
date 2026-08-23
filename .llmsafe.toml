@@ -1,0 +1,8 @@
+[llmsafe]
+exclude = [
+  "benchmarks/cases/**",
+  "examples/insecure_*",
+]
+fail_on = "high"
+max_file_size = 1000000
+disabled_rules = []

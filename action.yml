@@ -1,0 +1,58 @@
+name: LLMSafe Security Scan
+description: Scan AI and agentic application code and produce SARIF 2.1.0.
+author: LLMSafe contributors
+
+branding:
+  icon: shield
+  color: purple
+
+inputs:
+  path:
+    description: File or directory to scan.
+    required: false
+    default: .
+  fail-on:
+    description: Minimum severity that makes the action fail.
+    required: false
+    default: high
+  config:
+    description: Optional path to an LLMSafe TOML policy.
+    required: false
+    default: ""
+  sarif-file:
+    description: Destination for the generated SARIF report.
+    required: false
+    default: llmsafe.sarif
+
+outputs:
+  sarif-file:
+    description: Path to the generated SARIF report.
+    value: ${{ steps.scan.outputs.sarif-file }}
+
+runs:
+  using: composite
+  steps:
+    - name: Install LLMSafe
+      shell: bash
+      run: python -m pip install "${{ github.action_path }}"
+    - name: Scan
+      id: scan
+      shell: bash
+      env:
+        INPUT_CONFIG: ${{ inputs.config }}
+        INPUT_FAIL_ON: ${{ inputs.fail-on }}
+        INPUT_PATH: ${{ inputs.path }}
+        INPUT_SARIF: ${{ inputs.sarif-file }}
+      run: |
+        config_args=()
+        status=0
+        if [[ -n "$INPUT_CONFIG" ]]; then
+          config_args=(--config "$INPUT_CONFIG")
+        fi
+        llmsafe "$INPUT_PATH" \
+          --format sarif \
+          --output "$INPUT_SARIF" \
+          --fail-on "$INPUT_FAIL_ON" \
+          "${config_args[@]}" || status=$?
+        echo "sarif-file=$INPUT_SARIF" >> "$GITHUB_OUTPUT"
+        exit "$status"

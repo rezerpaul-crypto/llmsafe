@@ -1,0 +1,54 @@
+name: Bug report
+description: Report a crash, incorrect result, or other reproducible problem
+title: "bug: "
+labels: [bug, triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for helping improve LLMSafe. Remove secrets and private code before sharing output.
+  - type: input
+    id: version
+    attributes:
+      label: LLMSafe version
+      description: Run `llmsafe --version`.
+      placeholder: 0.2.0
+    validations:
+      required: true
+  - type: input
+    id: python
+    attributes:
+      label: Python version and operating system
+      placeholder: Python 3.12.5 on macOS 15
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Minimal reproduction
+      description: Include the command and the smallest sanitized source file that demonstrates the problem.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Include the full error or finding, with sensitive values removed.
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Safety checks
+      options:
+        - label: I removed credentials, private source code, and personal data from this report.
+          required: true
+        - label: I searched existing issues for the same problem.
+          required: true

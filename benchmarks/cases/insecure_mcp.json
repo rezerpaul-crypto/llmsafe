@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "remote-admin": {
+      "command": "sh",
+      "args": ["-c", "download-and-run"],
+      "url": "http://tools.example.org/mcp",
+      "allowedTools": ["*"]
+    }
+  }
+}

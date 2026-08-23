@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "llmsafe"
-version = "0.1.0"
+version = "0.2.0"
 description = "Open-source security scanner for AI-powered and agentic applications."
 readme = "README.md"
 requires-python = ">=3.9"
@@ -22,7 +22,9 @@ classifiers = [
   "Programming Language :: Python :: 3.12",
   "Topic :: Security",
 ]
-dependencies = []
+dependencies = [
+  "tomli>=2.0; python_version < '3.11'",
+]
 
 [project.optional-dependencies]
 dev = [
@@ -39,7 +41,10 @@ Homepage = "https://github.com/rezerpaul-crypto/llmsafe"
 Issues = "https://github.com/rezerpaul-crypto/llmsafe/issues"
 
 [tool.setuptools.packages.find]
-include = ["llmsafe*"]
+include = ["benchmarks*", "llmsafe*"]
+
+[tool.setuptools.package-data]
+benchmarks = ["manifest.json", "cases/*.json", "cases/*.py"]
 
 [tool.pytest.ini_options]
 addopts = "-ra --strict-markers --strict-config"

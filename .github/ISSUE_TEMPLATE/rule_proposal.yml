@@ -1,0 +1,58 @@
+name: Rule proposal
+description: Propose a new AI or agent security detection
+title: "rule: "
+labels: [rule, enhancement, triage]
+body:
+  - type: textarea
+    id: risk
+    attributes:
+      label: Security risk
+      description: Explain the vulnerable behavior, attacker control, and potential impact.
+    validations:
+      required: true
+  - type: textarea
+    id: vulnerable
+    attributes:
+      label: Vulnerable example
+      description: Provide a minimal, sanitized example.
+      render: python
+    validations:
+      required: true
+  - type: textarea
+    id: safe
+    attributes:
+      label: Safe alternative
+      description: Show a pattern that must not be reported.
+      render: python
+    validations:
+      required: true
+  - type: textarea
+    id: detection
+    attributes:
+      label: Detection approach
+      description: Describe useful syntax, data-flow, or configuration signals and likely false positives.
+    validations:
+      required: true
+  - type: dropdown
+    id: ecosystem
+    attributes:
+      label: Ecosystem
+      options:
+        - Framework-independent Python
+        - LangChain / LangGraph
+        - LlamaIndex
+        - CrewAI
+        - AutoGen
+        - MCP
+        - Other
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I searched existing rules and proposals.
+          required: true
+        - label: The examples contain no real credentials or private code.
+          required: true

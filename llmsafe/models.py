@@ -33,6 +33,18 @@ class Severity(str, Enum):
 
 
 @dataclass(frozen=True)
+class Evidence:
+    """One source or propagation step that explains a finding."""
+
+    line: int
+    column: int
+    message: str
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {"line": self.line, "column": self.column, "message": self.message}
+
+
+@dataclass(frozen=True)
 class Finding:
     """A single security issue reported by a rule."""
 
@@ -44,6 +56,7 @@ class Finding:
     column: int
     message: str
     remediation: str
+    evidence: Tuple[Evidence, ...] = ()
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -55,6 +68,7 @@ class Finding:
             "column": self.column,
             "message": self.message,
             "remediation": self.remediation,
+            "evidence": [step.to_dict() for step in self.evidence],
         }
 
 

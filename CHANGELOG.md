@@ -7,6 +7,24 @@ to use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-08-23
+
+### Added
+
+- Intra-procedural taint analysis from user/model sources to code, shell, SQL, URL, and dynamic
+  tool-dispatch sinks, including source-to-sink evidence.
+- Structural agent-framework rules for dangerous execution tools and disabled approval gates.
+- Repository policy discovery through `.llmsafe.toml` and `[tool.llmsafe]`.
+- Deterministic SARIF 2.1.0 output with GitHub-compatible fingerprints and evidence locations.
+- Reusable composite GitHub Action, Code Scanning workflow, and pre-commit hook metadata.
+- Checked-in vulnerable/safe agent benchmark with 13 expected rule signals.
+- Public architecture, threat-model, rule-catalog, configuration, and benchmark documentation.
+
+### Changed
+
+- CI now tests Python 3.9, 3.12, and 3.14 with current Node 24-based GitHub Actions.
+- Text and JSON findings now include trace evidence where dataflow is available.
+
 ## [0.1.0] - 2026-08-23
 
 ### Added

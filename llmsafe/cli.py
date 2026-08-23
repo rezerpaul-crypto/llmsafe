@@ -7,7 +7,9 @@ from pathlib import Path
 from typing import Optional, Sequence
 
 from llmsafe import __version__
+from llmsafe.config import ConfigError, load_config
 from llmsafe.models import ScanResult, Severity
+from llmsafe.sarif import to_sarif
 from llmsafe.scanner import Scanner
 
 
@@ -19,7 +21,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("paths", nargs="*", default=["."], help="Files or directories to scan")
     parser.add_argument(
         "--format",
-        choices=("text", "json"),
+        choices=("text", "json", "sarif"),
         default="text",
         dest="output_format",
         help="Output format (default: text)",
@@ -27,7 +29,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--fail-on",
         choices=tuple(severity.value for severity in Severity),
-        default=Severity.HIGH.value,
+        default=None,
         help="Exit with status 1 at this severity or above (default: high)",
     )
     parser.add_argument(
@@ -37,6 +39,15 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="GLOB",
         help="Exclude a file or path glob; may be repeated",
     )
+    parser.add_argument(
+        "--disable-rule",
+        action="append",
+        default=[],
+        metavar="RULE_ID",
+        help="Disable a rule ID; may be repeated",
+    )
+    parser.add_argument("--config", type=Path, help="Path to an LLMSafe TOML policy")
+    parser.add_argument("--output", type=Path, help="Write output to a file instead of stdout")
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     return parser
 
@@ -49,6 +60,8 @@ def render_text(result: ScanResult) -> str:
             f"{finding.severity.value.upper()} {finding.rule_id} {finding.title}"
         )
         lines.append(f"  {finding.message}")
+        for evidence in finding.evidence:
+            lines.append(f"  Trace {evidence.line}:{evidence.column}: {evidence.message}")
         lines.append(f"  Fix: {finding.remediation}")
     if result.errors:
         for error in result.errors:
@@ -75,15 +88,37 @@ def render_json(result: ScanResult) -> str:
     return json.dumps(payload, indent=2, sort_keys=True)
 
 
+def render_sarif(result: ScanResult) -> str:
+    return json.dumps(to_sarif(result), indent=2, sort_keys=True)
+
+
 def main(argv: Optional[Sequence[str]] = None) -> int:
     args = build_parser().parse_args(argv)
-    scanner = Scanner(excludes=args.exclude)
+    try:
+        config = load_config(args.config)
+    except ConfigError as exc:
+        print(f"llmsafe: configuration error: {exc}", file=sys.stderr)
+        return 2
+    scanner = Scanner(
+        excludes=(*config.excludes, *args.exclude),
+        max_file_size=config.max_file_size,
+        disabled_rules=(*config.disabled_rules, *args.disable_rule),
+    )
     result = scanner.scan(Path(value) for value in args.paths)
-    output = render_json(result) if args.output_format == "json" else render_text(result)
-    print(output)
+    renderers = {"text": render_text, "json": render_json, "sarif": render_sarif}
+    output = renderers[args.output_format](result)
+    if args.output:
+        try:
+            args.output.parent.mkdir(parents=True, exist_ok=True)
+            args.output.write_text(output + "\n", encoding="utf-8")
+        except OSError as exc:
+            print(f"llmsafe: cannot write {args.output}: {exc}", file=sys.stderr)
+            return 2
+    else:
+        print(output)
     if result.errors:
         return 2
-    minimum = Severity.parse(args.fail_on)
+    minimum = Severity.parse(args.fail_on) if args.fail_on else config.fail_on
     return 1 if result.has_findings_at(minimum) else 0
 
 

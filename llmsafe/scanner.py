@@ -8,7 +8,9 @@ from typing import Iterable, Iterator, Optional, Sequence, Tuple
 
 from llmsafe.models import Finding, ScanError, ScanResult
 from llmsafe.rules import (
+    AgentToolRule,
     DangerousPythonRule,
+    DataflowRule,
     DynamicSystemPromptRule,
     MCPConfigRule,
     SecretRule,
@@ -21,6 +23,8 @@ DEFAULT_RULES: Tuple[Rule, ...] = (
     DangerousPythonRule(),
     ShellExecutionRule(),
     DynamicSystemPromptRule(),
+    DataflowRule(),
+    AgentToolRule(),
     MCPConfigRule(),
 )
 
@@ -67,10 +71,12 @@ class Scanner:
         rules: Optional[Sequence[Rule]] = None,
         excludes: Sequence[str] = (),
         max_file_size: int = 1_000_000,
+        disabled_rules: Sequence[str] = (),
     ) -> None:
         self.rules = tuple(rules) if rules is not None else DEFAULT_RULES
         self.excludes = tuple(excludes)
         self.max_file_size = max_file_size
+        self.disabled_rules = {rule_id.upper() for rule_id in disabled_rules}
 
     def scan(self, targets: Iterable[Path]) -> ScanResult:
         findings = []
@@ -102,7 +108,10 @@ class Scanner:
                     try:
                         rule_findings = rule.scan(path, content)
                         for finding in rule_findings:
-                            if not self._ignored(finding, lines):
+                            if (
+                                finding.rule_id.upper() not in self.disabled_rules
+                                and not self._ignored(finding, lines)
+                            ):
                                 findings.append(finding)
                     except Exception as exc:  # keep one rule from aborting an entire scan
                         errors.append(ScanError(path, f"{type(rule).__name__}: {exc}"))
