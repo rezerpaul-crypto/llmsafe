@@ -17,6 +17,10 @@ class CatalogTests(unittest.TestCase):
             provider_key = "sk-" + "a" * 24
             aws_key = "AKIA" + "B" * 16
             github_token = "ghp_" + "c" * 36
+            private_key_header = "-----BEGIN " + "PRIVATE KEY-----"
+            password_value = "production-" + "password"
+            private_key_line = "private_" + f'key = "{private_key_header}"'
+            password_line = "pass" + f'word = "{password_value}"'
             (root / "agent.py").write_text(
                 f'''import os
 import pickle
@@ -27,8 +31,8 @@ import yaml
 openai_key = "{provider_key}"
 aws_key = "{aws_key}"
 github_token = "{github_token}"
-private_key = "-----BEGIN PRIVATE KEY-----"
-password = "production-password"
+{private_key_line}
+{password_line}
 
 def run(user_input, model_output, blob, document, tools, cursor):
     system_prompt = f"Follow {{user_input}}"
@@ -71,6 +75,13 @@ def run(user_input, model_output, blob, document, tools, cursor):
             metadata = RULES_BY_ID[finding.rule_id]
             self.assertEqual(finding.title, metadata.title)
             self.assertEqual(finding.severity, metadata.severity)
+
+    def test_synthetic_fixture_does_not_report_credentials_in_its_own_source(self):
+        findings = Scanner().scan([Path(__file__)]).findings
+        emitted_rule_ids = {finding.rule_id for finding in findings}
+
+        self.assertNotIn("SECRET004", emitted_rule_ids)
+        self.assertNotIn("SECRET005", emitted_rule_ids)
 
     def test_json_catalog_is_stable_and_does_not_scan_paths(self):
         output = io.StringIO()
