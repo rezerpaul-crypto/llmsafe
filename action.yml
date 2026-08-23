@@ -19,6 +19,10 @@ inputs:
     description: Optional path to an LLMSafe TOML policy.
     required: false
     default: ""
+  baseline:
+    description: Optional path to a reviewed LLMSafe baseline JSON file.
+    required: false
+    default: ""
   sarif-file:
     description: Destination for the generated SARIF report.
     required: false
@@ -39,20 +43,26 @@ runs:
       id: scan
       shell: bash
       env:
+        INPUT_BASELINE: ${{ inputs.baseline }}
         INPUT_CONFIG: ${{ inputs.config }}
         INPUT_FAIL_ON: ${{ inputs.fail-on }}
         INPUT_PATH: ${{ inputs.path }}
         INPUT_SARIF: ${{ inputs.sarif-file }}
       run: |
+        baseline_args=()
         config_args=()
         status=0
         if [[ -n "$INPUT_CONFIG" ]]; then
           config_args=(--config "$INPUT_CONFIG")
         fi
+        if [[ -n "$INPUT_BASELINE" ]]; then
+          baseline_args=(--baseline "$INPUT_BASELINE")
+        fi
         llmsafe "$INPUT_PATH" \
           --format sarif \
           --output "$INPUT_SARIF" \
           --fail-on "$INPUT_FAIL_ON" \
+          "${baseline_args[@]}" \
           "${config_args[@]}" || status=$?
         echo "sarif-file=$INPUT_SARIF" >> "$GITHUB_OUTPUT"
         exit "$status"

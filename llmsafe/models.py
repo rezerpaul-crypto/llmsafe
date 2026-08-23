@@ -91,6 +91,7 @@ class ScanResult:
     errors: Tuple[ScanError, ...]
     scanned_files: int
     skipped_files: int
+    baseline_findings: int = 0
 
     def has_findings_at(self, minimum: Severity) -> bool:
         return any(finding.severity.rank >= minimum.rank for finding in self.findings)

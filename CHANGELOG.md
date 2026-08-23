@@ -15,6 +15,8 @@ to use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   signals across five cases.
 - Versioned machine-readable metadata for all 23 built-in rules through `--list-rules`, with the
   same catalog powering SARIF rule descriptors.
+- Deterministic, duplicate-aware baseline files for incremental adoption through the CLI,
+  repository policy, JSON/SARIF summaries, and composite GitHub Action.
 
 ## [0.2.1] - 2026-08-23
 

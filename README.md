@@ -136,6 +136,20 @@ disabled_rules = ["PY004"]
 CLI options override or extend repository policy. Policy can also live under `[tool.llmsafe]` in
 `pyproject.toml`. See [configuration](docs/configuration.md).
 
+### Adopt LLMSafe without ignoring new risk
+
+Existing repositories can review and commit a baseline of current findings:
+
+```bash
+llmsafe . --write-baseline .llmsafe-baseline.json
+llmsafe . --baseline .llmsafe-baseline.json
+```
+
+The second command reports and fails only on findings not represented in the baseline. Matching is
+line-independent, duplicate-aware, and deterministic so ordinary code movement does not create
+noise while an additional dangerous operation is still reported. Baselines are review artifacts,
+not permanent suppressions; see [incremental adoption](docs/baselines.md).
+
 ### Suppress one reviewed finding
 
 Place a narrow suppression on the finding line or immediately above it:

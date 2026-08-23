@@ -1,10 +1,10 @@
 """SARIF 2.1.0 rendering for GitHub code scanning and other consumers."""
 
-import hashlib
 from pathlib import Path
 from typing import Any, Dict, Iterable, List
 
 from llmsafe import __version__
+from llmsafe.baseline import finding_fingerprint
 from llmsafe.catalog import RULES_BY_ID
 from llmsafe.models import Finding, ScanResult, Severity
 
@@ -49,6 +49,7 @@ def to_sarif(result: ScanResult) -> Dict[str, Any]:
                         "properties": {
                             "scannedFiles": result.scanned_files,
                             "skippedFiles": result.skipped_files,
+                            "baselineFindings": result.baseline_findings,
                             "scanErrors": len(result.errors),
                         },
                     }
@@ -113,24 +114,12 @@ def _result(finding: Finding) -> Dict[str, Any]:
         "level": SEVERITY_LEVEL[finding.severity],
         "message": {"text": f"{finding.message} Fix: {finding.remediation}"},
         "locations": [location],
-        "partialFingerprints": {"primaryLocationLineHash": _fingerprint(finding)},
+        "partialFingerprints": {"primaryLocationLineHash": finding_fingerprint(finding)},
         "properties": {"severity": finding.severity.value},
     }
     if related:
         rendered["relatedLocations"] = related
     return rendered
-
-
-def _fingerprint(finding: Finding) -> str:
-    identity = "\0".join(
-        (
-            finding.rule_id,
-            _uri(finding.path),
-            finding.title,
-            finding.message.split(" Source:", 1)[0],
-        )
-    )
-    return hashlib.sha256(identity.encode("utf-8")).hexdigest()
 
 
 def _uri(path: Path) -> str:
