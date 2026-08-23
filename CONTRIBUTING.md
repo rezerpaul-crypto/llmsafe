@@ -27,9 +27,10 @@ A useful rule should include:
 1. A concrete security risk and realistic AI/agent use case.
 2. A stable ID, title, severity, explanation, and remediation.
 3. Tests for vulnerable, safe, and edge-case inputs.
-4. A low-noise detection strategy; structural parsing is preferred when practical.
-5. A README update describing the rule.
-6. A benchmark case when the rule represents a core AI/agent security scenario.
+4. A matching entry in `llmsafe/catalog.py` with stable public metadata.
+5. A low-noise detection strategy; structural parsing is preferred when practical.
+6. A README update describing the rule.
+7. A benchmark case when the rule represents a core AI/agent security scenario.
 
 Never commit a real credential in a test fixture. Construct realistic-looking values at test
 runtime or use unmistakable placeholders.

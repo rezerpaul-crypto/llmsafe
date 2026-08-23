@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Optional, Sequence
 
 from llmsafe import __version__
+from llmsafe.catalog import CATALOG_SCHEMA_VERSION, RULE_CATALOG
 from llmsafe.config import ConfigError, load_config
 from llmsafe.models import ScanResult, Severity
 from llmsafe.sarif import to_sarif
@@ -47,6 +48,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Disable a rule ID; may be repeated",
     )
     parser.add_argument("--config", type=Path, help="Path to an LLMSafe TOML policy")
+    parser.add_argument(
+        "--list-rules",
+        action="store_true",
+        help="List built-in rule metadata without scanning",
+    )
     parser.add_argument("--output", type=Path, help="Write output to a file instead of stdout")
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     return parser
@@ -92,8 +98,48 @@ def render_sarif(result: ScanResult) -> str:
     return json.dumps(to_sarif(result), indent=2, sort_keys=True)
 
 
+def render_rule_catalog(output_format: str) -> str:
+    rules = sorted(RULE_CATALOG, key=lambda rule: rule.rule_id)
+    if output_format == "json":
+        return json.dumps(
+            {
+                "schema_version": CATALOG_SCHEMA_VERSION,
+                "version": __version__,
+                "rules": [rule.to_dict() for rule in rules],
+            },
+            indent=2,
+            sort_keys=True,
+        )
+    lines = [
+        f"{rule.rule_id:<9} {rule.severity.value.upper():<8} {rule.family:<8} {rule.title}"
+        for rule in rules
+    ]
+    lines.append(f"{len(rules)} built-in rule(s).")
+    return "\n".join(lines)
+
+
+def write_output(output: str, destination: Optional[Path]) -> bool:
+    """Write output and return whether the operation succeeded."""
+
+    if destination is None:
+        print(output)
+        return True
+    try:
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_text(output + "\n", encoding="utf-8")
+    except OSError as exc:
+        print(f"llmsafe: cannot write {destination}: {exc}", file=sys.stderr)
+        return False
+    return True
+
+
 def main(argv: Optional[Sequence[str]] = None) -> int:
     args = build_parser().parse_args(argv)
+    if args.list_rules:
+        if args.output_format == "sarif":
+            print("llmsafe: --list-rules supports text or json output", file=sys.stderr)
+            return 2
+        return 0 if write_output(render_rule_catalog(args.output_format), args.output) else 2
     try:
         config = load_config(args.config)
     except ConfigError as exc:
@@ -107,15 +153,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     result = scanner.scan(Path(value) for value in args.paths)
     renderers = {"text": render_text, "json": render_json, "sarif": render_sarif}
     output = renderers[args.output_format](result)
-    if args.output:
-        try:
-            args.output.parent.mkdir(parents=True, exist_ok=True)
-            args.output.write_text(output + "\n", encoding="utf-8")
-        except OSError as exc:
-            print(f"llmsafe: cannot write {args.output}: {exc}", file=sys.stderr)
-            return 2
-    else:
-        print(output)
+    if not write_output(output, args.output):
+        return 2
     if result.errors:
         return 2
     minimum = Severity.parse(args.fail_on) if args.fail_on else config.fail_on

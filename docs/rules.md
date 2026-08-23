@@ -3,6 +3,20 @@
 Rule IDs are stable public identifiers. Severity represents potential impact when the pattern is
 reachable with attacker- or model-controlled data; application context can change the final risk.
 
+## Machine-readable catalog
+
+The built-in metadata is available without scanning a repository:
+
+```bash
+llmsafe --list-rules
+llmsafe --list-rules --format json --output llmsafe-rules.json
+```
+
+JSON catalog schema version 1 contains the LLMSafe version and a deterministically ordered `rules`
+array. Each rule has `id`, `title`, `severity`, `family`, `description`, and `remediation` fields.
+SARIF reports use this same metadata source, preventing integration output from drifting away from
+the public catalog.
+
 ## Dataflow rules
 
 | ID | Severity | Detects | Primary remediation |

@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List
 
 from llmsafe import __version__
+from llmsafe.catalog import RULES_BY_ID
 from llmsafe.models import Finding, ScanResult, Severity
 
 SARIF_SCHEMA = "https://json.schemastore.org/sarif-2.1.0.json"
@@ -61,22 +62,32 @@ def _rules(findings: Iterable[Finding]) -> List[Dict[str, Any]]:
     by_id: Dict[str, Finding] = {}
     for finding in findings:
         by_id.setdefault(finding.rule_id, finding)
-    return [
-        {
-            "id": finding.rule_id,
-            "name": _rule_name(finding.title),
-            "shortDescription": {"text": finding.title},
-            "fullDescription": {"text": finding.message},
-            "help": {"text": finding.remediation},
-            "defaultConfiguration": {"level": SEVERITY_LEVEL[finding.severity]},
-            "properties": {
-                "tags": ["security", "ai", "agentic-applications"],
-                "security-severity": SECURITY_SEVERITY[finding.severity],
-                "severity": finding.severity.value,
-            },
-        }
-        for _, finding in sorted(by_id.items())
-    ]
+    rules = []
+    for _, finding in sorted(by_id.items()):
+        metadata = RULES_BY_ID.get(finding.rule_id)
+        title = metadata.title if metadata else finding.title
+        description = metadata.description if metadata else finding.message
+        remediation = metadata.remediation if metadata else finding.remediation
+        severity = metadata.severity if metadata else finding.severity
+        tags = ["security", "ai", "agentic-applications"]
+        if metadata:
+            tags.append(metadata.family)
+        rules.append(
+            {
+                "id": finding.rule_id,
+                "name": _rule_name(title),
+                "shortDescription": {"text": title},
+                "fullDescription": {"text": description},
+                "help": {"text": remediation},
+                "defaultConfiguration": {"level": SEVERITY_LEVEL[severity]},
+                "properties": {
+                    "tags": tags,
+                    "security-severity": SECURITY_SEVERITY[severity],
+                    "severity": severity.value,
+                },
+            }
+        )
+    return rules
 
 
 def _result(finding: Finding) -> Dict[str, Any]:

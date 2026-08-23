@@ -3,6 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from llmsafe.catalog import RULES_BY_ID
 from llmsafe.cli import main
 from llmsafe.sarif import SARIF_SCHEMA, to_sarif
 from llmsafe.scanner import Scanner
@@ -25,6 +26,11 @@ class SarifTests(unittest.TestCase):
         self.assertEqual(flow_result["level"], "error")
         self.assertIn("primaryLocationLineHash", flow_result["partialFingerprints"])
         self.assertGreaterEqual(len(flow_result["relatedLocations"]), 2)
+        flow_rule = next(item for item in run["tool"]["driver"]["rules"] if item["id"] == "FLOW001")
+        self.assertEqual(
+            flow_rule["fullDescription"]["text"], RULES_BY_ID["FLOW001"].description
+        )
+        self.assertIn("dataflow", flow_rule["properties"]["tags"])
 
     def test_cli_writes_valid_sarif_file(self):
         with tempfile.TemporaryDirectory() as temporary_directory:

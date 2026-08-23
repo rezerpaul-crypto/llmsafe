@@ -63,6 +63,15 @@ agent.py:4:12: CRITICAL FLOW001 Untrusted data reaches code execution
 
 See the [complete rule catalog](docs/rules.md) and [threat model](docs/threat-model.md).
 
+Integrations can query the same catalog without parsing documentation:
+
+```bash
+llmsafe --list-rules
+llmsafe --list-rules --format json
+```
+
+The versioned JSON output includes every stable ID, severity, family, description, and remediation.
+
 ## Install
 
 LLMSafe supports Python 3.9 and newer.
