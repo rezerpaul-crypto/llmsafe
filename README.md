@@ -187,10 +187,10 @@ The checked-in benchmark exercises vulnerable and safe agent boundaries:
 python -m benchmarks.run
 ```
 
-Current expectations cover 13 rule-level signals across code execution, shell execution, SQL,
-SSRF, tool dispatch, prompt boundaries, high-impact tools, approval bypasses, and MCP. This is a
-regression corpus—not an industry benchmark or a claim of real-world detection rate. See the
-[benchmark methodology](docs/benchmark.md).
+Current expectations cover 18 rule-level signals across direct and local-helper code execution,
+shell execution, SQL, SSRF, tool dispatch, prompt boundaries, high-impact tools, approval bypasses,
+and MCP. This is a regression corpus—not an industry benchmark or a claim of real-world detection
+rate. See the [benchmark methodology](docs/benchmark.md).
 
 ## How LLMSafe fits
 

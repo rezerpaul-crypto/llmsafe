@@ -13,7 +13,7 @@ discussion for each item.
 
 ## Next
 
-- Inter-procedural function summaries and cross-file import resolution
+- Cross-file import resolution and project-wide function summaries
 - JavaScript/TypeScript agent and MCP analysis
 - Framework fixture matrix for OpenAI Agents SDK, Anthropic, LangChain, and common MCP servers
 - Standardized rule metadata export and documentation generation
