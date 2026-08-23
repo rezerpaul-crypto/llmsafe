@@ -20,6 +20,14 @@
       "expected_rules": []
     },
     {
+      "path": "cases/interprocedural_agent.py",
+      "expected_rules": ["FLOW001", "FLOW002", "FLOW004", "PY001", "SHELL002"]
+    },
+    {
+      "path": "cases/safe_interprocedural.py",
+      "expected_rules": []
+    },
+    {
       "path": "cases/insecure_mcp.json",
       "expected_rules": ["MCP001", "MCP002", "MCP003"]
     }

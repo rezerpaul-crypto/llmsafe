@@ -13,7 +13,9 @@ reachable with attacker- or model-controlled data; application context can chang
 | `FLOW004` | High | User/model data controlling outbound HTTP URL | Allow-list scheme/host and block private ranges |
 | `FLOW005` | High | User/model data selecting a callable | Fixed tool registry plus per-tool authorization |
 
-Dataflow findings include evidence locations for sources and the sink.
+Dataflow findings include evidence locations for sources and the sink. Direct calls to local
+module-level helpers are summarized to a fixed point, allowing a finding to cross multiple wrapper
+functions while still reporting the helper boundary.
 
 ## Agent-framework rules
 

@@ -7,6 +7,13 @@ to use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Fixed-point summaries for direct calls to local Python helpers, including positional,
+  keyword-only, variadic, and unpacked keyword argument mapping with cross-boundary evidence.
+- Vulnerable and safe inter-procedural benchmark cases, increasing the corpus to 18 expected rule
+  signals across five cases.
+
 ## [0.2.1] - 2026-08-23
 
 ### Added

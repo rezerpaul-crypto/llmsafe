@@ -26,7 +26,8 @@ flowchart TD
   isolation, deduplication order, and aggregate results.
 - `llmsafe.rules` contains independent rules that accept a path and UTF-8 content and yield
   normalized findings.
-- `llmsafe.rules.dataflow` performs source-to-sink analysis within a Python module or function.
+- `llmsafe.rules.dataflow` performs source-to-sink analysis within Python functions and across
+  direct calls to local module-level helpers.
 - `llmsafe.config` discovers and validates repository policy.
 - `llmsafe.models` is the stable boundary between analysis and output.
 - `llmsafe.sarif` maps normalized findings and evidence to SARIF 2.1.0.
@@ -34,25 +35,32 @@ flowchart TD
 
 ## Taint-analysis algorithm
 
-The `DataflowRule` analyzes the module body and every function independently:
+The `DataflowRule` analyzes the module body and every function:
 
 1. Function arguments with trust-boundary names become user or model sources.
 2. Known request objects and LLM SDK calls create additional sources.
 3. Assignments, interpolation, containers, attribute access, calls, branches, loops, and exception
    branches propagate source sets through an environment keyed by variable name.
 4. Calls are checked against code, process, SQL, HTTP, and dynamic-dispatch sinks.
-5. A finding records up to four contributing sources and the final sink as evidence.
+5. Local function summaries map sink-relevant positional, keyword-only, variadic, and keyword
+   parameters to those sinks.
+6. Summaries are resolved to a fixed point so trust-boundary data can cross multiple local wrappers.
+7. A finding records up to four contributing sources, the helper boundary, and the final sink as
+   evidence.
 
 Branch environments are merged conservatively. Reassigning a variable to an untainted expression
 kills its previous taint in the current path.
 
-## Why intra-procedural first?
+## Local function summaries
 
-Intra-procedural analysis provides useful signal with deterministic performance and without a
-project-wide type resolver. It catches common agent loops where model output is received,
-transformed, and dispatched in the same handler. Inter-procedural summaries are a planned
-extension; the current boundary is documented so users do not mistake the scanner for a complete
-program proof.
+Each module-level function is analyzed once with synthetic parameter sources. Only parameters that
+reach a sensitive operation are retained in its summary. Repeated passes propagate terminal sink
+information through chains of local direct-name calls. At a real call site, only tainted arguments
+mapped to a sink-relevant parameter produce a finding; fixed arguments remain clean.
+
+This design detects common agent wrappers without importing the scanned application or requiring a
+project-wide type resolver. Calls through object attributes, aliases, decorators, dynamic imports,
+or another file remain outside this summary graph.
 
 ## Rule failure isolation
 
@@ -81,7 +89,8 @@ actionable remediation, and provide vulnerable/safe regression tests.
 
 ## Known architectural limits
 
-- No inter-procedural call graph or alias analysis across files.
+- No cross-file call graph, import resolution, or alias analysis; summaries cover direct-name
+  module-level helpers in the same file.
 - No runtime values, dependency resolution, generated code, or authorization-server state.
 - Python and MCP JSON receive structural analysis; other languages currently receive secret checks.
 - Taint source names and SDK call markers are intentionally opinionated heuristics.

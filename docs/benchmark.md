@@ -11,6 +11,9 @@ Its purpose is to make rule behavior measurable and prevent silent detection reg
   SQL construction, outbound URL, dynamic tool dispatch, Python REPL tool, and disabled approval.
 - `safe_agent.py` uses an allow-listed topic, parameterized SQL, an argument-list subprocess, and
   fixed tool lookup.
+- `interprocedural_agent.py` passes user and model data through local wrappers before code, shell,
+  and outbound HTTP sinks.
+- `safe_interprocedural.py` calls the same style of local wrappers with fixed values.
 - `insecure_mcp.json` contains a shell-launched remote HTTP server with wildcard tool access.
 
 ## Metric
@@ -32,9 +35,9 @@ python -m benchmarks.run
 
 ## Current result
 
-- Cases: 3/3 passing
-- Expected rule signals: 13
-- Detected expected rule signals: 13
+- Cases: 5/5 passing
+- Expected rule signals: 18
+- Detected expected rule signals: 18
 - Rule-level recall on this corpus: 100%
 
 ## Interpretation limits

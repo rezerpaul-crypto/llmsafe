@@ -46,7 +46,7 @@ source code, repository policy, or the CI environment.
 - Runtime sandbox enforcement and authorization-server correctness
 - Dependency vulnerabilities, malware, or supply-chain provenance
 - Network-layer verification, DNS rebinding simulation, or penetration testing
-- Cross-language and full inter-procedural dataflow in the current release
+- Cross-language, cross-file, aliased-call, and project-wide dataflow in the current release
 - Secrets already present in Git history after their working-tree value was removed
 
 ## Security posture
