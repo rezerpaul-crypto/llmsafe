@@ -16,6 +16,7 @@ exclude = ["generated/**", "vendor"]
 fail_on = "medium"
 max_file_size = 2048
 disabled_rules = ["py001", "FLOW004"]
+baseline = ".llmsafe-baseline.json"
 """,
                 encoding="utf-8",
             )
@@ -26,6 +27,7 @@ disabled_rules = ["py001", "FLOW004"]
         self.assertEqual(config.fail_on, Severity.MEDIUM)
         self.assertEqual(config.max_file_size, 2048)
         self.assertEqual(config.disabled_rules, frozenset({"PY001", "FLOW004"}))
+        self.assertEqual(config.baseline, (path.parent / ".llmsafe-baseline.json").resolve())
 
     def test_discovers_pyproject_policy_from_child_directory(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
@@ -54,6 +56,12 @@ disabled_rules = ["py001", "FLOW004"]
             invalid = root / "invalid.toml"
             invalid.write_text('[llmsafe]\nmax_file_size = false\n', encoding="utf-8")
             with self.assertRaisesRegex(ConfigError, "positive integer"):
+                load_config(invalid)
+            invalid.write_text('[llmsafe]\nbaseline = false\n', encoding="utf-8")
+            with self.assertRaisesRegex(ConfigError, "non-empty path string"):
+                load_config(invalid)
+            invalid.write_text('[llmsafe]\nbaseline = ""\n', encoding="utf-8")
+            with self.assertRaisesRegex(ConfigError, "non-empty path string"):
                 load_config(invalid)
             with self.assertRaisesRegex(ConfigError, "does not exist"):
                 load_config(root / "missing.toml")

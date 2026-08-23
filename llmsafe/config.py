@@ -24,10 +24,11 @@ class Config:
     fail_on: Severity = Severity.HIGH
     max_file_size: int = 1_000_000
     disabled_rules: FrozenSet[str] = frozenset()
+    baseline: Optional[Path] = None
     source: Optional[Path] = None
 
 
-ALLOWED_KEYS = {"exclude", "fail_on", "max_file_size", "disabled_rules"}
+ALLOWED_KEYS = {"baseline", "exclude", "fail_on", "max_file_size", "disabled_rules"}
 
 
 def discover_config(start: Path) -> Optional[Path]:
@@ -102,7 +103,20 @@ def _validate(path: Path, raw: Dict[str, Any]) -> Config:
     if not isinstance(max_file_size, int) or isinstance(max_file_size, bool) or max_file_size < 1:
         raise ConfigError(f"max_file_size in {path} must be a positive integer")
     normalized_rules = frozenset(rule_id.upper() for rule_id in disabled)
-    return Config(excludes, severity, max_file_size, normalized_rules, path)
+    baseline_value = raw.get("baseline")
+    if baseline_value is not None and (
+        not isinstance(baseline_value, str) or not baseline_value.strip()
+    ):
+        raise ConfigError(f"baseline in {path} must be a non-empty path string")
+    baseline = (path.parent / baseline_value).resolve() if baseline_value else None
+    return Config(
+        excludes=excludes,
+        fail_on=severity,
+        max_file_size=max_file_size,
+        disabled_rules=normalized_rules,
+        baseline=baseline,
+        source=path,
+    )
 
 
 def _string_list(path: Path, name: str, value: Any) -> Tuple[str, ...]:

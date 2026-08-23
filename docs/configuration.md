@@ -12,6 +12,7 @@ exclude = ["generated/**", "vendor/**"]
 fail_on = "high"
 max_file_size = 1000000
 disabled_rules = ["PY004"]
+baseline = ".llmsafe-baseline.json"
 ```
 
 ## `pyproject.toml`
@@ -22,6 +23,7 @@ exclude = ["tests/fixtures/**"]
 fail_on = "medium"
 max_file_size = 2000000
 disabled_rules = []
+baseline = ".llmsafe-baseline.json"
 ```
 
 ## Settings
@@ -32,6 +34,7 @@ disabled_rules = []
 | `fail_on` | string | `"high"` | `low`, `medium`, `high`, or `critical` exit threshold |
 | `max_file_size` | positive integer | `1000000` | Maximum bytes read from one file |
 | `disabled_rules` | array of strings | `[]` | Stable rule IDs excluded from results |
+| `baseline` | string | unset | Reviewed baseline path, relative to the policy file |
 
 Unknown settings and invalid types fail with exit code 2. This catches policy typos rather than
 silently weakening a scan.
@@ -42,6 +45,8 @@ silently weakening a scan.
 - `--exclude GLOB` extends configured excludes and may be repeated.
 - `--disable-rule ID` extends configured disabled rules and may be repeated.
 - `--fail-on SEVERITY` overrides the configured threshold.
+- `--baseline PATH` overrides the configured baseline.
+- `--write-baseline PATH` ignores the configured baseline and records the current result instead.
 
 ## Inline suppressions
 
