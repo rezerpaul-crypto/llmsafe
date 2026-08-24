@@ -12,8 +12,9 @@ code execution, shells, SQL, outbound requests, and dynamic tool dispatch.
 
 It runs locally. Source code is not uploaded to a model or external analysis service.
 
-> **Status:** `v0.2.1` is the current public release. The repository is preparing `v0.3.0`; LLMSafe
-> provides reviewable security signals, not a guarantee that an AI system is secure.
+> **Status:** `v0.2.1` is the current stable release. `v0.3.0rc1` is available as a public pilot
+> pre-release; LLMSafe provides reviewable security signals, not a guarantee that an AI system is
+> secure.
 
 ## Why another security scanner?
 

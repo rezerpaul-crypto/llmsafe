@@ -2,7 +2,7 @@
 
 Date prepared: 24 August 2026
 
-Status: local candidate; not pushed, tagged, published, or announced.
+Status: published as a public pilot pre-release on GitHub and PyPI; stable `v0.3.0` remains gated.
 
 ## Candidate scope
 
@@ -36,6 +36,17 @@ Artifact hashes from the local candidate build:
 - Wheel SHA-256: `ab2e6aff08d7a9ab171b5e7ba3371a23abbc65c971b2db147f2c57d392112bf9`
 - Source SHA-256: `52ff54dcc71eca6889d225d942cfeb654893ea9257bcad15ca63f53927253d55`
 
+Verified artifacts published by the OIDC trusted-publishing workflow:
+
+- Wheel: `llmsafe-0.3.0rc1-py3-none-any.whl` (SHA-256
+  `bd8326e80d9d06e87952f1cb56aaad1dd5a88820a670589ee6c921710ae0333f`)
+- Source: `llmsafe-0.3.0rc1.tar.gz` (SHA-256
+  `4db874d4f876d6b1fee0c852ef3aac833bd127e5367c4398dd952d86ea3505e2`)
+- GitHub pull request: [#12](https://github.com/rezerpaul-crypto/llmsafe/pull/12)
+- GitHub pre-release: [v0.3.0rc1](https://github.com/rezerpaul-crypto/llmsafe/releases/tag/v0.3.0rc1)
+- PyPI release: [llmsafe 0.3.0rc1](https://pypi.org/project/llmsafe/0.3.0rc1/)
+- Release workflow: [run 32713591285](https://github.com/rezerpaul-crypto/llmsafe/actions/runs/32713591285)
+
 ## Pilot gate
 
 - Confirmed active pilot testers: 0.
@@ -48,5 +59,8 @@ project is counted without explicit acceptance.
 
 ## Publication decision
 
-**No-go for publication.** The external pilot prerequisite is unmet. This status is a quality gate,
-not a technical failure and not permission to contact prospects automatically.
+**Go for the public pilot pre-release.** The candidate passed its local and GitHub CI gates and was
+published as `v0.3.0rc1` for external reproduction.
+
+**No-go for stable `v0.3.0`.** At least one external pilot must reproduce a run and no critical
+defect may remain. This is a quality gate, not permission to contact prospects automatically.
