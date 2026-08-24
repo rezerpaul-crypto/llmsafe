@@ -81,6 +81,7 @@ class Scanner:
     def scan(self, targets: Iterable[Path]) -> ScanResult:
         findings = []
         errors = []
+        files = []
         scanned_files = 0
         skipped_files = 0
         seen = set()
@@ -104,17 +105,39 @@ class Scanner:
                     continue
                 scanned_files += 1
                 lines = content.splitlines()
-                for rule in self.rules:
-                    try:
-                        rule_findings = rule.scan(path, content)
-                        for finding in rule_findings:
-                            if (
-                                finding.rule_id.upper() not in self.disabled_rules
-                                and not self._ignored(finding, lines)
-                            ):
-                                findings.append(finding)
-                    except Exception as exc:  # keep one rule from aborting an entire scan
-                        errors.append(ScanError(path, f"{type(rule).__name__}: {exc}"))
+                files.append((path, content, lines))
+
+        for path, content, lines in files:
+            for rule in self.rules:
+                if callable(getattr(rule, "scan_project", None)):
+                    continue
+                try:
+                    rule_findings = rule.scan(path, content)
+                    for finding in rule_findings:
+                        if (
+                            finding.rule_id.upper() not in self.disabled_rules
+                            and not self._ignored(finding, lines)
+                        ):
+                            findings.append(finding)
+                except Exception as exc:  # keep one rule from aborting an entire scan
+                    errors.append(ScanError(path, f"{type(rule).__name__}: {exc}"))
+
+        content_by_path = {path: content for path, content, _ in files}
+        lines_by_path = {path: lines for path, _, lines in files}
+        for rule in self.rules:
+            project_scan = getattr(rule, "scan_project", None)
+            if not callable(project_scan):
+                continue
+            try:
+                for finding in project_scan(content_by_path):
+                    lines = lines_by_path.get(finding.path, ())
+                    if (
+                        finding.rule_id.upper() not in self.disabled_rules
+                        and not self._ignored(finding, lines)
+                    ):
+                        findings.append(finding)
+            except Exception as exc:  # keep one project rule from aborting an entire scan
+                errors.append(ScanError(Path("."), f"{type(rule).__name__}: {exc}"))
 
         findings.sort(
             key=lambda item: (-item.severity.rank, str(item.path), item.line, item.rule_id)
@@ -123,6 +146,8 @@ class Scanner:
         return ScanResult(tuple(findings), tuple(errors), scanned_files, skipped_files)
 
     def _files(self, target: Path) -> Iterator[Path]:
+        if target.is_symlink():
+            return
         if target.is_file():
             if not self._excluded(target) and self._supported(target):
                 yield target
@@ -138,7 +163,11 @@ class Scanner:
             ]
             for filename in sorted(filenames):
                 path = root_path / filename
-                if not self._excluded(path) and self._supported(path):
+                if (
+                    not path.is_symlink()
+                    and not self._excluded(path)
+                    and self._supported(path)
+                ):
                     yield path
 
     def _excluded(self, path: Path) -> bool:

@@ -62,6 +62,20 @@ class ScannerTests(unittest.TestCase):
         self.assertEqual(result.skipped_files, 2)
         self.assertEqual(result.scanned_files, 0)
 
+    def test_does_not_follow_file_symlinks_outside_target(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            target = root / "target"
+            target.mkdir()
+            outside = root / "outside.py"
+            outside.write_text("exec(code)\n", encoding="utf-8")
+            (target / "linked.py").symlink_to(outside)
+
+            result = Scanner().scan([target])
+
+        self.assertEqual(result.scanned_files, 0)
+        self.assertEqual(result.findings, ())
+
 
 if __name__ == "__main__":
     unittest.main()

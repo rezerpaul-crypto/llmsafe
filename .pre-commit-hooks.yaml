@@ -3,6 +3,8 @@
   description: Scan AI and agentic application files for security risks.
   entry: llmsafe
   language: python
-  pass_filenames: true
+  pass_filenames: false
   types_or: [python, json, yaml, toml, text]
-  args: ["--fail-on", "high"]
+  always_run: true
+  require_serial: true
+  args: [".", "--fail-on", "high"]

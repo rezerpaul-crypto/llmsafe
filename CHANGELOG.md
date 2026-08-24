@@ -7,16 +7,40 @@ to use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.3.0rc1] - 2026-08-24
+
 ### Added
 
 - Fixed-point summaries for direct calls to local Python helpers, including positional,
   keyword-only, variadic, and unpacked keyword argument mapping with cross-boundary evidence.
-- Vulnerable and safe inter-procedural benchmark cases, increasing the corpus to 18 expected rule
-  signals across five cases.
+- Bounded local import resolution and cross-module dataflow for relative and absolute imports,
+  aliases, direct re-exports, keyword arguments, and safe import cycles.
+- Cross-file evidence paths in JSON and SARIF related locations.
+- Paired regression fixtures for current OpenAI Agents, Anthropic, LangChain, PydanticAI, and MCP
+  Python syntax, increasing the benchmark to 28 expected signals across 15 cases.
+- OpenAI Agents `Runner.run()`, `run_sync()`, and `run_streamed()` model-source recognition.
 - Versioned machine-readable metadata for all 23 built-in rules through `--list-rules`, with the
   same catalog powering SARIF rule descriptors.
 - Deterministic, duplicate-aware baseline files for incremental adoption through the CLI,
   repository policy, JSON/SARIF summaries, and composite GitHub Action.
+- One-command contributor workflow, rule-authoring example, five-minute demo, framework coverage
+  matrix, governance, support, and maintainer documentation.
+- Versioned scan-JSON and rule-catalog schemas, a documented exit-code contract, and end-to-end
+  composite Action tests.
+- Verified pipx, full-project pre-commit, and reviewed-baseline adoption paths.
+- A repeatable 500-module performance corpus and dependency-worklist summary propagation.
+- A bounded `llmsafe.api` surface for explicitly supplied organization-specific rules, without
+  dynamic plugin discovery.
+
+### Changed
+
+- Project scans collect selected files before rule execution so project-aware rules can analyze a
+  bounded local graph without importing or running target code.
+- File symlinks are skipped so a selected tree cannot silently expand through a linked file.
+- Scan JSON now declares `schema_version: 1`; cross-file text and SARIF evidence identify the sink
+  artifact.
+- Third-party Actions are pinned to full commit SHAs, checkout credentials are never persisted, and
+  SARIF upload permission is isolated from the job that executes repository code.
 
 ## [0.2.1] - 2026-08-23
 

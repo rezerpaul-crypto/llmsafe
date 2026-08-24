@@ -14,15 +14,16 @@ the `main` branch.
 
 Please do not open a public issue for a suspected vulnerability.
 
-Use GitHub's private vulnerability reporting feature on the LLMSafe repository:
+Use [GitHub's private vulnerability reporting
+form](https://github.com/rezerpaul-crypto/llmsafe/security/advisories/new):
 
 1. Open the repository's **Security** tab.
 2. Choose **Advisories** and **Report a vulnerability**.
 3. Include the affected version or commit, reproduction steps, impact, and any suggested fix.
 
 If private reporting is not yet enabled, contact the maintainer privately through the contact
-method listed on their GitHub profile. Do not include active credentials or sensitive third-party
-data in the report.
+method listed on their [GitHub profile](https://github.com/rezerpaul-crypto). Do not include active
+credentials or sensitive third-party data in the report.
 
 The project aims to acknowledge reports within 5 business days, provide an initial assessment
 within 10 business days, and coordinate disclosure after a fix is available. These are targets,

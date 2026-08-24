@@ -15,34 +15,28 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.9", "3.12", "3.14"]
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
 
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
-      - name: Install project and development tools
-        run: python -m pip install --upgrade pip && python -m pip install -e ".[dev]"
-      - name: Lint
-        run: ruff check .
-      - name: Test
-        run: pytest --cov=llmsafe --cov-report=term-missing
-      - name: Test benchmark
-        run: python -m benchmarks.run
-      - name: Smoke-test installed CLI
-        run: llmsafe --version
+      - name: Run the contributor workflow
+        run: python scripts/dev.py --current
 
   package:
     name: Package
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - uses: actions/setup-python@v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
           python-version: "3.12"
           cache: pip
@@ -57,3 +51,30 @@ jobs:
           python -m venv /tmp/llmsafe-package-test
           /tmp/llmsafe-package-test/bin/python -m pip install dist/*.whl
           /tmp/llmsafe-package-test/bin/llmsafe --version
+
+  action:
+    name: Composite action contract
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.12"
+          cache: pip
+      - id: llmsafe
+        uses: ./
+        with:
+          path: llmsafe
+          fail-on: high
+          sarif-file: /tmp/llmsafe-action.sarif
+      - name: Verify action outputs and SARIF
+        env:
+          LLMSAFE_EXIT_CODE: ${{ steps.llmsafe.outputs.exit-code }}
+          LLMSAFE_SARIF_FILE: ${{ steps.llmsafe.outputs.sarif-file }}
+        run: |
+          test "$LLMSAFE_EXIT_CODE" = "0"
+          test "$LLMSAFE_SARIF_FILE" = "/tmp/llmsafe-action.sarif"
+          python -c "import json; json.load(open('/tmp/llmsafe-action.sarif'))"

@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 
 class Severity(str, Enum):
@@ -39,9 +39,17 @@ class Evidence:
     line: int
     column: int
     message: str
+    path: Optional[Path] = None
 
     def to_dict(self) -> Dict[str, Any]:
-        return {"line": self.line, "column": self.column, "message": self.message}
+        rendered: Dict[str, Any] = {
+            "line": self.line,
+            "column": self.column,
+            "message": self.message,
+        }
+        if self.path is not None:
+            rendered["path"] = str(self.path)
+        return rendered
 
 
 @dataclass(frozen=True)

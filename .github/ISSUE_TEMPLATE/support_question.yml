@@ -1,0 +1,48 @@
+name: Support question
+description: Ask about installing, configuring, or using LLMSafe
+title: "question: "
+labels: [question, triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for using LLMSafe. Remove credentials, private code, and personal data before posting.
+        Suspected vulnerabilities in LLMSafe itself must use the private reporting path in SECURITY.md.
+  - type: input
+    id: version
+    attributes:
+      label: LLMSafe version
+      description: Run `llmsafe --version`.
+      placeholder: 0.2.1
+    validations:
+      required: true
+  - type: input
+    id: python
+    attributes:
+      label: Python version and operating system
+      placeholder: Python 3.12.5 on macOS 15
+    validations:
+      required: true
+  - type: textarea
+    id: goal
+    attributes:
+      label: What are you trying to do?
+      description: Describe the intended workflow and the outcome you expected.
+    validations:
+      required: true
+  - type: textarea
+    id: attempted
+    attributes:
+      label: What have you tried?
+      description: Include sanitized commands, configuration, and output that help reproduce the question.
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I searched the documentation and existing issues.
+          required: true
+        - label: I removed credentials, private source code, and personal data.
+          required: true

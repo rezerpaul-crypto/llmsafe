@@ -30,8 +30,11 @@ inputs:
 
 outputs:
   sarif-file:
-    description: Path to the generated SARIF report.
+    description: Path to the generated SARIF report, or empty when validation failed before scanning.
     value: ${{ steps.scan.outputs.sarif-file }}
+  exit-code:
+    description: LLMSafe process exit code (0 clean, 1 policy finding, 2 usage/configuration error).
+    value: ${{ steps.scan.outputs.exit-code }}
 
 runs:
   using: composite
@@ -43,26 +46,9 @@ runs:
       id: scan
       shell: bash
       env:
-        INPUT_BASELINE: ${{ inputs.baseline }}
-        INPUT_CONFIG: ${{ inputs.config }}
-        INPUT_FAIL_ON: ${{ inputs.fail-on }}
-        INPUT_PATH: ${{ inputs.path }}
-        INPUT_SARIF: ${{ inputs.sarif-file }}
-      run: |
-        baseline_args=()
-        config_args=()
-        status=0
-        if [[ -n "$INPUT_CONFIG" ]]; then
-          config_args=(--config "$INPUT_CONFIG")
-        fi
-        if [[ -n "$INPUT_BASELINE" ]]; then
-          baseline_args=(--baseline "$INPUT_BASELINE")
-        fi
-        llmsafe "$INPUT_PATH" \
-          --format sarif \
-          --output "$INPUT_SARIF" \
-          --fail-on "$INPUT_FAIL_ON" \
-          "${baseline_args[@]}" \
-          "${config_args[@]}" || status=$?
-        echo "sarif-file=$INPUT_SARIF" >> "$GITHUB_OUTPUT"
-        exit "$status"
+        LLMSAFE_INPUT_BASELINE: ${{ inputs.baseline }}
+        LLMSAFE_INPUT_CONFIG: ${{ inputs.config }}
+        LLMSAFE_INPUT_FAIL_ON: ${{ inputs.fail-on }}
+        LLMSAFE_INPUT_PATH: ${{ inputs.path }}
+        LLMSAFE_INPUT_SARIF: ${{ inputs.sarif-file }}
+      run: bash "${{ github.action_path }}/scripts/run-action.sh"

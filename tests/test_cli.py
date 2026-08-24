@@ -5,7 +5,7 @@ import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 
-from llmsafe.cli import main
+from llmsafe.cli import SCAN_SCHEMA_VERSION, main
 
 
 class CLITests(unittest.TestCase):
@@ -33,6 +33,7 @@ class CLITests(unittest.TestCase):
 
         payload = json.loads(output)
         self.assertEqual(exit_code, 1)
+        self.assertEqual(payload["schema_version"], SCAN_SCHEMA_VERSION)
         self.assertEqual(payload["summary"]["findings"], 1)
         self.assertEqual(payload["findings"][0]["rule_id"], "PY002")
 

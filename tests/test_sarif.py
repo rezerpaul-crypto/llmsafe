@@ -46,6 +46,31 @@ class SarifTests(unittest.TestCase):
         self.assertEqual(payload["version"], "2.1.0")
         self.assertEqual(payload["runs"][0]["results"][0]["ruleId"], "PY002")
 
+    def test_cross_file_evidence_uses_related_artifact(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            (root / "helpers.py").write_text(
+                "def evaluate(value):\n    return eval(value)\n",
+                encoding="utf-8",
+            )
+            (root / "app.py").write_text(
+                "from helpers import evaluate\n\n"
+                "def handle(user_input):\n"
+                "    return evaluate(user_input)\n",
+                encoding="utf-8",
+            )
+            result = Scanner().scan([root])
+            sarif = to_sarif(result)
+
+        flow_result = next(
+            item for item in sarif["runs"][0]["results"] if item["ruleId"] == "FLOW001"
+        )
+        related_uris = {
+            item["physicalLocation"]["artifactLocation"]["uri"]
+            for item in flow_result["relatedLocations"]
+        }
+        self.assertTrue(any(uri.endswith("helpers.py") for uri in related_uris))
+
     def test_policy_can_disable_a_rule_and_raise_threshold(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
