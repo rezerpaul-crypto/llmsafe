@@ -37,7 +37,7 @@ fail_on = "high"
 The composite GitHub Action accepts the same policy explicitly:
 
 ```yaml
-- uses: rezerpaul-crypto/llmsafe@v0.3.0
+- uses: rezerpaul-crypto/llmsafe@v0.2.1
   with:
     path: .
     baseline: .llmsafe-baseline.json

@@ -14,6 +14,8 @@ from llmsafe.models import ScanResult, Severity
 from llmsafe.sarif import to_sarif
 from llmsafe.scanner import Scanner
 
+SCAN_SCHEMA_VERSION = 1
+
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
@@ -79,7 +81,10 @@ def render_text(result: ScanResult) -> str:
         )
         lines.append(f"  {finding.message}")
         for evidence in finding.evidence:
-            lines.append(f"  Trace {evidence.line}:{evidence.column}: {evidence.message}")
+            location = f"{evidence.line}:{evidence.column}"
+            if evidence.path is not None:
+                location = f"{evidence.path}:{location}"
+            lines.append(f"  Trace {location}: {evidence.message}")
         lines.append(f"  Fix: {finding.remediation}")
     if result.errors:
         for error in result.errors:
@@ -96,6 +101,7 @@ def render_text(result: ScanResult) -> str:
 
 def render_json(result: ScanResult) -> str:
     payload = {
+        "schema_version": SCAN_SCHEMA_VERSION,
         "version": __version__,
         "summary": {
             "scanned_files": result.scanned_files,

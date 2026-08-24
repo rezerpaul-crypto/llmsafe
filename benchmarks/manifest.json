@@ -30,6 +30,46 @@
     {
       "path": "cases/insecure_mcp.json",
       "expected_rules": ["MCP001", "MCP002", "MCP003"]
+    },
+    {
+      "path": "cases/frameworks/openai_agents_vulnerable.py",
+      "expected_rules": ["FLOW002", "SHELL002"]
+    },
+    {
+      "path": "cases/frameworks/openai_agents_safe.py",
+      "expected_rules": []
+    },
+    {
+      "path": "cases/frameworks/anthropic_vulnerable.py",
+      "expected_rules": ["FLOW005"]
+    },
+    {
+      "path": "cases/frameworks/anthropic_safe.py",
+      "expected_rules": []
+    },
+    {
+      "path": "cases/frameworks/langchain_vulnerable.py",
+      "expected_rules": ["FLOW002", "SHELL002"]
+    },
+    {
+      "path": "cases/frameworks/langchain_safe.py",
+      "expected_rules": []
+    },
+    {
+      "path": "cases/frameworks/pydantic_ai_vulnerable.py",
+      "expected_rules": ["AGENT003", "FLOW002", "SHELL002"]
+    },
+    {
+      "path": "cases/frameworks/pydantic_ai_safe.py",
+      "expected_rules": []
+    },
+    {
+      "path": "cases/frameworks/mcp_vulnerable.py",
+      "expected_rules": ["FLOW002", "SHELL002"]
+    },
+    {
+      "path": "cases/frameworks/mcp_safe.py",
+      "expected_rules": []
     }
   ]
 }

@@ -12,8 +12,8 @@ code execution, shells, SQL, outbound requests, and dynamic tool dispatch.
 
 It runs locally. Source code is not uploaded to a model or external analysis service.
 
-> **Status:** `v0.2.1` is an early release. LLMSafe provides reviewable security signals, not a
-> guarantee that an AI system is secure.
+> **Status:** `v0.2.1` is the current public release. The repository is preparing `v0.3.0`; LLMSafe
+> provides reviewable security signals, not a guarantee that an AI system is secure.
 
 ## Why another security scanner?
 
@@ -61,7 +61,8 @@ agent.py:4:12: CRITICAL FLOW001 Untrusted data reaches code execution
 | Prompt trust | `LLM001` | Dynamic data interpolated into system/developer instructions |
 | MCP | `MCP001`–`MCP003` | Shell launch, remote HTTP, wildcard tool permissions |
 
-See the [complete rule catalog](docs/rules.md) and [threat model](docs/threat-model.md).
+See the [complete rule catalog](docs/rules.md), [framework coverage matrix](docs/framework-coverage.md),
+and [threat model](docs/threat-model.md).
 
 Integrations can query the same catalog without parsing documentation:
 
@@ -71,6 +72,11 @@ llmsafe --list-rules --format json
 ```
 
 The versioned JSON output includes every stable ID, severity, family, description, and remediation.
+See the [machine-readable integration contracts](docs/integration-contracts.md) for scan JSON, SARIF,
+catalog, and exit-code compatibility.
+
+Trusted internal tooling can add explicit organization-specific checks through the small
+[`llmsafe.api` extension surface](docs/extensions.md); the CLI does not dynamically load plugins.
 
 ## Install
 
@@ -87,10 +93,13 @@ For development:
 ```bash
 git clone https://github.com/rezerpaul-crypto/llmsafe.git
 cd llmsafe
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install -e ".[dev]"
+python3 scripts/dev.py
 ```
+
+For pipx, pre-commit, and reviewed-baseline adoption, see the
+[local integration guide](docs/local-integration.md).
+
+This creates an isolated environment and runs the same quality workflow as CI.
 
 ## Use the CLI
 
@@ -120,6 +129,18 @@ Exit codes are stable for automation:
 | `0` | No finding at or above the selected threshold |
 | `1` | At least one finding reached the selected threshold |
 | `2` | Invalid configuration, missing target, or scan error |
+
+## Five-minute demo
+
+Run a complete vulnerable scan, SARIF export, safe fix, and clean rescan without credentials or
+cloud resources:
+
+```bash
+.venv/bin/python demo/run.py
+```
+
+See the [demonstration walkthrough](docs/demo.md) for a clean-environment install and expected
+output.
 
 ## Repository policy
 
@@ -190,7 +211,10 @@ steps:
     run: exit 1
 ```
 
-The workflow uses only `contents: read` and `security-events: write`.
+The action returns the SARIF path and the scanner's `exit-code`. The workflow uses only
+`contents: read` and `security-events: write`; it does not use `pull_request_target` or require
+repository write access. Pin the action to a released tag or, for immutable supply-chain pinning,
+the full commit SHA for that release. See the [complete action contract](docs/github-action.md).
 
 ## Pre-commit
 
@@ -210,7 +234,7 @@ The checked-in benchmark exercises vulnerable and safe agent boundaries:
 python -m benchmarks.run
 ```
 
-Current expectations cover 18 rule-level signals across direct and local-helper code execution,
+Current expectations cover 28 rule-level signals across direct, local-helper, and cross-framework code execution,
 shell execution, SQL, SSRF, tool dispatch, prompt boundaries, high-impact tools, approval bypasses,
 and MCP. This is a regression corpus—not an industry benchmark or a claim of real-world detection
 rate. See the [benchmark methodology](docs/benchmark.md).
@@ -225,10 +249,15 @@ rate. See the [benchmark methodology](docs/benchmark.md).
 | Runtime guardrails | Enforce live policy and monitor model/tool calls | Out of scope; LLMSafe reviews source and configuration before runtime |
 
 Read the [architecture](docs/architecture.md) for implementation boundaries and tradeoffs.
+The [supply-chain security](docs/supply-chain.md) page records implemented controls and open gaps.
 
 ## Contributing and security
 
 Contributions are welcome. Start with [CONTRIBUTING.md](CONTRIBUTING.md) and the public
-[roadmap](ROADMAP.md). Report vulnerabilities privately according to [SECURITY.md](SECURITY.md).
+[roadmap](ROADMAP.md). The [governance policy](GOVERNANCE.md), [Code of
+Conduct](CODE_OF_CONDUCT.md), and [support policy](SUPPORT.md) explain how decisions are made and
+where to ask for help. Report vulnerabilities privately according to [SECURITY.md](SECURITY.md).
+
+The complete contributor setup and quality suite is one command: `python3 scripts/dev.py`.
 
 LLMSafe is released under the [MIT License](LICENSE).

@@ -3,24 +3,29 @@
 Thank you for helping make AI and agentic applications safer. Small, focused pull requests are
 easier to review and are especially valuable while the project is young.
 
+Participation is governed by the [Code of Conduct](CODE_OF_CONDUCT.md). The
+[governance policy](GOVERNANCE.md) explains how decisions, reviews, and maintainer access work.
+
 ## Set up a development environment
 
 Fork and clone the repository, then run:
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install -e ".[dev]"
-ruff check .
-pytest --cov=llmsafe --cov-report=term-missing
-python -m benchmarks.run
-llmsafe . --format sarif --output llmsafe.sarif
+python3 scripts/dev.py
 ```
 
-Python 3.9 is the minimum supported version. New code must work on both Python 3.9 and the newest
-version tested in CI.
+This one command creates an isolated environment and runs lint, tests, coverage, the benchmark, a
+CLI smoke test, and LLMSafe's self-scan. It does not require shell activation. See the
+[development workflow](docs/development.md) for repeat runs, Windows instructions, and individual
+commands.
+
+LLMSafe supports Python 3.9 through 3.14. CI runs the same contributor workflow on every supported
+version.
 
 ## Proposing a rule
+
+Read the [rule-authoring guide](docs/rule-authoring.md) for the complete workflow and a tested
+vulnerable/safe/edge-case example.
 
 A useful rule should include:
 
@@ -39,7 +44,7 @@ runtime or use unmistakable placeholders.
 
 - Keep each pull request focused on one concern.
 - Add or update tests for behavior changes.
-- Run the lint and test commands locally.
+- Run `python3 scripts/dev.py --check-only` locally.
 - Keep the curated benchmark at 100% expected-signal recall with no unexpected findings.
 - Explain important false-positive or compatibility tradeoffs in the description.
 - Do not reduce the coverage threshold to make a change pass.
@@ -63,4 +68,6 @@ By contributing, you agree that your contribution is licensed under the MIT Lice
 ## Issues and security reports
 
 Public issues are appropriate for bugs, false positives, false negatives, documentation, and rule
-ideas. Follow [SECURITY.md](SECURITY.md) for vulnerabilities that should be reported privately.
+ideas. Use [SUPPORT.md](SUPPORT.md) to choose the correct issue form. Follow
+[SECURITY.md](SECURITY.md) for vulnerabilities that should be reported privately. Never post real
+credentials, private source code, personal data, or embargoed vulnerability details.

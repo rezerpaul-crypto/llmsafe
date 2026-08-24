@@ -103,7 +103,7 @@ def _result(finding: Finding) -> Dict[str, Any]:
             "id": index,
             "message": {"text": evidence.message},
             "physicalLocation": {
-                "artifactLocation": {"uri": _uri(finding.path)},
+                "artifactLocation": {"uri": _uri(evidence.path or finding.path)},
                 "region": {"startLine": evidence.line, "startColumn": evidence.column},
             },
         }

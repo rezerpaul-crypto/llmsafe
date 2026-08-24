@@ -2,6 +2,7 @@
 
 Rule IDs are stable public identifiers. Severity represents potential impact when the pattern is
 reachable with attacker- or model-controlled data; application context can change the final risk.
+Contributors should start with the [rule-authoring guide](rule-authoring.md).
 
 ## Machine-readable catalog
 

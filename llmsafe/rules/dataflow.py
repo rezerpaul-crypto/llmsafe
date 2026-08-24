@@ -1,6 +1,7 @@
 """Local and inter-procedural dataflow analysis for agent trust boundaries."""
 
 import ast
+import os
 import re
 from collections import deque
 from dataclasses import dataclass
@@ -28,6 +29,11 @@ MODEL_CALL_MARKERS = (
     ".invoke",
     ".predict",
 )
+MODEL_CALL_NAMES = {
+    "runner.run",
+    "runner.run_streamed",
+    "runner.run_sync",
+}
 USER_CALLS = {
     "input",
     "request.get_json",
@@ -64,6 +70,7 @@ class FunctionSink:
 
     sink: Sink
     sink_name: str
+    path: Path
     line: int
     column: int
     parameters: Tuple[str, ...]
@@ -78,6 +85,26 @@ class FunctionSummary:
     vararg: Optional[str]
     kwarg: Optional[str]
     sinks: Tuple[FunctionSink, ...]
+
+
+@dataclass(frozen=True)
+class ImportedSymbol:
+    """One statically resolvable ``from module import symbol`` binding."""
+
+    module: str
+    symbol: str
+
+
+@dataclass(frozen=True)
+class ModuleInfo:
+    """Parsed local module and the import bindings visible at module scope."""
+
+    name: str
+    path: Path
+    tree: ast.Module
+    definitions: Mapping[str, Union[ast.FunctionDef, ast.AsyncFunctionDef]]
+    symbol_imports: Mapping[str, ImportedSymbol]
+    module_imports: Mapping[str, str]
 
 
 CODE_SINK = Sink(
@@ -159,6 +186,281 @@ class DataflowRule:
                 analyzer.analyze_scope(node.body, environment)
         yield from analyzer.findings
 
+    def scan_project(self, files: Mapping[Path, str]) -> Iterable[Finding]:
+        """Analyze included Python modules as one bounded local import graph."""
+
+        modules = self._project_modules(files)
+        if not modules:
+            return
+        function_nodes = {
+            f"{module.name}.{name}": (module, function)
+            for module in modules.values()
+            for name, function in module.definitions.items()
+        }
+        function_names = set(function_nodes)
+        call_targets = {
+            qualified_name: self._project_call_targets(
+                module,
+                function,
+                modules,
+                function_names,
+            )
+            for qualified_name, (module, function) in function_nodes.items()
+        }
+        dependents: Dict[str, Set[str]] = {name: set() for name in function_nodes}
+        for caller, targets in call_targets.items():
+            for callee in set(targets.values()):
+                dependents.setdefault(callee, set()).add(caller)
+
+        summaries: Dict[str, FunctionSummary] = {}
+        queue: Deque[str] = deque(sorted(function_nodes))
+        queued = set(queue)
+        while queue:
+            qualified_name = queue.popleft()
+            queued.discard(qualified_name)
+            module, function = function_nodes[qualified_name]
+            known = {
+                call: summaries[target]
+                for call, target in call_targets[qualified_name].items()
+                if target in summaries
+            }
+            updated = self._summarize_function(module.path, function, known)
+            if summaries.get(qualified_name) == updated:
+                continue
+            summaries[qualified_name] = updated
+            for caller in sorted(dependents.get(qualified_name, set())):
+                if caller not in queued:
+                    queue.append(caller)
+                    queued.add(caller)
+
+        for module in sorted(modules.values(), key=lambda item: item.name):
+            known = self._project_summaries_for(
+                module,
+                module.tree,
+                modules,
+                function_names,
+                summaries,
+            )
+            analyzer = _ScopeAnalyzer(module.path, known)
+            analyzer.analyze_scope(module.tree.body, {})
+            for function in module.definitions.values():
+                environment = analyzer.parameter_environment(function.args)
+                analyzer.analyze_scope(function.body, environment)
+            yield from analyzer.findings
+
+    @classmethod
+    def _project_modules(cls, files: Mapping[Path, str]) -> Dict[str, ModuleInfo]:
+        parsed: Dict[Path, Tuple[Path, ast.Module]] = {}
+        for path, content in files.items():
+            if path.suffix.lower() != ".py":
+                continue
+            tree = parse_python(content)
+            if isinstance(tree, ast.Module):
+                parsed[path] = (path.resolve(), tree)
+        if not parsed:
+            return {}
+
+        common_root = Path(
+            os.path.commonpath([str(absolute.parent) for absolute, _ in parsed.values()])
+        )
+        included_paths = {absolute for absolute, _ in parsed.values()}
+        if (common_root / "__init__.py") in included_paths:
+            common_root = common_root.parent
+
+        basic: Dict[str, ModuleInfo] = {}
+        ambiguous: Set[str] = set()
+        for original, (absolute, tree) in parsed.items():
+            try:
+                relative = absolute.relative_to(common_root)
+            except ValueError:
+                continue
+            parts = list(relative.parts)
+            if relative.name == "__init__.py":
+                parts = parts[:-1]
+            else:
+                parts[-1] = relative.stem
+            if not parts:
+                continue
+            module_name = ".".join(parts)
+            if module_name in basic:
+                ambiguous.add(module_name)
+                continue
+            definitions = {
+                node.name: node
+                for node in tree.body
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+            }
+            basic[module_name] = ModuleInfo(
+                module_name,
+                original,
+                tree,
+                definitions,
+                {},
+                {},
+            )
+        for module_name in ambiguous:
+            basic.pop(module_name, None)
+
+        module_names = set(basic)
+        modules: Dict[str, ModuleInfo] = {}
+        for module_name, info in basic.items():
+            symbol_imports, module_imports = cls._module_imports(info, module_names)
+            modules[module_name] = ModuleInfo(
+                info.name,
+                info.path,
+                info.tree,
+                info.definitions,
+                symbol_imports,
+                module_imports,
+            )
+        return modules
+
+    @classmethod
+    def _module_imports(
+        cls,
+        module: ModuleInfo,
+        module_names: Set[str],
+    ) -> Tuple[Dict[str, ImportedSymbol], Dict[str, str]]:
+        symbol_imports: Dict[str, ImportedSymbol] = {}
+        module_imports: Dict[str, str] = {}
+        for node in module.tree.body:
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    local_name = alias.asname or alias.name.split(".", 1)[0]
+                    imported_module = alias.name if alias.asname else local_name
+                    module_imports[local_name] = imported_module
+            elif isinstance(node, ast.ImportFrom):
+                imported_module = cls._absolute_import_name(module, node)
+                if not imported_module:
+                    continue
+                for alias in node.names:
+                    if alias.name == "*":
+                        continue
+                    local_name = alias.asname or alias.name
+                    possible_module = f"{imported_module}.{alias.name}"
+                    if possible_module in module_names:
+                        module_imports[local_name] = possible_module
+                    else:
+                        symbol_imports[local_name] = ImportedSymbol(
+                            imported_module,
+                            alias.name,
+                        )
+        return symbol_imports, module_imports
+
+    @staticmethod
+    def _absolute_import_name(module: ModuleInfo, node: ast.ImportFrom) -> str:
+        if node.level == 0:
+            return node.module or ""
+        package = (
+            module.name
+            if module.path.name == "__init__.py"
+            else module.name.rpartition(".")[0]
+        )
+        parts = package.split(".") if package else []
+        parents = node.level - 1
+        if parents > len(parts):
+            return ""
+        if parents:
+            parts = parts[:-parents]
+        if node.module:
+            parts.extend(node.module.split("."))
+        return ".".join(parts)
+
+    @classmethod
+    def _project_summaries_for(
+        cls,
+        module: ModuleInfo,
+        node: ast.AST,
+        modules: Mapping[str, ModuleInfo],
+        function_names: Set[str],
+        summaries: Mapping[str, FunctionSummary],
+    ) -> Dict[str, FunctionSummary]:
+        targets = cls._project_call_targets(module, node, modules, function_names)
+        return {
+            call: summaries[target]
+            for call, target in targets.items()
+            if target in summaries
+        }
+
+    @classmethod
+    def _project_call_targets(
+        cls,
+        module: ModuleInfo,
+        node: ast.AST,
+        modules: Mapping[str, ModuleInfo],
+        function_names: Set[str],
+    ) -> Dict[str, str]:
+        targets: Dict[str, str] = {}
+        for child in ast.walk(node):
+            if not isinstance(child, ast.Call):
+                continue
+            name = call_name(child)
+            if not name:
+                continue
+            target = cls._resolve_project_function(
+                module.name,
+                name,
+                modules,
+                function_names,
+                set(),
+            )
+            if target is not None:
+                targets[name] = target
+        return targets
+
+    @classmethod
+    def _resolve_project_function(
+        cls,
+        module_name: str,
+        symbol: str,
+        modules: Mapping[str, ModuleInfo],
+        function_names: Set[str],
+        seen: Set[Tuple[str, str]],
+    ) -> Optional[str]:
+        state = (module_name, symbol)
+        if state in seen or not symbol:
+            return None
+        seen.add(state)
+        direct = f"{module_name}.{symbol}"
+        if direct in function_names:
+            return direct
+        module = modules.get(module_name)
+        if module is None:
+            return None
+
+        first, separator, remainder = symbol.partition(".")
+        imported_symbol = module.symbol_imports.get(first)
+        if imported_symbol is not None:
+            target_symbol = imported_symbol.symbol
+            if separator:
+                target_symbol = f"{target_symbol}.{remainder}"
+            return cls._resolve_project_function(
+                imported_symbol.module,
+                target_symbol,
+                modules,
+                function_names,
+                seen,
+            )
+        imported_module = module.module_imports.get(first)
+        if imported_module is not None and separator:
+            return cls._resolve_project_function(
+                imported_module,
+                remainder,
+                modules,
+                function_names,
+                seen,
+            )
+        child_module = f"{module_name}.{first}"
+        if separator and child_module in modules:
+            return cls._resolve_project_function(
+                child_module,
+                remainder,
+                modules,
+                function_names,
+                seen,
+            )
+        return None
+
     def _function_summaries(
         self,
         path: Path,
@@ -232,6 +534,7 @@ class DataflowRule:
             (
                 item.sink.rule_id,
                 item.sink_name,
+                item.path,
                 item.line,
                 item.column,
                 item.parameters,
@@ -456,6 +759,7 @@ class _ScopeAnalyzer:
                     function_sink.line,
                     function_sink.column,
                     f"local helper reaches {function_sink.sink_name}",
+                    function_sink.path if function_sink.path != self.path else None,
                 )
             self._report(
                 function_sink.sink,
@@ -463,6 +767,11 @@ class _ScopeAnalyzer:
                 display_name,
                 taint,
                 helper_evidence=helper_evidence,
+                summary_location=(
+                    function_sink.path,
+                    function_sink.line,
+                    function_sink.column,
+                ),
             )
 
     def _report(
@@ -472,6 +781,7 @@ class _ScopeAnalyzer:
         name: str,
         taint: Taint,
         helper_evidence: Optional[Evidence] = None,
+        summary_location: Optional[Tuple[Path, int, int]] = None,
     ) -> None:
         ordered = sorted(taint, key=lambda source: (source.line, source.column, source.label))
         parameters = tuple(
@@ -488,12 +798,18 @@ class _ScopeAnalyzer:
         self._seen.add(location)
         if self.capture_parameter_sinks:
             if parameters:
+                summary_path, summary_line, summary_column = summary_location or (
+                    self.path,
+                    node.lineno,
+                    node.col_offset + 1,
+                )
                 self.summary_sinks.append(
                     FunctionSink(
                         sink,
                         name,
-                        node.lineno,
-                        node.col_offset + 1,
+                        summary_path,
+                        summary_line,
+                        summary_column,
                         parameters,
                     )
                 )
@@ -524,7 +840,7 @@ class _ScopeAnalyzer:
         lowered = name.lower()
         if lowered in USER_CALLS or lowered.startswith("request."):
             return self._source("user", name or "request", node)
-        if any(marker in lowered for marker in MODEL_CALL_MARKERS):
+        if lowered in MODEL_CALL_NAMES or any(marker in lowered for marker in MODEL_CALL_MARKERS):
             return self._source("model", name, node)
         return None
 

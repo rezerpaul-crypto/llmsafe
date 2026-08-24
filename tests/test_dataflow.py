@@ -24,6 +24,20 @@ def run(client, user_input):
         self.assertGreaterEqual(len(findings[0].evidence), 2)
         self.assertEqual(findings[0].evidence[-1].message, "reaches eval")
 
+    def test_traces_openai_agents_runner_result_to_process(self):
+        content = """
+import subprocess
+from agents import Runner
+
+async def run(agent):
+    result = await Runner.run(agent, "inspect the repository")
+    subprocess.run(result.final_output, shell=True)
+"""
+        findings = findings_for(DataflowRule(), content)
+
+        self.assertEqual([finding.rule_id for finding in findings], ["FLOW002"])
+        self.assertIn("model", findings[0].message)
+
     def test_traces_user_input_through_interpolation_to_shell(self):
         content = """
 import subprocess

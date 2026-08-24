@@ -62,4 +62,5 @@ location and is intentionally more visible in review.
 
 Excludes are matched against the rendered path, the base filename, and the pattern under any
 parent path. Common dependency, build, cache, virtual-environment, and VCS directories are skipped
-by default.
+by default. Directory traversal does not follow symbolic links, and symbolic-link files are not
+read, so a repository link cannot silently expand the scan outside the selected tree.
