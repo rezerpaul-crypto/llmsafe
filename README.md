@@ -6,34 +6,80 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/Python-3.9%2B-3776AB.svg)](pyproject.toml)
 
-LLMSafe is an open-source static security scanner for AI-powered and agentic Python
-applications. It traces user input and model-controlled data into dangerous capabilities such as
-code execution, shells, SQL, outbound requests, and dynamic tool dispatch.
+**Static security analysis built for Python AI agents.**
 
-It runs locally. Source code is not uploaded to a model or external analysis service.
+LLMSafe traces untrusted user input and model-controlled data into code execution, shells, SQL,
+outbound URLs, and dynamic tools. It also flags high-impact agent tools, privileged prompt
+construction, secrets, unsafe Python, and risky MCP configuration—before deployment.
 
-> **Status:** `v0.2.1` is the current stable release. `v0.3.0rc1` is available as a public pilot
-> pre-release; LLMSafe provides reviewable security signals, not a guarantee that an AI system is
-> secure.
+**No API key. No model calls. No source upload. One local scan command.**
 
-Maintainers of public Python AI and agent projects can request one of five free, bounded
-[compatibility pilots](docs/pilot-program.md). Pilot scans run locally without credentials or
-deployed access, and findings remain private unless the project separately approves disclosure.
+[Quick start](#start-in-60-seconds) · [See a real finding](#see-the-risk-not-just-the-api) ·
+[Why LLMSafe](docs/why-llmsafe.md) · [Rule catalog](docs/rules.md) ·
+[GitHub Action](docs/github-action.md) · [Request a pilot](docs/pilot-program.md)
 
-## Why another security scanner?
+> **Project status:** `v0.2.1` is the current stable release. `v0.3.0rc1` is a public pilot
+> pre-release with bounded cross-file analysis and expanded integration contracts. LLMSafe returns
+> reviewable security evidence; it does not certify that an AI system is secure.
 
-Traditional Python scanners are good at finding dangerous APIs. Agentic applications add a
-different question: **can untrusted user or model output reach that capability?**
+## The security question LLMSafe answers
+
+General Python scanners can identify a dangerous API. Agentic applications add a second question:
+
+> **Can data controlled by a user or model reach that dangerous capability?**
+
+LLMSafe models that trust boundary directly:
 
 ```mermaid
 flowchart LR
-    A["User input"] --> C["Assignments and transforms"]
-    B["Model output"] --> C
-    C --> D["Shell / eval / SQL / HTTP / tool dispatch"]
-    D --> E["Finding with source-to-sink evidence"]
+    U["User input"] --> A["Agent / LLM application"]
+    M["Model-controlled output"] --> A
+    A --> F["Bounded dataflow analysis"]
+    F --> C["Code / shell"]
+    F --> D["SQL / outbound URL"]
+    F --> T["Dynamic or high-impact tools"]
+    F --> P["Prompt / MCP boundaries"]
+    C --> E["Finding + evidence path + remediation"]
+    D --> E
+    T --> E
+    P --> E
 ```
 
-LLMSafe combines focused API checks with AST-based dataflow and agent-framework rules:
+The scanner parses source and configuration without importing the target project, executing tools,
+contacting a model provider, or requiring deployed access.
+
+## Start in 60 seconds
+
+LLMSafe supports Python 3.9 and newer.
+
+```bash
+python -m pip install llmsafe
+llmsafe .
+```
+
+Scan selected paths and fail CI on medium-or-higher findings:
+
+```bash
+llmsafe src agent.py --fail-on medium --exclude "generated/**"
+```
+
+Generate reviewable reports for automation and GitHub Code Scanning:
+
+```bash
+llmsafe . --format json --output reports/llmsafe.json
+llmsafe . --format sarif --output reports/llmsafe.sarif
+```
+
+Prefer an isolated one-off run? Use the pinned stable release with pipx:
+
+```bash
+pipx run --spec llmsafe==0.2.1 llmsafe . --fail-on high
+```
+
+See [local integration](docs/local-integration.md) for pre-commit and baseline adoption, or run the
+[credential-free five-minute demo](docs/demo.md).
+
+## See the risk, not just the API
 
 ```python
 def run_agent(client, user_input):
@@ -42,8 +88,7 @@ def run_agent(client, user_input):
     return eval(generated_code)
 ```
 
-The scanner reports both the dangerous `eval()` and the path from the model response to that
-sink:
+LLMSafe reports the dangerous operation **and** the evidence path from user/model-controlled data:
 
 ```text
 agent.py:4:12: CRITICAL FLOW001 Untrusted data reaches code execution
@@ -54,7 +99,27 @@ agent.py:4:12: CRITICAL FLOW001 Untrusted data reaches code execution
   Fix: Replace dynamic execution with a typed parser and an allow-listed operation.
 ```
 
+That path is the core product: a reviewer can see **what is controlled, where it flows, which
+capability it reaches, and how to remove the boundary failure**.
+
+## What makes LLMSafe different
+
+| Design choice | What it gives you |
+| --- | --- |
+| Agent-native trust model | User input and model output are treated as untrusted when they reach code, processes, queries, URLs, or tools. |
+| Explainable, bounded dataflow | Findings include source-to-sink evidence across direct calls and supported local-module helpers instead of only naming a risky API. |
+| Static and credential-free | Scan pull requests and source trees without running the application, invoking a model, or uploading code. |
+| Stable automation contracts | Versioned JSON, deterministic SARIF, rule metadata, and documented exit codes for CI and security tooling. |
+| Low-friction adoption | Start locally, add a reviewed baseline for existing findings, then enforce only new risk in pre-commit or CI. |
+| Security-engineering scope | Explicit limitations, safe counterexamples, regression fixtures, and remediations are part of the public contract. |
+
+Read [why LLMSafe exists](docs/why-llmsafe.md) for the full positioning, use cases, and decision
+guide. The [threat model](docs/threat-model.md) states exactly what LLMSafe protects and what remains
+out of scope.
+
 ## Detection coverage
+
+LLMSafe currently publishes 23 stable built-in rule IDs:
 
 | Family | Rule IDs | Examples |
 | --- | --- | --- |
@@ -67,7 +132,8 @@ agent.py:4:12: CRITICAL FLOW001 Untrusted data reaches code execution
 | MCP | `MCP001`–`MCP003` | Shell launch, remote HTTP, wildcard tool permissions |
 
 See the [complete rule catalog](docs/rules.md), [framework coverage matrix](docs/framework-coverage.md),
-and [threat model](docs/threat-model.md).
+and [cross-file analysis boundary](docs/cross-file-analysis.md). Framework names describe tested
+syntax—not blanket support for every framework feature.
 
 Integrations can query the same catalog without parsing documentation:
 
@@ -76,116 +142,33 @@ llmsafe --list-rules
 llmsafe --list-rules --format json
 ```
 
-The versioned JSON output includes every stable ID, severity, family, description, and remediation.
-See the [machine-readable integration contracts](docs/integration-contracts.md) for scan JSON, SARIF,
-catalog, and exit-code compatibility.
-
 Trusted internal tooling can add explicit organization-specific checks through the small
 [`llmsafe.api` extension surface](docs/extensions.md); the CLI does not dynamically load plugins.
 
-## Install
+## Where LLMSafe fits in an AI security stack
 
-LLMSafe supports Python 3.9 and newer.
+| Need | Use | LLMSafe's role |
+| --- | --- | --- |
+| Broad language and API security | General SAST / Python security linter | Complement it with AI-agent trust-boundary analysis. |
+| Organization-specific patterns | Pattern-rule engine | Use LLMSafe's opinionated agent rules without writing a rule first. |
+| Vulnerable dependencies | SCA / dependency scanner | Out of scope; run it alongside LLMSafe. |
+| Prompt, model, or deployed-agent attacks | Evaluation / red-team tooling | Complement runtime probing with pre-deployment source analysis. |
+| Live authorization and containment | Runtime guardrails / sandbox | Out of scope; use LLMSafe to review code and configuration before runtime. |
+| Model/user data reaching dangerous capabilities | **LLMSafe** | Trace the source-to-sink path and return actionable evidence. |
 
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install llmsafe
-```
+LLMSafe is not trying to replace a complete AppSec stack. It owns one high-value layer: **static
+analysis of the code paths that connect untrusted AI data to real application capabilities**.
 
-For development:
+## Choose your path
 
-```bash
-git clone https://github.com/rezerpaul-crypto/llmsafe.git
-cd llmsafe
-python3 scripts/dev.py
-```
-
-For pipx, pre-commit, and reviewed-baseline adoption, see the
-[local integration guide](docs/local-integration.md).
-
-This creates an isolated environment and runs the same quality workflow as CI.
-
-## Use the CLI
-
-Scan the current repository:
-
-```bash
-llmsafe .
-```
-
-Scan selected paths and fail on medium-or-higher findings:
-
-```bash
-llmsafe src agent.py --fail-on medium --exclude "generated/**"
-```
-
-Generate machine-readable reports:
-
-```bash
-llmsafe . --format json --output reports/llmsafe.json
-llmsafe . --format sarif --output reports/llmsafe.sarif
-```
-
-Exit codes are stable for automation:
-
-| Code | Meaning |
-| --- | --- |
-| `0` | No finding at or above the selected threshold |
-| `1` | At least one finding reached the selected threshold |
-| `2` | Invalid configuration, missing target, or scan error |
-
-## Five-minute demo
-
-Run a complete vulnerable scan, SARIF export, safe fix, and clean rescan without credentials or
-cloud resources:
-
-```bash
-.venv/bin/python demo/run.py
-```
-
-See the [demonstration walkthrough](docs/demo.md) for a clean-environment install and expected
-output.
-
-## Repository policy
-
-Commit a `.llmsafe.toml` file:
-
-```toml
-[llmsafe]
-exclude = ["generated/**", "vendor/**"]
-fail_on = "high"
-max_file_size = 1000000
-disabled_rules = ["PY004"]
-```
-
-CLI options override or extend repository policy. Policy can also live under `[tool.llmsafe]` in
-`pyproject.toml`. See [configuration](docs/configuration.md).
-
-### Adopt LLMSafe without ignoring new risk
-
-Existing repositories can review and commit a baseline of current findings:
-
-```bash
-llmsafe . --write-baseline .llmsafe-baseline.json
-llmsafe . --baseline .llmsafe-baseline.json
-```
-
-The second command reports and fails only on findings not represented in the baseline. Matching is
-line-independent, duplicate-aware, and deterministic so ordinary code movement does not create
-noise while an additional dangerous operation is still reported. Baselines are review artifacts,
-not permanent suppressions; see [incremental adoption](docs/baselines.md).
-
-### Suppress one reviewed finding
-
-Place a narrow suppression on the finding line or immediately above it:
-
-```python
-# llmsafe: ignore[PY001] -- expression is generated from a fixed internal grammar
-result = eval(TRUSTED_EXPRESSION)
-```
-
-Prefer a rule-specific suppression over a bare `llmsafe: ignore`.
+| You are… | Start here | Outcome |
+| --- | --- | --- |
+| Building a Python agent | [Five-minute demo](docs/demo.md) | See a vulnerable flow, SARIF export, fix, and clean rescan. |
+| Adding checks to an existing repository | [Local integration](docs/local-integration.md) | Adopt with pipx, pre-commit, and a reviewed baseline. |
+| Owning CI or AppSec | [GitHub Action](docs/github-action.md) | Upload SARIF and enforce a documented severity threshold. |
+| Building security tooling | [Integration contracts](docs/integration-contracts.md) | Consume stable JSON, SARIF, exit codes, and rule metadata. |
+| Maintaining an AI/MCP project | [Compatibility pilot](docs/pilot-program.md) | Request a bounded, private compatibility review of public source. |
+| Contributing a detection | [Rule-authoring guide](docs/rule-authoring.md) | Add a rule with vulnerable, safe, and edge-case tests. |
 
 ## GitHub Code Scanning
 
@@ -216,53 +199,84 @@ steps:
     run: exit 1
 ```
 
-The action returns the SARIF path and the scanner's `exit-code`. The workflow uses only
-`contents: read` and `security-events: write`; it does not use `pull_request_target` or require
-repository write access. Pin the action to a released tag or, for immutable supply-chain pinning,
-the full commit SHA for that release. See the [complete action contract](docs/github-action.md).
+The action returns the SARIF path and scanner exit code. It needs only `contents: read` plus
+`security-events: write` for SARIF upload; it does not require repository write access. Pin the
+action to a release tag or its full commit SHA. See the [complete action contract](docs/github-action.md).
 
-## Pre-commit
+## Adopt without hiding existing risk
 
-```yaml
-repos:
-  - repo: https://github.com/rezerpaul-crypto/llmsafe
-    rev: v0.2.1
-    hooks:
-      - id: llmsafe
+Existing repositories can review and commit a baseline of current findings:
+
+```bash
+llmsafe . --write-baseline .llmsafe-baseline.json
+llmsafe . --baseline .llmsafe-baseline.json
 ```
 
-## Benchmark
+The second command reports and fails only on findings not represented in the baseline. Matching is
+line-independent, duplicate-aware, and deterministic, so ordinary code movement does not create
+noise while an additional dangerous operation is still reported. Baselines are review artifacts,
+not permanent suppressions; see [incremental adoption](docs/baselines.md).
 
-The checked-in benchmark exercises vulnerable and safe agent boundaries:
+For one reviewed finding, use a narrow rule-specific suppression:
+
+```python
+# llmsafe: ignore[PY001] -- expression is generated from a fixed internal grammar
+result = eval(TRUSTED_EXPRESSION)
+```
+
+Repository policy can live in `.llmsafe.toml` or under `[tool.llmsafe]` in `pyproject.toml`:
+
+```toml
+[llmsafe]
+exclude = ["generated/**", "vendor/**"]
+fail_on = "high"
+max_file_size = 1000000
+disabled_rules = ["PY004"]
+```
+
+See [configuration](docs/configuration.md) for the complete contract.
+
+## Automation contracts
+
+Exit codes are stable:
+
+| Code | Meaning |
+| --- | --- |
+| `0` | No finding at or above the selected threshold |
+| `1` | At least one finding reached the selected threshold |
+| `2` | Invalid configuration, missing target, or scan error |
+
+The versioned JSON output, SARIF, catalog, and exit-code contracts are documented in
+[machine-readable integration contracts](docs/integration-contracts.md).
+
+## Evidence, not inflated claims
+
+The checked-in regression corpus currently expects 28 rule-level signals across vulnerable and
+safe examples for direct, local-helper, and supported framework patterns:
 
 ```bash
 python -m benchmarks.run
 ```
 
-Current expectations cover 28 rule-level signals across direct, local-helper, and cross-framework code execution,
-shell execution, SQL, SSRF, tool dispatch, prompt boundaries, high-impact tools, approval bypasses,
-and MCP. This is a regression corpus—not an industry benchmark or a claim of real-world detection
-rate. See the [benchmark methodology](docs/benchmark.md).
+This is a regression corpus—not an industry benchmark or a claim of real-world detection rate. The
+[benchmark methodology](docs/benchmark.md), [real-world benchmark protocol](docs/real-world-benchmark-protocol.md),
+and [performance budget](docs/performance.md) make that distinction explicit.
 
-## How LLMSafe fits
+## Contributing, support, and security
 
-| Tool category | Primary strength | LLMSafe relationship |
-| --- | --- | --- |
-| General Python SAST | Broad language and API security checks | Complementary; LLMSafe focuses on AI/agent trust boundaries |
-| Pattern-rule engines | Highly customizable organizational rules | LLMSafe supplies opinionated agent rules without rule authoring |
-| Dependency scanners | Known vulnerable packages and supply chain | Out of scope; run alongside LLMSafe |
-| Runtime guardrails | Enforce live policy and monitor model/tool calls | Out of scope; LLMSafe reviews source and configuration before runtime |
+LLMSafe is early and intentionally open to rigorous feedback. Useful contributions include new
+agent boundaries, safe counterexamples, reproducible false positives, framework fixtures,
+integration improvements, and technical documentation.
 
-Read the [architecture](docs/architecture.md) for implementation boundaries and tradeoffs.
-The [supply-chain security](docs/supply-chain.md) page records implemented controls and open gaps.
+- Start with [CONTRIBUTING.md](CONTRIBUTING.md) and the [public roadmap](ROADMAP.md).
+- Ask installation or usage questions through [SUPPORT.md](SUPPORT.md).
+- Report vulnerabilities privately according to [SECURITY.md](SECURITY.md).
+- Read [GOVERNANCE.md](GOVERNANCE.md) and the [Code of Conduct](CODE_OF_CONDUCT.md) before participating.
 
-## Contributing and security
+The complete contributor setup and quality suite is one command:
 
-Contributions are welcome. Start with [CONTRIBUTING.md](CONTRIBUTING.md) and the public
-[roadmap](ROADMAP.md). The [governance policy](GOVERNANCE.md), [Code of
-Conduct](CODE_OF_CONDUCT.md), and [support policy](SUPPORT.md) explain how decisions are made and
-where to ask for help. Report vulnerabilities privately according to [SECURITY.md](SECURITY.md).
-
-The complete contributor setup and quality suite is one command: `python3 scripts/dev.py`.
+```bash
+python3 scripts/dev.py
+```
 
 LLMSafe is released under the [MIT License](LICENSE).
