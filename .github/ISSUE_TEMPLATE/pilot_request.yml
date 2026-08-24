@@ -1,0 +1,75 @@
+name: Compatibility pilot request
+description: Request a bounded LLMSafe review of a public Python AI or agent project
+title: "pilot: "
+labels: [question, triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for considering an LLMSafe pilot. This issue is public: do not post credentials,
+        private source code, scan findings, personal data, or embargoed security information.
+        Read the pilot scope and privacy boundaries before submitting this request.
+  - type: input
+    id: repository
+    attributes:
+      label: Public repository URL
+      description: Link to the public Python AI or agent project you maintain or represent.
+      placeholder: https://github.com/owner/project
+    validations:
+      required: true
+  - type: input
+    id: revision
+    attributes:
+      label: Proposed commit or tag
+      description: An immutable commit is preferred; leave blank if the maintainer should select it later.
+      placeholder: 0123456789abcdef0123456789abcdef01234567
+    validations:
+      required: false
+  - type: textarea
+    id: scenario
+    attributes:
+      label: Pilot scenario
+      description: Describe the agent, MCP, model-output, or tool-calling boundary you want reviewed.
+      placeholder: Review how model-selected tool arguments reach local process or network capabilities.
+    validations:
+      required: true
+  - type: dropdown
+    id: ecosystem
+    attributes:
+      label: Primary ecosystem
+      options:
+        - Framework-independent Python
+        - OpenAI Agents
+        - Anthropic
+        - LangChain / LangGraph
+        - PydanticAI
+        - MCP
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: success
+    attributes:
+      label: What would make the pilot useful?
+      description: Name the compatibility question, false-positive concern, or integration outcome that matters.
+    validations:
+      required: true
+  - type: input
+    id: security_policy
+    attributes:
+      label: Published private security-contact instructions
+      description: Optional URL to the project's SECURITY.md or equivalent private reporting policy.
+      placeholder: https://github.com/owner/project/security/policy
+    validations:
+      required: false
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Scope and privacy checks
+      options:
+        - label: I read the pilot program and understand that LLMSafe is not a security certification or guarantee.
+          required: true
+        - label: This request contains only public project information and no sensitive material.
+          required: true
+        - label: I understand that scan scope and any public disclosure require separate explicit agreement.
+          required: true

@@ -10,6 +10,7 @@ realistic expectations.
 | Reproducible bug, false positive, or false negative | [Bug report](https://github.com/rezerpaul-crypto/llmsafe/issues/new?template=bug_report.yml) |
 | Installation, configuration, or usage question | [Support question](https://github.com/rezerpaul-crypto/llmsafe/issues/new?template=support_question.yml) |
 | New detection idea | [Rule proposal](https://github.com/rezerpaul-crypto/llmsafe/issues/new?template=rule_proposal.yml) |
+| Public-project compatibility pilot | [Pilot request](https://github.com/rezerpaul-crypto/llmsafe/issues/new?template=pilot_request.yml) |
 | Vulnerability in LLMSafe itself | [Private vulnerability report](https://github.com/rezerpaul-crypto/llmsafe/security/advisories/new) |
 | Conduct concern | Private path in the [Code of Conduct](CODE_OF_CONDUCT.md) |
 
@@ -32,3 +33,7 @@ public issue tracker.
 
 Scanner findings are evidence for human review. They do not prove exploitability and should not be
 treated as a substitute for a broader security program.
+
+The bounded pilot program is described separately in [docs/pilot-program.md](docs/pilot-program.md).
+Do not place private code, credentials, scan findings, or embargoed security information in a pilot
+request.
