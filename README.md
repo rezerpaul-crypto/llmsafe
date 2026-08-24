@@ -16,6 +16,10 @@ It runs locally. Source code is not uploaded to a model or external analysis ser
 > pre-release; LLMSafe provides reviewable security signals, not a guarantee that an AI system is
 > secure.
 
+Maintainers of public Python AI and agent projects can request one of five free, bounded
+[compatibility pilots](docs/pilot-program.md). Pilot scans run locally without credentials or
+deployed access, and findings remain private unless the project separately approves disclosure.
+
 ## Why another security scanner?
 
 Traditional Python scanners are good at finding dangerous APIs. Agentic applications add a
