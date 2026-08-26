@@ -56,6 +56,26 @@ class ProjectDataflowTests(unittest.TestCase):
 
         self.assertEqual([finding.rule_id for finding in findings], ["FLOW002"])
 
+    def test_preserves_keyword_sink_binding_across_files(self):
+        findings = self.scan(
+            {
+                "helpers.py": (
+                    "import requests\n\n"
+                    "def fetch(*, url):\n"
+                    "    return requests.get(url=url)\n"
+                ),
+                "app.py": (
+                    "from helpers import fetch\n\n"
+                    "def handle(model_output):\n"
+                    "    return fetch(url=model_output)\n"
+                ),
+            }
+        )
+
+        self.assertEqual([finding.rule_id for finding in findings], ["FLOW004"])
+        sink = next(step for step in findings[0].evidence if "helper reaches" in step.message)
+        self.assertEqual(sink.path.name, "helpers.py")
+
     def test_resolves_unaliased_module_import(self):
         findings = self.scan(
             {

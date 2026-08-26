@@ -60,6 +60,74 @@ def fetch():
         findings = findings_for(DataflowRule(), content)
         self.assertEqual([finding.rule_id for finding in findings], ["FLOW004"])
 
+    def test_maps_keyword_and_method_specific_sink_arguments(self):
+        content = """
+import httpx
+import requests
+import subprocess
+
+def run(model_output, user_input, cursor):
+    subprocess.run(args=model_output)
+    cursor.execute(operation=user_input)
+    requests.get(url=user_input)
+    requests.request("GET", model_output)
+    httpx.stream("GET", url=model_output)
+"""
+        findings = findings_for(DataflowRule(), content)
+
+        self.assertEqual(
+            [finding.rule_id for finding in findings],
+            ["FLOW002", "FLOW003", "FLOW004", "FLOW004", "FLOW004"],
+        )
+
+    def test_ignores_tainted_non_sink_arguments(self):
+        content = """
+import httpx
+import requests
+import subprocess
+
+def run(user_input, cursor):
+    subprocess.run(["fixed-command"], env=user_input)
+    cursor.execute("SELECT value FROM docs WHERE id = ?", parameters=[user_input])
+    requests.get("https://example.com/search", params={"query": user_input})
+    requests.request(user_input, "https://example.com/health")
+    httpx.stream(user_input, "https://example.com/events")
+    subprocess.run(["fixed-command"], **user_input)
+    requests.get("https://example.com/health", **user_input)
+"""
+        self.assertEqual(findings_for(DataflowRule(), content), [])
+
+    def test_treats_unpacked_keywords_as_sink_input_when_unbound(self):
+        content = """
+import requests
+import subprocess
+
+def run(user_input, model_output):
+    subprocess.run(**user_input)
+    requests.get(**model_output)
+"""
+        findings = findings_for(DataflowRule(), content)
+
+        self.assertEqual(
+            [finding.rule_id for finding in findings],
+            ["FLOW002", "FLOW004"],
+        )
+
+    def test_keyword_sink_binding_survives_local_function_summary(self):
+        content = """
+import subprocess
+
+def launch(**options):
+    subprocess.run(**options)
+
+def run(model_output):
+    launch(args=model_output)
+"""
+        findings = findings_for(DataflowRule(), content)
+
+        self.assertEqual([finding.rule_id for finding in findings], ["FLOW002"])
+        self.assertIn("launch() -> subprocess.run", findings[0].message)
+
     def test_traces_dynamic_sql_and_tool_dispatch(self):
         content = """
 def lookup(user_query, model_output, cursor, tools):

@@ -14,6 +14,9 @@ Its purpose is to make rule behavior measurable and prevent silent detection reg
 - `interprocedural_agent.py` passes user and model data through local wrappers before code, shell,
   and outbound HTTP sinks.
 - `safe_interprocedural.py` calls the same style of local wrappers with fixed values.
+- `sink_arguments_vulnerable.py` covers keyword-bound process and SQL inputs plus the second
+  positional URL used by generic HTTP request/stream functions; `sink_arguments_safe.py` keeps
+  those sensitive parameters fixed while untrusted values remain in non-sink options.
 - `insecure_mcp.json` contains a shell-launched remote HTTP server with wildcard tool access.
 - `frameworks/` contains paired vulnerable and safe examples for OpenAI Agents, Anthropic,
   LangChain, PydanticAI, and MCP Python SDK v2 syntax.
@@ -37,9 +40,9 @@ python -m benchmarks.run
 
 ## Current result
 
-- Cases: 15/15 passing
-- Expected rule signals: 28
-- Detected expected rule signals: 28
+- Cases: 17/17 passing
+- Expected rule signals: 31
+- Detected expected rule signals: 31
 - Rule-level recall on this corpus: 100%
 
 ## Interpretation limits

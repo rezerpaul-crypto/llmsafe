@@ -158,8 +158,10 @@ HTTP_CALL_SUFFIXES = {
     ".post",
     ".put",
     ".request",
+    ".stream",
 }
 HTTP_CLIENT_PREFIXES = ("httpx", "requests", "urllib3")
+HTTP_METHOD_URL_SUFFIXES = (".request", ".stream")
 
 
 class DataflowRule:
@@ -668,7 +670,14 @@ class _ScopeAnalyzer:
             unpacked_keyword_taint = self._combine(
                 *(taint for name, taint in keyword_pairs if name is None)
             )
-            self._check_call_sink(node, name, argument_taints, environment)
+            self._check_call_sink(
+                node,
+                name,
+                argument_taints,
+                keyword_taints,
+                unpacked_keyword_taint,
+                environment,
+            )
             self._check_function_sinks(
                 node,
                 name,
@@ -690,21 +699,63 @@ class _ScopeAnalyzer:
         return combined
 
     def _check_call_sink(
-        self, node: ast.Call, name: str, argument_taints: Sequence[Taint], environment: Environment
+        self,
+        node: ast.Call,
+        name: str,
+        argument_taints: Sequence[Taint],
+        keyword_taints: Mapping[str, Taint],
+        unpacked_keyword_taint: Taint,
+        environment: Environment,
     ) -> None:
-        first = argument_taints[0] if argument_taints else set()
-        if name in {"eval", "exec"} and first:
-            self._report(CODE_SINK, node, name, first)
-        elif name == "os.system" and first:
-            self._report(SHELL_SINK, node, name, first)
-        elif name in SUBPROCESS_CALLS and first:
-            self._report(SHELL_SINK, node, name, first)
-        elif (name.endswith(".execute") or name.endswith(".executemany")) and first:
-            self._report(SQL_SINK, node, name, first)
+        if name in {"eval", "exec"}:
+            taint = self._sink_argument_taint(
+                argument_taints,
+                keyword_taints,
+                unpacked_keyword_taint,
+                keyword_names=("source",),
+            )
+            if taint:
+                self._report(CODE_SINK, node, name, taint)
+        elif name == "os.system":
+            taint = self._sink_argument_taint(
+                argument_taints,
+                keyword_taints,
+                unpacked_keyword_taint,
+                keyword_names=("command",),
+            )
+            if taint:
+                self._report(SHELL_SINK, node, name, taint)
+        elif name in SUBPROCESS_CALLS:
+            taint = self._sink_argument_taint(
+                argument_taints,
+                keyword_taints,
+                unpacked_keyword_taint,
+                keyword_names=("args",),
+            )
+            if taint:
+                self._report(SHELL_SINK, node, name, taint)
+        elif name.endswith(".execute") or name.endswith(".executemany"):
+            taint = self._sink_argument_taint(
+                argument_taints,
+                keyword_taints,
+                unpacked_keyword_taint,
+                keyword_names=("operation", "query", "sql", "statement"),
+            )
+            if taint:
+                self._report(SQL_SINK, node, name, taint)
         elif name.startswith(HTTP_CLIENT_PREFIXES) and any(
             name.endswith(suffix) for suffix in HTTP_CALL_SUFFIXES
-        ) and first:
-            self._report(URL_SINK, node, name, first)
+        ):
+            positional_index = 1 if name.endswith(HTTP_METHOD_URL_SUFFIXES) else 0
+            taint = self._sink_argument_taint(
+                argument_taints,
+                keyword_taints,
+                unpacked_keyword_taint,
+                positional_index=positional_index,
+                keyword_names=("url",),
+            )
+            if taint:
+                self._report(URL_SINK, node, name, taint)
 
         dispatch_taint: Taint = set()
         if isinstance(node.func, ast.Subscript):
@@ -714,6 +765,28 @@ class _ScopeAnalyzer:
                 dispatch_taint = self._expression(node.func.args[1], environment)
         if dispatch_taint:
             self._report(TOOL_SINK, node, "dynamic dispatch", dispatch_taint)
+
+    @classmethod
+    def _sink_argument_taint(
+        cls,
+        argument_taints: Sequence[Taint],
+        keyword_taints: Mapping[str, Taint],
+        unpacked_keyword_taint: Taint,
+        positional_index: int = 0,
+        keyword_names: Sequence[str] = (),
+    ) -> Taint:
+        """Return taint that can bind to one security-sensitive call parameter."""
+
+        explicitly_bound = positional_index < len(argument_taints) or any(
+            name in keyword_taints for name in keyword_names
+        )
+        taint = set() if explicitly_bound else set(unpacked_keyword_taint)
+        if positional_index < len(argument_taints):
+            taint.update(argument_taints[positional_index])
+        taint.update(
+            cls._combine(*(keyword_taints.get(name, set()) for name in keyword_names))
+        )
+        return taint
 
     def _check_function_sinks(
         self,
