@@ -40,6 +40,14 @@
       "expected_rules": []
     },
     {
+      "path": "cases/import_aliases_vulnerable.py",
+      "expected_rules": ["FLOW002", "FLOW004"]
+    },
+    {
+      "path": "cases/import_aliases_safe.py",
+      "expected_rules": []
+    },
+    {
       "path": "cases/insecure_mcp.json",
       "expected_rules": ["MCP001", "MCP002", "MCP003"]
     },

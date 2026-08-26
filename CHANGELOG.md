@@ -12,6 +12,8 @@ to use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Dataflow sinks now bind security-sensitive positional, keyword, and unpacked-keyword arguments
   by API signature. This detects keyword-based process and SQL inputs plus the URL in generic HTTP
   request and streaming calls without treating tainted ancillary options as the sink value.
+- Dataflow source and sink matching now resolves unambiguous external module and symbol import
+  aliases while rejecting rebound, parameter-shadowed, or conflicting bindings.
 
 ## [0.3.0rc1] - 2026-08-24
 

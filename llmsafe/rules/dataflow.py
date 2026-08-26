@@ -160,8 +160,50 @@ HTTP_CALL_SUFFIXES = {
     ".request",
     ".stream",
 }
-HTTP_CLIENT_PREFIXES = ("httpx", "requests", "urllib3")
+HTTP_CLIENT_PREFIXES = ("httpx.", "requests.", "urllib3.")
 HTTP_METHOD_URL_SUFFIXES = (".request", ".stream")
+
+
+class _ScopeBindingCollector(ast.NodeVisitor):
+    """Collect import candidates and names rebound in one lexical scope."""
+
+    def __init__(self) -> None:
+        self.bindings: Set[str] = set()
+        self.imports: Dict[str, Set[str]] = {}
+
+    def visit_Import(self, node: ast.Import) -> None:  # noqa: N802
+        for alias in node.names:
+            local_name = alias.asname or alias.name.split(".", 1)[0]
+            imported_name = alias.name if alias.asname else local_name
+            self.imports.setdefault(local_name, set()).add(imported_name)
+
+    def visit_ImportFrom(self, node: ast.ImportFrom) -> None:  # noqa: N802
+        module = "." * node.level + (node.module or "")
+        for alias in node.names:
+            if alias.name == "*":
+                continue
+            local_name = alias.asname or alias.name
+            imported_name = f"{module}.{alias.name}".strip(".")
+            self.imports.setdefault(local_name, set()).add(imported_name)
+
+    def visit_Name(self, node: ast.Name) -> None:  # noqa: N802
+        if isinstance(node.ctx, (ast.Store, ast.Del)):
+            self.bindings.add(node.id)
+
+    def visit_FunctionDef(self, node: ast.FunctionDef) -> None:  # noqa: N802
+        self.bindings.add(node.name)
+
+    def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:  # noqa: N802
+        self.bindings.add(node.name)
+
+    def visit_ClassDef(self, node: ast.ClassDef) -> None:  # noqa: N802
+        self.bindings.add(node.name)
+
+    def visit_ExceptHandler(self, node: ast.ExceptHandler) -> None:  # noqa: N802
+        if node.name:
+            self.bindings.add(node.name)
+        for statement in node.body:
+            self.visit(statement)
 
 
 class DataflowRule:
@@ -179,13 +221,21 @@ class DataflowRule:
             for node in tree.body
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
         }
-        summaries = self._function_summaries(path, definitions)
-        analyzer = _ScopeAnalyzer(path, summaries)
+        module_imports = self._scope_import_aliases(tree.body)
+        summaries = self._function_summaries(path, definitions, module_imports)
+        analyzer = _ScopeAnalyzer(path, summaries, import_aliases=module_imports)
         analyzer.analyze_scope(tree.body, {})
         for node in ast.walk(tree):
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 environment = analyzer.parameter_environment(node.args)
-                analyzer.analyze_scope(node.body, environment)
+                import_aliases = self._function_import_aliases(node, module_imports)
+                function_analyzer = _ScopeAnalyzer(
+                    path,
+                    summaries,
+                    import_aliases=import_aliases,
+                )
+                function_analyzer.analyze_scope(node.body, environment)
+                analyzer.findings.extend(function_analyzer.findings)
         yield from analyzer.findings
 
     def scan_project(self, files: Mapping[Path, str]) -> Iterable[Finding]:
@@ -221,12 +271,18 @@ class DataflowRule:
             qualified_name = queue.popleft()
             queued.discard(qualified_name)
             module, function = function_nodes[qualified_name]
+            module_imports = self._scope_import_aliases(module.tree.body)
             known = {
                 call: summaries[target]
                 for call, target in call_targets[qualified_name].items()
                 if target in summaries
             }
-            updated = self._summarize_function(module.path, function, known)
+            updated = self._summarize_function(
+                module.path,
+                function,
+                known,
+                self._function_import_aliases(function, module_imports),
+            )
             if summaries.get(qualified_name) == updated:
                 continue
             summaries[qualified_name] = updated
@@ -236,6 +292,7 @@ class DataflowRule:
                     queued.add(caller)
 
         for module in sorted(modules.values(), key=lambda item: item.name):
+            module_imports = self._scope_import_aliases(module.tree.body)
             known = self._project_summaries_for(
                 module,
                 module.tree,
@@ -243,12 +300,62 @@ class DataflowRule:
                 function_names,
                 summaries,
             )
-            analyzer = _ScopeAnalyzer(module.path, known)
+            analyzer = _ScopeAnalyzer(module.path, known, import_aliases=module_imports)
             analyzer.analyze_scope(module.tree.body, {})
             for function in module.definitions.values():
                 environment = analyzer.parameter_environment(function.args)
-                analyzer.analyze_scope(function.body, environment)
+                import_aliases = self._function_import_aliases(function, module_imports)
+                function_analyzer = _ScopeAnalyzer(
+                    module.path,
+                    known,
+                    import_aliases=import_aliases,
+                )
+                function_analyzer.analyze_scope(function.body, environment)
+                analyzer.findings.extend(function_analyzer.findings)
             yield from analyzer.findings
+
+    @classmethod
+    def _scope_import_aliases(
+        cls,
+        statements: Sequence[ast.stmt],
+        inherited: Optional[Mapping[str, str]] = None,
+        blocked: Sequence[str] = (),
+    ) -> Dict[str, str]:
+        """Return unambiguous import bindings that are not rebound in this scope."""
+
+        collector = _ScopeBindingCollector()
+        for statement in statements:
+            collector.visit(statement)
+        blocked_names = collector.bindings | set(blocked)
+        local_imports = set(collector.imports)
+        aliases = {
+            name: target
+            for name, target in (inherited or {}).items()
+            if name not in blocked_names and name not in local_imports
+        }
+        for name, targets in collector.imports.items():
+            if name not in blocked_names and len(targets) == 1:
+                aliases[name] = next(iter(targets))
+        return aliases
+
+    @classmethod
+    def _function_import_aliases(
+        cls,
+        function: Union[ast.FunctionDef, ast.AsyncFunctionDef],
+        inherited: Mapping[str, str],
+    ) -> Dict[str, str]:
+        arguments = (
+            *function.args.posonlyargs,
+            *function.args.args,
+            *function.args.kwonlyargs,
+            *((function.args.vararg,) if function.args.vararg else ()),
+            *((function.args.kwarg,) if function.args.kwarg else ()),
+        )
+        return cls._scope_import_aliases(
+            function.body,
+            inherited,
+            blocked=tuple(argument.arg for argument in arguments),
+        )
 
     @classmethod
     def _project_modules(cls, files: Mapping[Path, str]) -> Dict[str, ModuleInfo]:
@@ -467,9 +574,15 @@ class DataflowRule:
         self,
         path: Path,
         definitions: Mapping[str, Union[ast.FunctionDef, ast.AsyncFunctionDef]],
+        module_imports: Mapping[str, str],
     ) -> Dict[str, FunctionSummary]:
         summaries = {
-            name: self._summarize_function(path, function, {})
+            name: self._summarize_function(
+                path,
+                function,
+                {},
+                self._function_import_aliases(function, module_imports),
+            )
             for name, function in definitions.items()
         }
         dependents: Dict[str, Set[str]] = {name: set() for name in definitions}
@@ -487,7 +600,13 @@ class DataflowRule:
             changed = queue.popleft()
             queued.discard(changed)
             for caller in sorted(dependents[changed]):
-                updated = self._summarize_function(path, definitions[caller], summaries)
+                function = definitions[caller]
+                updated = self._summarize_function(
+                    path,
+                    function,
+                    summaries,
+                    self._function_import_aliases(function, module_imports),
+                )
                 if updated == summaries[caller]:
                     continue
                 summaries[caller] = updated
@@ -501,6 +620,7 @@ class DataflowRule:
         path: Path,
         function: Union[ast.FunctionDef, ast.AsyncFunctionDef],
         known_summaries: Mapping[str, FunctionSummary],
+        import_aliases: Optional[Mapping[str, str]] = None,
     ) -> FunctionSummary:
         positional = tuple(
             argument.arg for argument in (*function.args.posonlyargs, *function.args.args)
@@ -530,7 +650,12 @@ class DataflowRule:
                 *((function.args.kwarg,) if function.args.kwarg else ()),
             )
         }
-        analyzer = _ScopeAnalyzer(path, known_summaries, capture_parameter_sinks=True)
+        analyzer = _ScopeAnalyzer(
+            path,
+            known_summaries,
+            capture_parameter_sinks=True,
+            import_aliases=import_aliases,
+        )
         analyzer.analyze_scope(function.body, environment)
         unique = {
             (
@@ -553,10 +678,12 @@ class _ScopeAnalyzer:
         path: Path,
         function_summaries: Optional[Mapping[str, FunctionSummary]] = None,
         capture_parameter_sinks: bool = False,
+        import_aliases: Optional[Mapping[str, str]] = None,
     ) -> None:
         self.path = path
         self.function_summaries = dict(function_summaries or {})
         self.capture_parameter_sinks = capture_parameter_sinks
+        self.import_aliases = dict(import_aliases or {})
         self.findings: List[Finding] = []
         self.summary_sinks: List[FunctionSink] = []
         self._seen: Set[Tuple[str, int, int, Tuple[str, ...]]] = set()
@@ -661,6 +788,7 @@ class _ScopeAnalyzer:
             return taint
         if isinstance(node, ast.Call):
             name = call_name(node) or ""
+            resolved_name = self._resolved_call_name(name)
             argument_taints = [self._expression(argument, environment) for argument in node.args]
             keyword_pairs = [
                 (keyword.arg, self._expression(keyword.value, environment))
@@ -672,7 +800,7 @@ class _ScopeAnalyzer:
             )
             self._check_call_sink(
                 node,
-                name,
+                resolved_name,
                 argument_taints,
                 keyword_taints,
                 unpacked_keyword_taint,
@@ -685,7 +813,7 @@ class _ScopeAnalyzer:
                 keyword_taints,
                 unpacked_keyword_taint,
             )
-            source = self._call_source(name, node)
+            source = self._call_source(resolved_name, node)
             combined = self._combine(
                 *argument_taints, *(taint for _, taint in keyword_pairs)
             )
@@ -913,9 +1041,17 @@ class _ScopeAnalyzer:
         lowered = name.lower()
         if lowered in USER_CALLS or lowered.startswith("request."):
             return self._source("user", name or "request", node)
-        if lowered in MODEL_CALL_NAMES or any(marker in lowered for marker in MODEL_CALL_MARKERS):
+        model_call = lowered in MODEL_CALL_NAMES or any(
+            lowered.endswith(f".{call}") for call in MODEL_CALL_NAMES
+        )
+        if model_call or any(marker in lowered for marker in MODEL_CALL_MARKERS):
             return self._source("model", name, node)
         return None
+
+    def _resolved_call_name(self, name: str) -> str:
+        first, separator, remainder = name.partition(".")
+        resolved = self.import_aliases.get(first, first)
+        return f"{resolved}.{remainder}" if separator else resolved
 
     def _named_source(self, name: str, node: ast.AST) -> Optional[TaintSource]:
         if MODEL_PARAMETER.search(name):

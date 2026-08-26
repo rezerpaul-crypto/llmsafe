@@ -38,6 +38,11 @@ the URL is the second positional argument in `requests.request(method, url)` and
 `httpx.stream(method, url)`. Tainted headers, query parameters, environment values, and other
 ancillary options do not by themselves trigger a finding for a fixed sink parameter.
 
+Direct and renamed imports of supported external APIs are resolved before source and sink matching,
+including patterns such as `import subprocess as process`, `from requests import get as fetch`, and
+`from agents import Runner as AgentRunner`. A binding is not resolved when the imported name is
+reassigned, shadowed by a parameter or local value, or mapped to multiple imports in the same scope.
+
 ## Agent-framework rules
 
 | ID | Severity | Detects |

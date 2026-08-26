@@ -60,6 +60,87 @@ def fetch():
         findings = findings_for(DataflowRule(), content)
         self.assertEqual([finding.rule_id for finding in findings], ["FLOW004"])
 
+    def test_resolves_external_module_and_symbol_import_aliases(self):
+        content = """
+import subprocess as process
+from agents import Runner as AgentRunner
+from requests import get as fetch
+
+async def run(user_input):
+    result = await AgentRunner.run(None, user_input)
+    process.run(args=result.final_output)
+    return fetch(url=user_input)
+"""
+        findings = findings_for(DataflowRule(), content)
+
+        self.assertEqual(
+            [finding.rule_id for finding in findings],
+            ["FLOW002", "FLOW004"],
+        )
+        self.assertIn("model", findings[0].message)
+        self.assertEqual(findings[0].evidence[-1].message, "reaches subprocess.run")
+        self.assertEqual(findings[1].evidence[-1].message, "reaches requests.get")
+
+    def test_resolves_function_local_import_aliases(self):
+        content = """
+def run(user_input, model_output):
+    import httpx as web
+    from subprocess import run as launch
+
+    launch(args=model_output)
+    return web.get(url=user_input)
+"""
+        findings = findings_for(DataflowRule(), content)
+
+        self.assertEqual(
+            [finding.rule_id for finding in findings],
+            ["FLOW002", "FLOW004"],
+        )
+
+    def test_import_alias_survives_local_function_summary(self):
+        content = """
+from os import system as launch
+
+def execute(value):
+    return launch(value)
+
+def run(user_input):
+    return execute(user_input)
+"""
+        findings = findings_for(DataflowRule(), content)
+
+        self.assertEqual([finding.rule_id for finding in findings], ["FLOW002"])
+        self.assertIn("execute() -> os.system", findings[0].message)
+
+    def test_does_not_resolve_shadowed_import_aliases(self):
+        content = """
+import requests as http
+from subprocess import run as launch
+
+http = SafeClient()
+
+def run(user_input):
+    launch = safe_launch
+    http.get(user_input)
+    launch(user_input)
+"""
+        self.assertEqual(findings_for(DataflowRule(), content), [])
+
+    def test_does_not_guess_ambiguous_or_similarly_named_imports(self):
+        content = """
+import requests_wrapper as http
+
+try:
+    import requests as optional_client
+except ImportError:
+    import safe_http as optional_client
+
+def run(user_input):
+    http.get(user_input)
+    return optional_client.get(user_input)
+"""
+        self.assertEqual(findings_for(DataflowRule(), content), [])
+
     def test_maps_keyword_and_method_specific_sink_arguments(self):
         content = """
 import httpx
