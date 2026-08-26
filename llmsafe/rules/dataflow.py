@@ -183,7 +183,8 @@ class _ScopeBindingCollector(ast.NodeVisitor):
             if alias.name == "*":
                 continue
             local_name = alias.asname or alias.name
-            imported_name = f"{module}.{alias.name}".strip(".")
+            separator = "" if not module or module.endswith(".") else "."
+            imported_name = f"{module}{separator}{alias.name}"
             self.imports.setdefault(local_name, set()).add(imported_name)
 
     def visit_Name(self, node: ast.Name) -> None:  # noqa: N802
@@ -205,6 +206,25 @@ class _ScopeBindingCollector(ast.NodeVisitor):
         for statement in node.body:
             self.visit(statement)
 
+    def visit_MatchAs(self, node: ast.AST) -> None:  # noqa: N802
+        name = getattr(node, "name", None)
+        pattern = getattr(node, "pattern", None)
+        if name:
+            self.bindings.add(name)
+        if pattern:
+            self.visit(pattern)
+
+    def visit_MatchStar(self, node: ast.AST) -> None:  # noqa: N802
+        name = getattr(node, "name", None)
+        if name:
+            self.bindings.add(name)
+
+    def visit_MatchMapping(self, node: ast.AST) -> None:  # noqa: N802
+        rest = getattr(node, "rest", None)
+        if rest:
+            self.bindings.add(rest)
+        self.generic_visit(node)
+
 
 class DataflowRule:
     """Trace trust-boundary data to security-sensitive operations."""
@@ -221,18 +241,33 @@ class DataflowRule:
             for node in tree.body
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
         }
-        module_imports = self._scope_import_aliases(tree.body)
-        summaries = self._function_summaries(path, definitions, module_imports)
-        analyzer = _ScopeAnalyzer(path, summaries, import_aliases=module_imports)
+        module_imports, module_shadowed = self._scope_import_context(tree.body)
+        summaries = self._function_summaries(
+            path,
+            definitions,
+            module_imports,
+            module_shadowed,
+        )
+        analyzer = _ScopeAnalyzer(
+            path,
+            summaries,
+            import_aliases=module_imports,
+            shadowed_names=module_shadowed,
+        )
         analyzer.analyze_scope(tree.body, {})
         for node in ast.walk(tree):
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 environment = analyzer.parameter_environment(node.args)
-                import_aliases = self._function_import_aliases(node, module_imports)
+                import_aliases, shadowed_names = self._function_import_context(
+                    node,
+                    module_imports,
+                    module_shadowed,
+                )
                 function_analyzer = _ScopeAnalyzer(
                     path,
                     summaries,
                     import_aliases=import_aliases,
+                    shadowed_names=shadowed_names,
                 )
                 function_analyzer.analyze_scope(node.body, environment)
                 analyzer.findings.extend(function_analyzer.findings)
@@ -271,17 +306,23 @@ class DataflowRule:
             qualified_name = queue.popleft()
             queued.discard(qualified_name)
             module, function = function_nodes[qualified_name]
-            module_imports = self._scope_import_aliases(module.tree.body)
+            module_imports, module_shadowed = self._scope_import_context(module.tree.body)
             known = {
                 call: summaries[target]
                 for call, target in call_targets[qualified_name].items()
                 if target in summaries
             }
+            function_imports, function_shadowed = self._function_import_context(
+                function,
+                module_imports,
+                module_shadowed,
+            )
             updated = self._summarize_function(
                 module.path,
                 function,
                 known,
-                self._function_import_aliases(function, module_imports),
+                function_imports,
+                function_shadowed,
             )
             if summaries.get(qualified_name) == updated:
                 continue
@@ -292,7 +333,7 @@ class DataflowRule:
                     queued.add(caller)
 
         for module in sorted(modules.values(), key=lambda item: item.name):
-            module_imports = self._scope_import_aliases(module.tree.body)
+            module_imports, module_shadowed = self._scope_import_context(module.tree.body)
             known = self._project_summaries_for(
                 module,
                 module.tree,
@@ -300,50 +341,75 @@ class DataflowRule:
                 function_names,
                 summaries,
             )
-            analyzer = _ScopeAnalyzer(module.path, known, import_aliases=module_imports)
+            analyzer = _ScopeAnalyzer(
+                module.path,
+                known,
+                import_aliases=module_imports,
+                shadowed_names=module_shadowed,
+            )
             analyzer.analyze_scope(module.tree.body, {})
             for function in module.definitions.values():
                 environment = analyzer.parameter_environment(function.args)
-                import_aliases = self._function_import_aliases(function, module_imports)
+                import_aliases, shadowed_names = self._function_import_context(
+                    function,
+                    module_imports,
+                    module_shadowed,
+                )
                 function_analyzer = _ScopeAnalyzer(
                     module.path,
                     known,
                     import_aliases=import_aliases,
+                    shadowed_names=shadowed_names,
                 )
                 function_analyzer.analyze_scope(function.body, environment)
                 analyzer.findings.extend(function_analyzer.findings)
             yield from analyzer.findings
 
     @classmethod
-    def _scope_import_aliases(
+    def _scope_import_context(
         cls,
         statements: Sequence[ast.stmt],
-        inherited: Optional[Mapping[str, str]] = None,
+        inherited_aliases: Optional[Mapping[str, str]] = None,
+        inherited_shadowed: Sequence[str] = (),
         blocked: Sequence[str] = (),
-    ) -> Dict[str, str]:
-        """Return unambiguous import bindings that are not rebound in this scope."""
+    ) -> Tuple[Dict[str, str], Set[str]]:
+        """Return resolvable imports and names whose API identity is shadowed."""
 
         collector = _ScopeBindingCollector()
         for statement in statements:
             collector.visit(statement)
         blocked_names = collector.bindings | set(blocked)
         local_imports = set(collector.imports)
+        unresolved_imports = {
+            name
+            for name, targets in collector.imports.items()
+            if len(targets) != 1 or next(iter(targets)).startswith(".")
+        }
+        shadowed_names = (
+            (set(inherited_shadowed) - local_imports)
+            | blocked_names
+            | unresolved_imports
+        )
         aliases = {
             name: target
-            for name, target in (inherited or {}).items()
-            if name not in blocked_names and name not in local_imports
+            for name, target in (inherited_aliases or {}).items()
+            if name not in shadowed_names and name not in local_imports
         }
         for name, targets in collector.imports.items():
-            if name not in blocked_names and len(targets) == 1:
-                aliases[name] = next(iter(targets))
-        return aliases
+            if name in shadowed_names or len(targets) != 1:
+                continue
+            target = next(iter(targets))
+            if not target.startswith("."):
+                aliases[name] = target
+        return aliases, shadowed_names
 
     @classmethod
-    def _function_import_aliases(
+    def _function_import_context(
         cls,
         function: Union[ast.FunctionDef, ast.AsyncFunctionDef],
-        inherited: Mapping[str, str],
-    ) -> Dict[str, str]:
+        inherited_aliases: Mapping[str, str],
+        inherited_shadowed: Sequence[str],
+    ) -> Tuple[Dict[str, str], Set[str]]:
         arguments = (
             *function.args.posonlyargs,
             *function.args.args,
@@ -351,9 +417,10 @@ class DataflowRule:
             *((function.args.vararg,) if function.args.vararg else ()),
             *((function.args.kwarg,) if function.args.kwarg else ()),
         )
-        return cls._scope_import_aliases(
+        return cls._scope_import_context(
             function.body,
-            inherited,
+            inherited_aliases,
+            inherited_shadowed,
             blocked=tuple(argument.arg for argument in arguments),
         )
 
@@ -575,16 +642,22 @@ class DataflowRule:
         path: Path,
         definitions: Mapping[str, Union[ast.FunctionDef, ast.AsyncFunctionDef]],
         module_imports: Mapping[str, str],
+        module_shadowed: Sequence[str],
     ) -> Dict[str, FunctionSummary]:
-        summaries = {
-            name: self._summarize_function(
+        summaries = {}
+        for name, function in definitions.items():
+            import_aliases, shadowed_names = self._function_import_context(
+                function,
+                module_imports,
+                module_shadowed,
+            )
+            summaries[name] = self._summarize_function(
                 path,
                 function,
                 {},
-                self._function_import_aliases(function, module_imports),
+                import_aliases,
+                shadowed_names,
             )
-            for name, function in definitions.items()
-        }
         dependents: Dict[str, Set[str]] = {name: set() for name in definitions}
         for caller, function in definitions.items():
             for node in ast.walk(function):
@@ -601,11 +674,17 @@ class DataflowRule:
             queued.discard(changed)
             for caller in sorted(dependents[changed]):
                 function = definitions[caller]
+                import_aliases, shadowed_names = self._function_import_context(
+                    function,
+                    module_imports,
+                    module_shadowed,
+                )
                 updated = self._summarize_function(
                     path,
                     function,
                     summaries,
-                    self._function_import_aliases(function, module_imports),
+                    import_aliases,
+                    shadowed_names,
                 )
                 if updated == summaries[caller]:
                     continue
@@ -621,6 +700,7 @@ class DataflowRule:
         function: Union[ast.FunctionDef, ast.AsyncFunctionDef],
         known_summaries: Mapping[str, FunctionSummary],
         import_aliases: Optional[Mapping[str, str]] = None,
+        shadowed_names: Sequence[str] = (),
     ) -> FunctionSummary:
         positional = tuple(
             argument.arg for argument in (*function.args.posonlyargs, *function.args.args)
@@ -655,6 +735,7 @@ class DataflowRule:
             known_summaries,
             capture_parameter_sinks=True,
             import_aliases=import_aliases,
+            shadowed_names=shadowed_names,
         )
         analyzer.analyze_scope(function.body, environment)
         unique = {
@@ -679,11 +760,13 @@ class _ScopeAnalyzer:
         function_summaries: Optional[Mapping[str, FunctionSummary]] = None,
         capture_parameter_sinks: bool = False,
         import_aliases: Optional[Mapping[str, str]] = None,
+        shadowed_names: Sequence[str] = (),
     ) -> None:
         self.path = path
         self.function_summaries = dict(function_summaries or {})
         self.capture_parameter_sinks = capture_parameter_sinks
         self.import_aliases = dict(import_aliases or {})
+        self.shadowed_names = set(shadowed_names)
         self.findings: List[Finding] = []
         self.summary_sinks: List[FunctionSink] = []
         self._seen: Set[Tuple[str, int, int, Tuple[str, ...]]] = set()
@@ -1050,6 +1133,8 @@ class _ScopeAnalyzer:
 
     def _resolved_call_name(self, name: str) -> str:
         first, separator, remainder = name.partition(".")
+        if first in self.shadowed_names:
+            return f"<shadowed>.{remainder}" if separator else "<shadowed>"
         resolved = self.import_aliases.get(first, first)
         return f"{resolved}.{remainder}" if separator else resolved
 

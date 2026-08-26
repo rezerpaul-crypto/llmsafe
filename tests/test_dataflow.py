@@ -1,3 +1,4 @@
+import sys
 import unittest
 from pathlib import Path
 
@@ -123,6 +124,40 @@ def run(user_input):
     launch = safe_launch
     http.get(user_input)
     launch(user_input)
+"""
+        self.assertEqual(findings_for(DataflowRule(), content), [])
+
+    def test_does_not_resolve_shadowed_canonical_import_names(self):
+        content = """
+import requests
+import subprocess
+
+requests = SafeClient()
+
+def run(user_input, subprocess):
+    requests.get(user_input)
+    return subprocess.run(user_input)
+"""
+        self.assertEqual(findings_for(DataflowRule(), content), [])
+
+    def test_does_not_resolve_relative_import_as_external_api(self):
+        content = """
+from .requests import get as fetch
+
+def run(user_input):
+    return fetch(user_input)
+"""
+        self.assertEqual(findings_for(DataflowRule(), content), [])
+
+    @unittest.skipUnless(sys.version_info >= (3, 10), "requires pattern matching")
+    def test_does_not_resolve_pattern_shadowed_import(self):
+        content = """
+import requests
+
+def run(user_input, payload):
+    match payload:
+        case {"client": requests}:
+            requests.get(user_input)
 """
         self.assertEqual(findings_for(DataflowRule(), content), [])
 

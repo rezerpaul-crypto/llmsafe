@@ -108,6 +108,20 @@ class ProjectDataflowTests(unittest.TestCase):
 
         self.assertEqual(findings, [])
 
+    def test_project_scan_ignores_shadowed_canonical_external_name(self):
+        findings = self.scan(
+            {
+                "app.py": (
+                    "import requests\n\n"
+                    "requests = SafeClient()\n\n"
+                    "def handle(user_input):\n"
+                    "    return requests.get(user_input)\n"
+                )
+            }
+        )
+
+        self.assertEqual(findings, [])
+
     def test_resolves_unaliased_module_import(self):
         findings = self.scan(
             {
