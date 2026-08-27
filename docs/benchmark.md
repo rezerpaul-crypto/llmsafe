@@ -19,6 +19,8 @@ Its purpose is to make rule behavior measurable and prevent silent detection reg
   those sensitive parameters fixed while untrusted values remain in non-sink options.
 - `import_aliases_vulnerable.py` covers renamed process, HTTP, and model-source imports;
   `import_aliases_safe.py` verifies that assignments which shadow imported names remain safe.
+- `return_summaries_vulnerable.py` covers parameter-selective and transitive helper returns;
+  `return_summaries_safe.py` verifies that fixed helper returns do not inherit unrelated taint.
 - `insecure_mcp.json` contains a shell-launched remote HTTP server with wildcard tool access.
 - `frameworks/` contains paired vulnerable and safe examples for OpenAI Agents, Anthropic,
   LangChain, PydanticAI, and MCP Python SDK v2 syntax.
@@ -42,9 +44,9 @@ python -m benchmarks.run
 
 ## Current result
 
-- Cases: 19/19 passing
-- Expected rule signals: 33
-- Detected expected rule signals: 33
+- Cases: 21/21 passing
+- Expected rule signals: 35
+- Detected expected rule signals: 35
 - Rule-level recall on this corpus: 100%
 
 ## Interpretation limits

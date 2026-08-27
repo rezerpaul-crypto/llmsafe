@@ -49,6 +49,7 @@ class TaintSource:
     label: str
     line: int
     column: int
+    path: Optional[Path] = None
 
 
 Taint = Set[TaintSource]
@@ -85,6 +86,7 @@ class FunctionSummary:
     vararg: Optional[str]
     kwarg: Optional[str]
     sinks: Tuple[FunctionSink, ...]
+    returns: Tuple[TaintSource, ...]
 
 
 @dataclass(frozen=True)
@@ -299,7 +301,10 @@ class DataflowRule:
             for callee in set(targets.values()):
                 dependents.setdefault(callee, set()).add(caller)
 
-        summaries: Dict[str, FunctionSummary] = {}
+        summaries = {
+            qualified_name: self._empty_function_summary(function)
+            for qualified_name, (_, function) in function_nodes.items()
+        }
         queue: Deque[str] = deque(sorted(function_nodes))
         queued = set(queue)
         while queue:
@@ -644,20 +649,10 @@ class DataflowRule:
         module_imports: Mapping[str, str],
         module_shadowed: Sequence[str],
     ) -> Dict[str, FunctionSummary]:
-        summaries = {}
-        for name, function in definitions.items():
-            import_aliases, shadowed_names = self._function_import_context(
-                function,
-                module_imports,
-                module_shadowed,
-            )
-            summaries[name] = self._summarize_function(
-                path,
-                function,
-                {},
-                import_aliases,
-                shadowed_names,
-            )
+        summaries = {
+            name: self._empty_function_summary(function)
+            for name, function in definitions.items()
+        }
         dependents: Dict[str, Set[str]] = {name: set() for name in definitions}
         for caller, function in definitions.items():
             for node in ast.walk(function):
@@ -667,41 +662,45 @@ class DataflowRule:
                 if callee in definitions:
                     dependents[callee].add(caller)
 
-        queue: Deque[str] = deque(name for name, summary in summaries.items() if summary.sinks)
+        queue: Deque[str] = deque(sorted(definitions))
         queued = set(queue)
         while queue:
             changed = queue.popleft()
             queued.discard(changed)
+            function = definitions[changed]
+            import_aliases, shadowed_names = self._function_import_context(
+                function,
+                module_imports,
+                module_shadowed,
+            )
+            updated = self._summarize_function(
+                path,
+                function,
+                summaries,
+                import_aliases,
+                shadowed_names,
+            )
+            if updated == summaries[changed]:
+                continue
+            summaries[changed] = updated
             for caller in sorted(dependents[changed]):
-                function = definitions[caller]
-                import_aliases, shadowed_names = self._function_import_context(
-                    function,
-                    module_imports,
-                    module_shadowed,
-                )
-                updated = self._summarize_function(
-                    path,
-                    function,
-                    summaries,
-                    import_aliases,
-                    shadowed_names,
-                )
-                if updated == summaries[caller]:
-                    continue
-                summaries[caller] = updated
                 if caller not in queued:
                     queue.append(caller)
                     queued.add(caller)
         return summaries
 
-    def _summarize_function(
-        self,
-        path: Path,
+    @classmethod
+    def _empty_function_summary(
+        cls,
         function: Union[ast.FunctionDef, ast.AsyncFunctionDef],
-        known_summaries: Mapping[str, FunctionSummary],
-        import_aliases: Optional[Mapping[str, str]] = None,
-        shadowed_names: Sequence[str] = (),
     ) -> FunctionSummary:
+        parameters, positional, vararg, kwarg = cls._function_parameters(function)
+        return FunctionSummary(parameters, positional, vararg, kwarg, (), ())
+
+    @staticmethod
+    def _function_parameters(
+        function: Union[ast.FunctionDef, ast.AsyncFunctionDef],
+    ) -> Tuple[Tuple[str, ...], Tuple[str, ...], Optional[str], Optional[str]]:
         positional = tuple(
             argument.arg for argument in (*function.args.posonlyargs, *function.args.args)
         )
@@ -713,6 +712,17 @@ class DataflowRule:
             parameters = (*parameters, vararg)
         if kwarg:
             parameters = (*parameters, kwarg)
+        return tuple(parameters), positional, vararg, kwarg
+
+    def _summarize_function(
+        self,
+        path: Path,
+        function: Union[ast.FunctionDef, ast.AsyncFunctionDef],
+        known_summaries: Mapping[str, FunctionSummary],
+        import_aliases: Optional[Mapping[str, str]] = None,
+        shadowed_names: Sequence[str] = (),
+    ) -> FunctionSummary:
+        parameters, positional, vararg, kwarg = self._function_parameters(function)
         environment = {
             argument.arg: {
                 TaintSource(
@@ -720,6 +730,7 @@ class DataflowRule:
                     argument.arg,
                     getattr(argument, "lineno", function.lineno),
                     getattr(argument, "col_offset", function.col_offset) + 1,
+                    path,
                 )
             }
             for argument in (
@@ -750,7 +761,19 @@ class DataflowRule:
             for item in analyzer.summary_sinks
         }
         sinks = tuple(unique[key] for key in sorted(unique))
-        return FunctionSummary(tuple(parameters), positional, vararg, kwarg, sinks)
+        returns = tuple(
+            sorted(
+                analyzer.summary_returns,
+                key=lambda source: (
+                    source.kind,
+                    source.label,
+                    str(source.path or ""),
+                    source.line,
+                    source.column,
+                ),
+            )
+        )
+        return FunctionSummary(parameters, positional, vararg, kwarg, sinks, returns)
 
 
 class _ScopeAnalyzer:
@@ -769,6 +792,7 @@ class _ScopeAnalyzer:
         self.shadowed_names = set(shadowed_names)
         self.findings: List[Finding] = []
         self.summary_sinks: List[FunctionSink] = []
+        self.summary_returns: Taint = set()
         self._seen: Set[Tuple[str, int, int, Tuple[str, ...]]] = set()
 
     def parameter_environment(self, arguments: ast.arguments) -> Environment:
@@ -811,10 +835,14 @@ class _ScopeAnalyzer:
             self._assign(statement.target, taint, current)
         elif isinstance(statement, ast.Expr):
             self._expression(statement.value, current)
-        elif isinstance(statement, (ast.Return, ast.Raise)):
-            value = getattr(statement, "value", None) or getattr(statement, "exc", None)
-            if value is not None:
-                self._expression(value, current)
+        elif isinstance(statement, ast.Return):
+            if statement.value is not None:
+                taint = self._expression(statement.value, current)
+                if self.capture_parameter_sinks:
+                    self.summary_returns.update(taint)
+        elif isinstance(statement, ast.Raise):
+            if statement.exc is not None:
+                self._expression(statement.exc, current)
         elif isinstance(statement, ast.If):
             self._expression(statement.test, current)
             left = self.analyze_scope(statement.body, current)
@@ -872,6 +900,11 @@ class _ScopeAnalyzer:
         if isinstance(node, ast.Call):
             name = call_name(node) or ""
             resolved_name = self._resolved_call_name(name)
+            receiver_taint = (
+                self._expression(node.func.value, environment)
+                if isinstance(node.func, ast.Attribute)
+                else set()
+            )
             argument_taints = [self._expression(argument, environment) for argument in node.args]
             keyword_pairs = [
                 (keyword.arg, self._expression(keyword.value, environment))
@@ -896,10 +929,21 @@ class _ScopeAnalyzer:
                 keyword_taints,
                 unpacked_keyword_taint,
             )
-            source = self._call_source(resolved_name, node)
-            combined = self._combine(
-                *argument_taints, *(taint for _, taint in keyword_pairs)
-            )
+            summary = self.function_summaries.get(name)
+            if summary is None:
+                combined = self._combine(
+                    receiver_taint,
+                    *argument_taints,
+                    *(taint for _, taint in keyword_pairs),
+                )
+            else:
+                combined = self._summary_return_taint(
+                    summary,
+                    argument_taints,
+                    keyword_taints,
+                    unpacked_keyword_taint,
+                )
+            source = None if summary is not None else self._call_source(resolved_name, node)
             if source:
                 combined.add(source)
             return combined
@@ -1011,25 +1055,13 @@ class _ScopeAnalyzer:
         if summary is None:
             return
         for function_sink in summary.sinks:
-            taint: Taint = set()
-            for parameter in function_sink.parameters:
-                taint.update(keyword_taints.get(parameter, set()))
-                if parameter in summary.positional_parameters:
-                    index = summary.positional_parameters.index(parameter)
-                    if index < len(argument_taints):
-                        taint.update(argument_taints[index])
-                elif parameter == summary.vararg:
-                    taint.update(
-                        self._combine(*argument_taints[len(summary.positional_parameters) :])
-                    )
-                elif parameter == summary.kwarg:
-                    taint.update(unpacked_keyword_taint)
-                    extra = (
-                        value
-                        for key, value in keyword_taints.items()
-                        if key not in summary.parameters
-                    )
-                    taint.update(self._combine(*extra))
+            taint = self._bound_parameter_taint(
+                summary,
+                function_sink.parameters,
+                argument_taints,
+                keyword_taints,
+                unpacked_keyword_taint,
+            )
             if not taint:
                 continue
             display_name = (
@@ -1058,6 +1090,57 @@ class _ScopeAnalyzer:
                 ),
             )
 
+    @classmethod
+    def _summary_return_taint(
+        cls,
+        summary: FunctionSummary,
+        argument_taints: Sequence[Taint],
+        keyword_taints: Mapping[str, Taint],
+        unpacked_keyword_taint: Taint,
+    ) -> Taint:
+        parameters = tuple(
+            source.label for source in summary.returns if source.kind == "parameter"
+        )
+        taint = cls._bound_parameter_taint(
+            summary,
+            parameters,
+            argument_taints,
+            keyword_taints,
+            unpacked_keyword_taint,
+        )
+        taint.update(source for source in summary.returns if source.kind != "parameter")
+        return taint
+
+    @classmethod
+    def _bound_parameter_taint(
+        cls,
+        summary: FunctionSummary,
+        parameters: Sequence[str],
+        argument_taints: Sequence[Taint],
+        keyword_taints: Mapping[str, Taint],
+        unpacked_keyword_taint: Taint,
+    ) -> Taint:
+        taint: Taint = set()
+        for parameter in parameters:
+            taint.update(keyword_taints.get(parameter, set()))
+            if parameter in summary.positional_parameters:
+                index = summary.positional_parameters.index(parameter)
+                if index < len(argument_taints):
+                    taint.update(argument_taints[index])
+            elif parameter == summary.vararg:
+                taint.update(
+                    cls._combine(*argument_taints[len(summary.positional_parameters) :])
+                )
+            elif parameter == summary.kwarg:
+                taint.update(unpacked_keyword_taint)
+                extra = (
+                    value
+                    for key, value in keyword_taints.items()
+                    if key not in summary.parameters
+                )
+                taint.update(cls._combine(*extra))
+        return taint
+
     def _report(
         self,
         sink: Sink,
@@ -1067,7 +1150,15 @@ class _ScopeAnalyzer:
         helper_evidence: Optional[Evidence] = None,
         summary_location: Optional[Tuple[Path, int, int]] = None,
     ) -> None:
-        ordered = sorted(taint, key=lambda source: (source.line, source.column, source.label))
+        ordered = sorted(
+            taint,
+            key=lambda source: (
+                str(source.path or ""),
+                source.line,
+                source.column,
+                source.label,
+            ),
+        )
         parameters = tuple(
             sorted({source.label for source in ordered if source.kind == "parameter"})
         )
@@ -1100,7 +1191,12 @@ class _ScopeAnalyzer:
             return
         source_kinds = sorted({source.kind for source in ordered})
         evidence = tuple(
-            Evidence(source.line, source.column, f"{source.kind} source: {source.label}")
+            Evidence(
+                source.line,
+                source.column,
+                f"{source.kind} source: {source.label}",
+                source.path if source.path is not None and source.path != self.path else None,
+            )
             for source in ordered[:4]
         )
         if helper_evidence:
@@ -1145,13 +1241,13 @@ class _ScopeAnalyzer:
             return self._source("user", name, node)
         return None
 
-    @staticmethod
-    def _source(kind: str, label: str, node: ast.AST) -> TaintSource:
+    def _source(self, kind: str, label: str, node: ast.AST) -> TaintSource:
         return TaintSource(
             kind,
             label,
             getattr(node, "lineno", 1),
             getattr(node, "col_offset", 0) + 1,
+            self.path,
         )
 
     def _assign(self, target: ast.AST, taint: Taint, environment: Environment) -> None:

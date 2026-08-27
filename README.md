@@ -251,7 +251,7 @@ The versioned JSON output, SARIF, catalog, and exit-code contracts are documente
 
 ## Evidence, not inflated claims
 
-The checked-in regression corpus currently expects 33 rule-level signals across vulnerable and
+The checked-in regression corpus currently expects 35 rule-level signals across vulnerable and
 safe examples for direct, local-helper, and supported framework patterns:
 
 ```bash

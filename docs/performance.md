@@ -1,6 +1,6 @@
 # Performance report
 
-Date: 24 August 2026
+Date: 27 August 2026
 
 Environment: macOS 26.4 on arm64, Python 3.9.6. Results are local measurements, not universal
 hardware guarantees.
@@ -24,7 +24,7 @@ Result after worklist propagation:
 | Selected files | 502 |
 | Cross-file findings | 1 |
 | Scan errors | 0 |
-| Elapsed time | 0.093989 seconds |
+| Elapsed time | 0.099367 seconds |
 | Budget | under 2 seconds |
 
 The initial whole-project fixed-point pass took 3.544285 seconds on the same corpus. Replacing full
@@ -34,9 +34,9 @@ the explicit performance gate.
 
 ## LLMSafe repository scan
 
-The repository itself is also scanned in the standard contributor workflow. The release-candidate
-run selected 77 files and returned zero findings and zero scan errors. This is a self-scan, not an
-independent real-world corpus and therefore is not presented as adoption evidence.
+The repository itself is also scanned in the standard contributor workflow. The latest local
+candidate run selected 100 files and returned zero findings and zero scan errors. This is a
+self-scan, not an independent real-world corpus and therefore is not presented as adoption evidence.
 
 ## File-selection hardening
 

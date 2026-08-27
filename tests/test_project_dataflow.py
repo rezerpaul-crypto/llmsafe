@@ -186,6 +186,64 @@ class ProjectDataflowTests(unittest.TestCase):
 
         self.assertEqual(findings, [])
 
+    def test_imported_constant_return_does_not_propagate_argument_taint(self):
+        findings = self.scan(
+            {
+                "helpers.py": "def fixed_command(value):\n    return 'printf safe'\n",
+                "app.py": (
+                    "import os\n"
+                    "from helpers import fixed_command\n\n"
+                    "def handle(user_input):\n"
+                    "    return os.system(fixed_command(user_input))\n"
+                ),
+            }
+        )
+
+        self.assertEqual(findings, [])
+
+    def test_imported_return_tracks_only_relevant_parameter(self):
+        findings = self.scan(
+            {
+                "helpers.py": (
+                    "def select_command(command, audit_context):\n"
+                    "    return command\n"
+                ),
+                "app.py": (
+                    "import os\n"
+                    "from helpers import select_command\n\n"
+                    "def safe(user_input):\n"
+                    "    os.system(select_command('printf safe', user_input))\n\n"
+                    "def unsafe(user_input):\n"
+                    "    os.system(select_command(user_input, 'fixed context'))\n"
+                ),
+            }
+        )
+
+        self.assertEqual([finding.rule_id for finding in findings], ["FLOW002"])
+        self.assertEqual(findings[0].path.name, "app.py")
+        self.assertEqual(findings[0].line, 8)
+
+    def test_imported_return_preserves_model_source_and_source_path(self):
+        findings = self.scan(
+            {
+                "helpers.py": (
+                    "def generate(client):\n"
+                    "    return client.responses.create(input='fixed prompt')\n"
+                ),
+                "app.py": (
+                    "import os\n"
+                    "from helpers import generate\n\n"
+                    "def handle(client):\n"
+                    "    return os.system(generate(client).output_text)\n"
+                ),
+            }
+        )
+
+        self.assertEqual([finding.rule_id for finding in findings], ["FLOW002"])
+        source = next(step for step in findings[0].evidence if "model source" in step.message)
+        self.assertIsNotNone(source.path)
+        self.assertEqual(source.path.name, "helpers.py")
+
     def test_does_not_guess_external_imports(self):
         findings = self.scan(
             {
