@@ -56,6 +56,72 @@ class ProjectDataflowTests(unittest.TestCase):
 
         self.assertEqual([finding.rule_id for finding in findings], ["FLOW002"])
 
+    def test_preserves_keyword_sink_binding_across_files(self):
+        findings = self.scan(
+            {
+                "helpers.py": (
+                    "import requests\n\n"
+                    "def fetch(*, url):\n"
+                    "    return requests.get(url=url)\n"
+                ),
+                "app.py": (
+                    "from helpers import fetch\n\n"
+                    "def handle(model_output):\n"
+                    "    return fetch(url=model_output)\n"
+                ),
+            }
+        )
+
+        self.assertEqual([finding.rule_id for finding in findings], ["FLOW004"])
+        sink = next(step for step in findings[0].evidence if "helper reaches" in step.message)
+        self.assertEqual(sink.path.name, "helpers.py")
+
+    def test_resolves_external_import_aliases_in_project_scan(self):
+        findings = self.scan(
+            {
+                "app.py": (
+                    "import subprocess as process\n"
+                    "from requests import get as fetch\n\n"
+                    "def handle(user_input, model_output):\n"
+                    "    process.run(args=model_output)\n"
+                    "    return fetch(url=user_input)\n"
+                )
+            }
+        )
+
+        self.assertEqual(
+            [finding.rule_id for finding in findings],
+            ["FLOW002", "FLOW004"],
+        )
+
+    def test_project_scan_ignores_shadowed_external_alias(self):
+        findings = self.scan(
+            {
+                "app.py": (
+                    "import requests as http\n\n"
+                    "def handle(user_input):\n"
+                    "    http = SafeClient()\n"
+                    "    return http.get(user_input)\n"
+                )
+            }
+        )
+
+        self.assertEqual(findings, [])
+
+    def test_project_scan_ignores_shadowed_canonical_external_name(self):
+        findings = self.scan(
+            {
+                "app.py": (
+                    "import requests\n\n"
+                    "requests = SafeClient()\n\n"
+                    "def handle(user_input):\n"
+                    "    return requests.get(user_input)\n"
+                )
+            }
+        )
+
+        self.assertEqual(findings, [])
+
     def test_resolves_unaliased_module_import(self):
         findings = self.scan(
             {

@@ -32,6 +32,17 @@ Dataflow findings include evidence locations for sources and the sink. Direct ca
 module-level helpers are summarized to a fixed point, allowing a finding to cross multiple wrapper
 functions while still reporting the helper boundary.
 
+Sink parameters are bound according to the supported API shape rather than assumed to be the first
+argument. For example, `subprocess.run(args=value)` and `requests.get(url=value)` are analyzed, and
+the URL is the second positional argument in `requests.request(method, url)` and
+`httpx.stream(method, url)`. Tainted headers, query parameters, environment values, and other
+ancillary options do not by themselves trigger a finding for a fixed sink parameter.
+
+Direct and renamed imports of supported external APIs are resolved before source and sink matching,
+including patterns such as `import subprocess as process`, `from requests import get as fetch`, and
+`from agents import Runner as AgentRunner`. A binding is not resolved when the imported name is
+reassigned, shadowed by a parameter or local value, or mapped to multiple imports in the same scope.
+
 ## Agent-framework rules
 
 | ID | Severity | Detects |

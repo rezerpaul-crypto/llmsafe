@@ -158,8 +158,72 @@ HTTP_CALL_SUFFIXES = {
     ".post",
     ".put",
     ".request",
+    ".stream",
 }
-HTTP_CLIENT_PREFIXES = ("httpx", "requests", "urllib3")
+HTTP_CLIENT_PREFIXES = ("httpx.", "requests.", "urllib3.")
+HTTP_METHOD_URL_SUFFIXES = (".request", ".stream")
+
+
+class _ScopeBindingCollector(ast.NodeVisitor):
+    """Collect import candidates and names rebound in one lexical scope."""
+
+    def __init__(self) -> None:
+        self.bindings: Set[str] = set()
+        self.imports: Dict[str, Set[str]] = {}
+
+    def visit_Import(self, node: ast.Import) -> None:  # noqa: N802
+        for alias in node.names:
+            local_name = alias.asname or alias.name.split(".", 1)[0]
+            imported_name = alias.name if alias.asname else local_name
+            self.imports.setdefault(local_name, set()).add(imported_name)
+
+    def visit_ImportFrom(self, node: ast.ImportFrom) -> None:  # noqa: N802
+        module = "." * node.level + (node.module or "")
+        for alias in node.names:
+            if alias.name == "*":
+                continue
+            local_name = alias.asname or alias.name
+            separator = "" if not module or module.endswith(".") else "."
+            imported_name = f"{module}{separator}{alias.name}"
+            self.imports.setdefault(local_name, set()).add(imported_name)
+
+    def visit_Name(self, node: ast.Name) -> None:  # noqa: N802
+        if isinstance(node.ctx, (ast.Store, ast.Del)):
+            self.bindings.add(node.id)
+
+    def visit_FunctionDef(self, node: ast.FunctionDef) -> None:  # noqa: N802
+        self.bindings.add(node.name)
+
+    def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:  # noqa: N802
+        self.bindings.add(node.name)
+
+    def visit_ClassDef(self, node: ast.ClassDef) -> None:  # noqa: N802
+        self.bindings.add(node.name)
+
+    def visit_ExceptHandler(self, node: ast.ExceptHandler) -> None:  # noqa: N802
+        if node.name:
+            self.bindings.add(node.name)
+        for statement in node.body:
+            self.visit(statement)
+
+    def visit_MatchAs(self, node: ast.AST) -> None:  # noqa: N802
+        name = getattr(node, "name", None)
+        pattern = getattr(node, "pattern", None)
+        if name:
+            self.bindings.add(name)
+        if pattern:
+            self.visit(pattern)
+
+    def visit_MatchStar(self, node: ast.AST) -> None:  # noqa: N802
+        name = getattr(node, "name", None)
+        if name:
+            self.bindings.add(name)
+
+    def visit_MatchMapping(self, node: ast.AST) -> None:  # noqa: N802
+        rest = getattr(node, "rest", None)
+        if rest:
+            self.bindings.add(rest)
+        self.generic_visit(node)
 
 
 class DataflowRule:
@@ -177,13 +241,36 @@ class DataflowRule:
             for node in tree.body
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
         }
-        summaries = self._function_summaries(path, definitions)
-        analyzer = _ScopeAnalyzer(path, summaries)
+        module_imports, module_shadowed = self._scope_import_context(tree.body)
+        summaries = self._function_summaries(
+            path,
+            definitions,
+            module_imports,
+            module_shadowed,
+        )
+        analyzer = _ScopeAnalyzer(
+            path,
+            summaries,
+            import_aliases=module_imports,
+            shadowed_names=module_shadowed,
+        )
         analyzer.analyze_scope(tree.body, {})
         for node in ast.walk(tree):
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 environment = analyzer.parameter_environment(node.args)
-                analyzer.analyze_scope(node.body, environment)
+                import_aliases, shadowed_names = self._function_import_context(
+                    node,
+                    module_imports,
+                    module_shadowed,
+                )
+                function_analyzer = _ScopeAnalyzer(
+                    path,
+                    summaries,
+                    import_aliases=import_aliases,
+                    shadowed_names=shadowed_names,
+                )
+                function_analyzer.analyze_scope(node.body, environment)
+                analyzer.findings.extend(function_analyzer.findings)
         yield from analyzer.findings
 
     def scan_project(self, files: Mapping[Path, str]) -> Iterable[Finding]:
@@ -219,12 +306,24 @@ class DataflowRule:
             qualified_name = queue.popleft()
             queued.discard(qualified_name)
             module, function = function_nodes[qualified_name]
+            module_imports, module_shadowed = self._scope_import_context(module.tree.body)
             known = {
                 call: summaries[target]
                 for call, target in call_targets[qualified_name].items()
                 if target in summaries
             }
-            updated = self._summarize_function(module.path, function, known)
+            function_imports, function_shadowed = self._function_import_context(
+                function,
+                module_imports,
+                module_shadowed,
+            )
+            updated = self._summarize_function(
+                module.path,
+                function,
+                known,
+                function_imports,
+                function_shadowed,
+            )
             if summaries.get(qualified_name) == updated:
                 continue
             summaries[qualified_name] = updated
@@ -234,6 +333,7 @@ class DataflowRule:
                     queued.add(caller)
 
         for module in sorted(modules.values(), key=lambda item: item.name):
+            module_imports, module_shadowed = self._scope_import_context(module.tree.body)
             known = self._project_summaries_for(
                 module,
                 module.tree,
@@ -241,12 +341,88 @@ class DataflowRule:
                 function_names,
                 summaries,
             )
-            analyzer = _ScopeAnalyzer(module.path, known)
+            analyzer = _ScopeAnalyzer(
+                module.path,
+                known,
+                import_aliases=module_imports,
+                shadowed_names=module_shadowed,
+            )
             analyzer.analyze_scope(module.tree.body, {})
             for function in module.definitions.values():
                 environment = analyzer.parameter_environment(function.args)
-                analyzer.analyze_scope(function.body, environment)
+                import_aliases, shadowed_names = self._function_import_context(
+                    function,
+                    module_imports,
+                    module_shadowed,
+                )
+                function_analyzer = _ScopeAnalyzer(
+                    module.path,
+                    known,
+                    import_aliases=import_aliases,
+                    shadowed_names=shadowed_names,
+                )
+                function_analyzer.analyze_scope(function.body, environment)
+                analyzer.findings.extend(function_analyzer.findings)
             yield from analyzer.findings
+
+    @classmethod
+    def _scope_import_context(
+        cls,
+        statements: Sequence[ast.stmt],
+        inherited_aliases: Optional[Mapping[str, str]] = None,
+        inherited_shadowed: Sequence[str] = (),
+        blocked: Sequence[str] = (),
+    ) -> Tuple[Dict[str, str], Set[str]]:
+        """Return resolvable imports and names whose API identity is shadowed."""
+
+        collector = _ScopeBindingCollector()
+        for statement in statements:
+            collector.visit(statement)
+        blocked_names = collector.bindings | set(blocked)
+        local_imports = set(collector.imports)
+        unresolved_imports = {
+            name
+            for name, targets in collector.imports.items()
+            if len(targets) != 1 or next(iter(targets)).startswith(".")
+        }
+        shadowed_names = (
+            (set(inherited_shadowed) - local_imports)
+            | blocked_names
+            | unresolved_imports
+        )
+        aliases = {
+            name: target
+            for name, target in (inherited_aliases or {}).items()
+            if name not in shadowed_names and name not in local_imports
+        }
+        for name, targets in collector.imports.items():
+            if name in shadowed_names or len(targets) != 1:
+                continue
+            target = next(iter(targets))
+            if not target.startswith("."):
+                aliases[name] = target
+        return aliases, shadowed_names
+
+    @classmethod
+    def _function_import_context(
+        cls,
+        function: Union[ast.FunctionDef, ast.AsyncFunctionDef],
+        inherited_aliases: Mapping[str, str],
+        inherited_shadowed: Sequence[str],
+    ) -> Tuple[Dict[str, str], Set[str]]:
+        arguments = (
+            *function.args.posonlyargs,
+            *function.args.args,
+            *function.args.kwonlyargs,
+            *((function.args.vararg,) if function.args.vararg else ()),
+            *((function.args.kwarg,) if function.args.kwarg else ()),
+        )
+        return cls._scope_import_context(
+            function.body,
+            inherited_aliases,
+            inherited_shadowed,
+            blocked=tuple(argument.arg for argument in arguments),
+        )
 
     @classmethod
     def _project_modules(cls, files: Mapping[Path, str]) -> Dict[str, ModuleInfo]:
@@ -465,11 +641,23 @@ class DataflowRule:
         self,
         path: Path,
         definitions: Mapping[str, Union[ast.FunctionDef, ast.AsyncFunctionDef]],
+        module_imports: Mapping[str, str],
+        module_shadowed: Sequence[str],
     ) -> Dict[str, FunctionSummary]:
-        summaries = {
-            name: self._summarize_function(path, function, {})
-            for name, function in definitions.items()
-        }
+        summaries = {}
+        for name, function in definitions.items():
+            import_aliases, shadowed_names = self._function_import_context(
+                function,
+                module_imports,
+                module_shadowed,
+            )
+            summaries[name] = self._summarize_function(
+                path,
+                function,
+                {},
+                import_aliases,
+                shadowed_names,
+            )
         dependents: Dict[str, Set[str]] = {name: set() for name in definitions}
         for caller, function in definitions.items():
             for node in ast.walk(function):
@@ -485,7 +673,19 @@ class DataflowRule:
             changed = queue.popleft()
             queued.discard(changed)
             for caller in sorted(dependents[changed]):
-                updated = self._summarize_function(path, definitions[caller], summaries)
+                function = definitions[caller]
+                import_aliases, shadowed_names = self._function_import_context(
+                    function,
+                    module_imports,
+                    module_shadowed,
+                )
+                updated = self._summarize_function(
+                    path,
+                    function,
+                    summaries,
+                    import_aliases,
+                    shadowed_names,
+                )
                 if updated == summaries[caller]:
                     continue
                 summaries[caller] = updated
@@ -499,6 +699,8 @@ class DataflowRule:
         path: Path,
         function: Union[ast.FunctionDef, ast.AsyncFunctionDef],
         known_summaries: Mapping[str, FunctionSummary],
+        import_aliases: Optional[Mapping[str, str]] = None,
+        shadowed_names: Sequence[str] = (),
     ) -> FunctionSummary:
         positional = tuple(
             argument.arg for argument in (*function.args.posonlyargs, *function.args.args)
@@ -528,7 +730,13 @@ class DataflowRule:
                 *((function.args.kwarg,) if function.args.kwarg else ()),
             )
         }
-        analyzer = _ScopeAnalyzer(path, known_summaries, capture_parameter_sinks=True)
+        analyzer = _ScopeAnalyzer(
+            path,
+            known_summaries,
+            capture_parameter_sinks=True,
+            import_aliases=import_aliases,
+            shadowed_names=shadowed_names,
+        )
         analyzer.analyze_scope(function.body, environment)
         unique = {
             (
@@ -551,10 +759,14 @@ class _ScopeAnalyzer:
         path: Path,
         function_summaries: Optional[Mapping[str, FunctionSummary]] = None,
         capture_parameter_sinks: bool = False,
+        import_aliases: Optional[Mapping[str, str]] = None,
+        shadowed_names: Sequence[str] = (),
     ) -> None:
         self.path = path
         self.function_summaries = dict(function_summaries or {})
         self.capture_parameter_sinks = capture_parameter_sinks
+        self.import_aliases = dict(import_aliases or {})
+        self.shadowed_names = set(shadowed_names)
         self.findings: List[Finding] = []
         self.summary_sinks: List[FunctionSink] = []
         self._seen: Set[Tuple[str, int, int, Tuple[str, ...]]] = set()
@@ -659,6 +871,7 @@ class _ScopeAnalyzer:
             return taint
         if isinstance(node, ast.Call):
             name = call_name(node) or ""
+            resolved_name = self._resolved_call_name(name)
             argument_taints = [self._expression(argument, environment) for argument in node.args]
             keyword_pairs = [
                 (keyword.arg, self._expression(keyword.value, environment))
@@ -668,7 +881,14 @@ class _ScopeAnalyzer:
             unpacked_keyword_taint = self._combine(
                 *(taint for name, taint in keyword_pairs if name is None)
             )
-            self._check_call_sink(node, name, argument_taints, environment)
+            self._check_call_sink(
+                node,
+                resolved_name,
+                argument_taints,
+                keyword_taints,
+                unpacked_keyword_taint,
+                environment,
+            )
             self._check_function_sinks(
                 node,
                 name,
@@ -676,7 +896,7 @@ class _ScopeAnalyzer:
                 keyword_taints,
                 unpacked_keyword_taint,
             )
-            source = self._call_source(name, node)
+            source = self._call_source(resolved_name, node)
             combined = self._combine(
                 *argument_taints, *(taint for _, taint in keyword_pairs)
             )
@@ -690,21 +910,63 @@ class _ScopeAnalyzer:
         return combined
 
     def _check_call_sink(
-        self, node: ast.Call, name: str, argument_taints: Sequence[Taint], environment: Environment
+        self,
+        node: ast.Call,
+        name: str,
+        argument_taints: Sequence[Taint],
+        keyword_taints: Mapping[str, Taint],
+        unpacked_keyword_taint: Taint,
+        environment: Environment,
     ) -> None:
-        first = argument_taints[0] if argument_taints else set()
-        if name in {"eval", "exec"} and first:
-            self._report(CODE_SINK, node, name, first)
-        elif name == "os.system" and first:
-            self._report(SHELL_SINK, node, name, first)
-        elif name in SUBPROCESS_CALLS and first:
-            self._report(SHELL_SINK, node, name, first)
-        elif (name.endswith(".execute") or name.endswith(".executemany")) and first:
-            self._report(SQL_SINK, node, name, first)
+        if name in {"eval", "exec"}:
+            taint = self._sink_argument_taint(
+                argument_taints,
+                keyword_taints,
+                unpacked_keyword_taint,
+                keyword_names=("source",),
+            )
+            if taint:
+                self._report(CODE_SINK, node, name, taint)
+        elif name == "os.system":
+            taint = self._sink_argument_taint(
+                argument_taints,
+                keyword_taints,
+                unpacked_keyword_taint,
+                keyword_names=("command",),
+            )
+            if taint:
+                self._report(SHELL_SINK, node, name, taint)
+        elif name in SUBPROCESS_CALLS:
+            taint = self._sink_argument_taint(
+                argument_taints,
+                keyword_taints,
+                unpacked_keyword_taint,
+                keyword_names=("args",),
+            )
+            if taint:
+                self._report(SHELL_SINK, node, name, taint)
+        elif name.endswith(".execute") or name.endswith(".executemany"):
+            taint = self._sink_argument_taint(
+                argument_taints,
+                keyword_taints,
+                unpacked_keyword_taint,
+                keyword_names=("operation", "query", "sql", "statement"),
+            )
+            if taint:
+                self._report(SQL_SINK, node, name, taint)
         elif name.startswith(HTTP_CLIENT_PREFIXES) and any(
             name.endswith(suffix) for suffix in HTTP_CALL_SUFFIXES
-        ) and first:
-            self._report(URL_SINK, node, name, first)
+        ):
+            positional_index = 1 if name.endswith(HTTP_METHOD_URL_SUFFIXES) else 0
+            taint = self._sink_argument_taint(
+                argument_taints,
+                keyword_taints,
+                unpacked_keyword_taint,
+                positional_index=positional_index,
+                keyword_names=("url",),
+            )
+            if taint:
+                self._report(URL_SINK, node, name, taint)
 
         dispatch_taint: Taint = set()
         if isinstance(node.func, ast.Subscript):
@@ -714,6 +976,28 @@ class _ScopeAnalyzer:
                 dispatch_taint = self._expression(node.func.args[1], environment)
         if dispatch_taint:
             self._report(TOOL_SINK, node, "dynamic dispatch", dispatch_taint)
+
+    @classmethod
+    def _sink_argument_taint(
+        cls,
+        argument_taints: Sequence[Taint],
+        keyword_taints: Mapping[str, Taint],
+        unpacked_keyword_taint: Taint,
+        positional_index: int = 0,
+        keyword_names: Sequence[str] = (),
+    ) -> Taint:
+        """Return taint that can bind to one security-sensitive call parameter."""
+
+        explicitly_bound = positional_index < len(argument_taints) or any(
+            name in keyword_taints for name in keyword_names
+        )
+        taint = set() if explicitly_bound else set(unpacked_keyword_taint)
+        if positional_index < len(argument_taints):
+            taint.update(argument_taints[positional_index])
+        taint.update(
+            cls._combine(*(keyword_taints.get(name, set()) for name in keyword_names))
+        )
+        return taint
 
     def _check_function_sinks(
         self,
@@ -840,9 +1124,19 @@ class _ScopeAnalyzer:
         lowered = name.lower()
         if lowered in USER_CALLS or lowered.startswith("request."):
             return self._source("user", name or "request", node)
-        if lowered in MODEL_CALL_NAMES or any(marker in lowered for marker in MODEL_CALL_MARKERS):
+        model_call = lowered in MODEL_CALL_NAMES or any(
+            lowered.endswith(f".{call}") for call in MODEL_CALL_NAMES
+        )
+        if model_call or any(marker in lowered for marker in MODEL_CALL_MARKERS):
             return self._source("model", name, node)
         return None
+
+    def _resolved_call_name(self, name: str) -> str:
+        first, separator, remainder = name.partition(".")
+        if first in self.shadowed_names:
+            return f"<shadowed>.{remainder}" if separator else "<shadowed>"
+        resolved = self.import_aliases.get(first, first)
+        return f"{resolved}.{remainder}" if separator else resolved
 
     def _named_source(self, name: str, node: ast.AST) -> Optional[TaintSource]:
         if MODEL_PARAMETER.search(name):
