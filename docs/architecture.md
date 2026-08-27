@@ -44,9 +44,11 @@ The `DataflowRule` analyzes the module body and every function:
    branches propagate source sets through an environment keyed by variable name.
 4. Calls are checked against code, process, SQL, HTTP, and dynamic-dispatch sinks.
 5. Local function summaries map sink-relevant positional, keyword-only, variadic, and keyword
-   parameters to those sinks.
-6. Summaries are resolved to a fixed point so trust-boundary data can cross multiple local wrappers.
-7. A finding records up to four contributing sources, the helper boundary, and the final sink as
+   parameters to those sinks and record which sources influence the function's return value.
+6. Known local calls use those return summaries; unresolved calls conservatively preserve taint
+   from their receiver and arguments.
+7. Summaries are resolved to a fixed point so trust-boundary data can cross multiple local wrappers.
+8. A finding records up to four contributing sources, the helper boundary, and the final sink as
    evidence.
 
 Branch environments are merged conservatively. Reassigning a variable to an untainted expression
@@ -54,10 +56,12 @@ kills its previous taint in the current path.
 
 ## Local function summaries
 
-Each module-level function is analyzed once with synthetic parameter sources. Only parameters that
-reach a sensitive operation are retained in its summary. Repeated passes propagate terminal sink
-information through chains of local direct-name calls. At a real call site, only tainted arguments
-mapped to a sink-relevant parameter produce a finding; fixed arguments remain clean.
+Each module-level function is analyzed with synthetic parameter sources. The summary retains both
+parameters that reach sensitive operations and the tracked parameter or intrinsic trust-boundary
+sources that influence returned data. Repeated passes propagate sink and return information through
+chains of local direct-name calls. At a real call site, only tainted arguments mapped to a relevant
+parameter produce a finding; a helper that returns a fixed value does not taint that value merely
+because it accepted untrusted context.
 
 This design detects common agent wrappers without importing the scanned application. See the
 [cross-file analysis design](cross-file-analysis.md) for project boundaries, supported import forms,

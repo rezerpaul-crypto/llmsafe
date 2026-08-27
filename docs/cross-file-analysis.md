@@ -28,17 +28,21 @@ methods, callable objects, and dynamic attribute construction are not resolved.
 ## Summary propagation
 
 Each module-level function receives a summary of which parameters can reach code, process, SQL, URL,
-or dynamic-dispatch sinks. The analyzer repeatedly propagates those summaries through resolved local
-calls until no summary changes. The iteration count is bounded by the number of project functions plus
-one, so an import or call cycle cannot cause unbounded work.
+or dynamic-dispatch sinks and which parameter or intrinsic trust-boundary sources influence its
+return value. The analyzer repeatedly propagates those summaries through resolved local calls until
+no summary changes. A dependency worklist ensures an import or call cycle cannot cause recursive
+execution.
 
 At a real call site, only tainted arguments mapped to sink-relevant parameters create a finding. Fixed
-arguments remain clean even when the imported helper contains a sensitive primitive.
+arguments remain clean even when the imported helper contains a sensitive primitive. Likewise, a
+fixed helper return remains clean even when another helper argument is tainted; parameter-selective
+and transitive returns preserve only the relevant source set.
 
 ## Evidence path
 
-The primary finding location is the caller where untrusted data crosses into the imported helper. A
-related evidence location points to the terminal sink in the other module. JSON includes the evidence
+The primary finding location is the caller where untrusted data reaches the terminal operation. A
+related evidence location points to a sink in another module when the helper performs that operation.
+Sources created inside an imported helper also retain that source file. JSON includes the evidence
 path only for cross-file steps; SARIF renders it as the related artifact URI.
 
 ## Performance budget

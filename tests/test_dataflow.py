@@ -338,6 +338,68 @@ execute("fixed-command")
 """
         self.assertEqual(findings_for(DataflowRule(), content), [])
 
+    def test_constant_helper_return_does_not_propagate_argument_taint(self):
+        content = """
+import os
+
+def fixed_command(user_input):
+    return "printf safe"
+
+def run(user_input):
+    return os.system(fixed_command(user_input))
+"""
+        self.assertEqual(findings_for(DataflowRule(), content), [])
+
+    def test_helper_return_tracks_only_relevant_parameters(self):
+        content = """
+import os
+
+def select_command(command, audit_context):
+    return command
+
+def safe(user_input):
+    return os.system(select_command("printf safe", user_input))
+
+def unsafe(user_input):
+    return os.system(select_command(user_input, "fixed context"))
+"""
+        findings = findings_for(DataflowRule(), content)
+
+        self.assertEqual([finding.rule_id for finding in findings], ["FLOW002"])
+        self.assertEqual(findings[0].line, 11)
+
+    def test_transitive_helper_return_summary_reaches_sink(self):
+        content = """
+import os
+
+def normalize(value):
+    return value.strip()
+
+def command_for(value):
+    return normalize(value)
+
+def run(user_input):
+    return os.system(command_for(user_input))
+"""
+        findings = findings_for(DataflowRule(), content)
+
+        self.assertEqual([finding.rule_id for finding in findings], ["FLOW002"])
+
+    def test_helper_return_preserves_intrinsic_model_source(self):
+        content = """
+import os
+
+def generate(client):
+    return client.responses.create(input="fixed prompt")
+
+def run(client):
+    return os.system(generate(client).output_text)
+"""
+        findings = findings_for(DataflowRule(), content)
+
+        self.assertEqual([finding.rule_id for finding in findings], ["FLOW002"])
+        self.assertIn("model", findings[0].message)
+
     def test_maps_keyword_only_and_variadic_parameters(self):
         content = """
 def evaluate(*, expression):

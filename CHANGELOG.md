@@ -14,6 +14,9 @@ to use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   request and streaming calls without treating tainted ancillary options as the sink value.
 - Dataflow source and sink matching now resolves unambiguous external module and symbol import
   aliases while rejecting rebound, parameter-shadowed, or conflicting bindings.
+- Local and cross-module function summaries now retain only the parameters and intrinsic user or
+  model sources that influence a helper's return value. Fixed returns no longer inherit unrelated
+  argument taint, while transitive return flows retain their original evidence path.
 
 ## [0.3.0rc1] - 2026-08-24
 
