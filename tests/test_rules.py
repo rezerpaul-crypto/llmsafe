@@ -90,7 +90,7 @@ class PythonRuleTests(unittest.TestCase):
 
     def test_ignores_non_python_yaml_load(self):
         content = "yaml.load(document)\n"
-        self.assertEqual(rule_ids(DangerousPythonRule(), "agent.py", content), set())
+        self.assertEqual(rule_ids(DangerousPythonRule(), "notes.md", content), set())
 
 
 class PromptRuleTests(unittest.TestCase):

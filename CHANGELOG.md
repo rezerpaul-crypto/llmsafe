@@ -7,6 +7,10 @@ to use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- PY004 now covers explicit PyYAML `Loader`/`FullLoader`/`UnsafeLoader` choices, `unsafe_load`/`full_load`, and direct import aliases, while leaving `safe_load` and `SafeLoader` quiet.
+
 ### Fixed
 
 - Dataflow sinks now bind security-sensitive positional, keyword, and unpacked-keyword arguments
