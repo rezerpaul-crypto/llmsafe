@@ -1,5 +1,8 @@
 blank_issues_enabled: false
 contact_links:
+  - name: Contributor sprint
+    url: https://github.com/rezerpaul-crypto/llmsafe/blob/main/docs/contributor-sprint.md
+    about: Choose a scoped task and review the contribution and first-time CI workflow.
   - name: Compatibility pilot program
     url: https://github.com/rezerpaul-crypto/llmsafe/blob/main/docs/pilot-program.md
     about: Review the scope, privacy boundaries, and intake process before requesting a pilot.

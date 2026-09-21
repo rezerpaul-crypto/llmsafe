@@ -16,7 +16,8 @@ construction, secrets, unsafe Python, and risky MCP configuration—before deplo
 
 [Quick start](#start-in-60-seconds) · [See a real finding](#see-the-risk-not-just-the-api) ·
 [Why LLMSafe](docs/why-llmsafe.md) · [Rule catalog](docs/rules.md) ·
-[GitHub Action](docs/github-action.md) · [Request a pilot](docs/pilot-program.md)
+[GitHub Action](docs/github-action.md) · [Contribute](docs/contributor-sprint.md) ·
+[Request a pilot](docs/pilot-program.md)
 
 > **Project status:** `v0.2.1` is the current stable release. `v0.3.0rc1` is a public pilot
 > pre-release with bounded cross-file analysis and expanded integration contracts. LLMSafe returns
@@ -168,6 +169,7 @@ analysis of the code paths that connect untrusted AI data to real application ca
 | Owning CI or AppSec | [GitHub Action](docs/github-action.md) | Upload SARIF and enforce a documented severity threshold. |
 | Building security tooling | [Integration contracts](docs/integration-contracts.md) | Consume stable JSON, SARIF, exit codes, and rule metadata. |
 | Maintaining an AI/MCP project | [Compatibility pilot](docs/pilot-program.md) | Request a bounded, private compatibility review of public source. |
+| Making a first contribution | [Contributor sprint](docs/contributor-sprint.md) | Choose an unclaimed task, run the complete quality gate, and get a scoped review. |
 | Contributing a detection | [Rule-authoring guide](docs/rule-authoring.md) | Add a rule with vulnerable, safe, and edge-case tests. |
 
 ## GitHub Code Scanning
@@ -268,7 +270,8 @@ LLMSafe is early and intentionally open to rigorous feedback. Useful contributio
 agent boundaries, safe counterexamples, reproducible false positives, framework fixtures,
 integration improvements, and technical documentation.
 
-- Start with [CONTRIBUTING.md](CONTRIBUTING.md) and the [public roadmap](ROADMAP.md).
+- Start with the [contributor sprint](docs/contributor-sprint.md), [CONTRIBUTING.md](CONTRIBUTING.md),
+  and the [public roadmap](ROADMAP.md).
 - Ask installation or usage questions through [SUPPORT.md](SUPPORT.md).
 - Report vulnerabilities privately according to [SECURITY.md](SECURITY.md).
 - Read [GOVERNANCE.md](GOVERNANCE.md) and the [Code of Conduct](CODE_OF_CONDUCT.md) before participating.

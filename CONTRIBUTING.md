@@ -22,6 +22,17 @@ commands.
 LLMSafe supports Python 3.9 through 3.14. CI runs the same contributor workflow on every supported
 version.
 
+## Choose a scoped task
+
+The [contributor sprint guide](docs/contributor-sprint.md) lists the current contribution lanes,
+coordination rules, review target, first-time CI behavior, and evidence expected for each kind of
+change.
+
+Before implementation, read the entire issue and its comments, check for an existing pull request,
+and leave a short plan with the boundary and tests you intend to add. Wait for maintainer
+confirmation when an issue includes a design gate. This prevents duplicated work and avoids changes
+to public contracts before the intended behavior is agreed.
+
 ## Proposing a rule
 
 Read the [rule-authoring guide](docs/rule-authoring.md) for the complete workflow and a tested
