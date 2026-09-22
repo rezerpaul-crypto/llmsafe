@@ -35,3 +35,14 @@ The pending publisher creates the PyPI project during the first successful publi
 7. Verify the PyPI page, provenance, and a clean-environment installation.
 
 The release workflow rejects a tag that does not match the version in `pyproject.toml`.
+
+## Release build dependency policy
+
+GitHub's Ubuntu 24.04/Python 3.12 package and release jobs install
+`requirements/release-linux-py312.txt` with pip hash enforcement. The lock includes exact direct and
+transitive versions, permits wheels only, and contains the build backend used by
+`python -m build --no-isolation`. This prevents the release job from resolving a new backend or
+packaging-tool graph after a tag is published.
+
+When a direct tool changes, edit `requirements/release.in`, regenerate the lock exactly as described
+in `docs/supply-chain.md`, review the full diff, and merge only after the target package job passes.

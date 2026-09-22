@@ -3,6 +3,8 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW_ROOT = PROJECT_ROOT / ".github" / "workflows"
+RELEASE_INPUT = PROJECT_ROOT / "requirements" / "release.in"
+RELEASE_LOCK = PROJECT_ROOT / "requirements" / "release-linux-py312.txt"
 
 
 def workflow_text() -> str:
@@ -39,6 +41,50 @@ def test_linux_runner_image_is_explicitly_pinned() -> None:
     assert linux_runners
     assert set(linux_runners) == {"ubuntu-24.04"}
     assert "ubuntu-latest" not in workflows
+
+
+def test_release_toolchain_is_exactly_pinned_and_hash_checked() -> None:
+    direct_lines = {
+        line
+        for line in RELEASE_INPUT.read_text(encoding="utf-8").splitlines()
+        if line and not line.startswith("#")
+    }
+    direct_pins = {
+        requirement.split("==", maxsplit=1)[0]: requirement.split("==", maxsplit=1)[1]
+        for requirement in direct_lines
+    }
+    lock = RELEASE_LOCK.read_text(encoding="utf-8")
+    package_starts = list(
+        re.finditer(
+            r"^(?P<name>[a-z0-9][a-z0-9._-]*)==(?P<version>[^\\\s]+) \\$",
+            lock,
+            flags=re.MULTILINE,
+        )
+    )
+
+    assert set(direct_pins) == {"build", "setuptools", "twine", "wheel"}
+    assert "--only-binary :all:" in lock
+    assert package_starts
+    assert len(package_starts) == len({match["name"] for match in package_starts})
+    for index, match in enumerate(package_starts):
+        block_end = (
+            package_starts[index + 1].start()
+            if index + 1 < len(package_starts)
+            else len(lock)
+        )
+        assert "--hash=sha256:" in lock[match.start() : block_end]
+    for package, version in direct_pins.items():
+        line_ending = "\\"
+        assert f"{package}=={version} {line_ending}" in lock
+    pyproject = (PROJECT_ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    assert f'requires = ["setuptools=={direct_pins["setuptools"]}"]' in pyproject
+
+    for workflow_name in ("ci.yml", "release.yml"):
+        workflow = (WORKFLOW_ROOT / workflow_name).read_text(encoding="utf-8")
+        assert "pip install --disable-pip-version-check --require-hashes" in workflow
+        assert "-r requirements/release-linux-py312.txt" in workflow
+        assert "python -m build --no-isolation" in workflow
+        assert "pip install --upgrade build twine" not in workflow
 
 
 def test_checkout_never_persists_workflow_credentials() -> None:
