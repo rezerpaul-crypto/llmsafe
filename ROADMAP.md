@@ -57,6 +57,8 @@ maintainer can participate.
 - Make first-scan triage, baselines, SARIF, and remediations easier to adopt in existing projects.
 - Publish a real-world benchmark only after project consent, ground truth, manual classification,
   and the preregistered [protocol](docs/real-world-benchmark-protocol.md).
+- Enforce corpus enrollment before any real-world run with the offline, privacy-safe
+  [`benchmarks.enrollment`](benchmarks/enrollment.py) validator.
 
 ## Later — broader ecosystem coverage
 

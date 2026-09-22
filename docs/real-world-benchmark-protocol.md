@@ -30,6 +30,27 @@ Select up to ten repositories across at least three framework families. Do not c
 because a preliminary scan produced favorable numbers. Record rejected candidates and reasons before
 measurement to make selection bias visible.
 
+### Machine-enforced enrollment gate
+
+The [private corpus register](benchmark-enrollment.md) is validated before any clone or scan with:
+
+```console
+python -m benchmarks.enrollment /private/path/enrollment.json --require-ready-corpus
+```
+
+The register is deliberately stored outside the public repository. Schema version 1 requires an
+immutable 40- or 64-character object ID, retrieval timestamp with timezone, framework family,
+license plus HTTPS evidence, normalized include/exclude paths, an opaque reference to the private
+security contact, an explicit scan-consent record, independent publication permissions, and a
+negative incident/embargo declaration for every repository. Unknown fields are rejected so a typo
+cannot silently bypass a gate.
+
+The validator performs no network access and never clones or scans the named repository. Its output
+contains aggregate counts only: it does not echo repository URLs, security contacts, consent
+evidence, or project identifiers. A corpus is measurement-ready only when all entries pass and at
+least three framework families are represented. Successful validation establishes enrollment
+readiness, not permission to publish identities or results.
+
 ## Consent and disclosure
 
 Consent to scan is separate from consent to publish a name, result, quote, logo, or code excerpt. The
