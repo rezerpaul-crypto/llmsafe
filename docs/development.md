@@ -51,6 +51,12 @@ python scripts/dev.py --current
 
 Do not use `--current` with a system Python where you do not want packages installed.
 
+On Windows, the contributor workflow runs the platform-neutral test suite, benchmark, CLI smoke test,
+and self-scan. The direct `scripts/run-action.sh` test harness is Unix-only and is skipped on
+Windows because invoking bare `bash` there can resolve to the Windows/WSL shim instead of the
+GitHub runner's Git Bash. The composite action itself explicitly declares `shell: bash`, and its
+shell harness remains covered by the Ubuntu action-contract job.
+
 ## Individual commands
 
 The workflow deliberately keeps the project commands visible. When diagnosing one failed stage,

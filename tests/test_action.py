@@ -5,6 +5,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+import pytest
+
 from llmsafe.cli import main
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -19,6 +21,13 @@ def run_action(
     config: Path = None,
     baseline: Path = None,
 ):
+    if os.name == "nt":
+        pytest.skip(
+            "The direct run-action.sh harness requires Unix bash; "
+            "the composite action declares shell: bash and is covered by "
+            "the Ubuntu action job."
+        )
+
     environment = os.environ.copy()
     environment.update(
         {

@@ -35,7 +35,10 @@ class ProjectDataflowTests(unittest.TestCase):
         sink = next(step for step in findings[0].evidence if "helper reaches" in step.message)
         self.assertIsNotNone(sink.path)
         self.assertEqual(sink.path.name, "helpers.py")
-        self.assertTrue(sink.to_dict()["path"].endswith("pkg/helpers.py"))
+        self.assertEqual(
+            Path(sink.to_dict()["path"]).parts[-2:],
+            ("pkg", "helpers.py"),
+        )
 
     def test_resolves_module_alias_and_keyword_argument(self):
         findings = self.scan(
