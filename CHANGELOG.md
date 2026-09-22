@@ -15,8 +15,8 @@ to use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
-- Dependabot no longer proposes Python-3.10-only pytest or setuptools major updates while LLMSafe
-  supports Python 3.9; compatible minor and patch updates remain enabled.
+- Dependabot now uses an explicit `pytest>=9` exclusion so grouped updates cannot bypass the
+  Python 3.9 compatibility boundary; setuptools major updates remain held separately.
 - Dataflow sinks now bind security-sensitive positional, keyword, and unpacked-keyword arguments
   by API signature. This detects keyword-based process and SQL inputs plus the URL in generic HTTP
   request and streaming calls without treating tainted ancillary options as the sink value.
