@@ -156,8 +156,8 @@ RULE_CATALOG: Tuple[RuleMetadata, ...] = (
         "Potentially unsafe YAML load",
         Severity.MEDIUM,
         "python",
-        "Detects yaml.load() calls that may instantiate unsafe Python objects.",
-        "Use yaml.safe_load() for data-only YAML.",
+        "Detects yaml.load() without SafeLoader, yaml.unsafe_load(), yaml.full_load(), and import aliases of those APIs.",
+        "Use yaml.safe_load() or yaml.load(..., Loader=yaml.SafeLoader) for data-only YAML.",
     ),
     RuleMetadata(
         "SECRET001",

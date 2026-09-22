@@ -74,7 +74,7 @@ Reported messages never include the matched credential. Placeholder values such 
 | `PY001` | High | `eval()` |
 | `PY002` | Critical | `exec()` |
 | `PY003` | High | `pickle.load()` and `pickle.loads()` |
-| `PY004` | Medium | `yaml.load()` instead of data-only safe loading |
+| `PY004` | Medium | Unsafe PyYAML loaders (`yaml.load` without `SafeLoader`, `unsafe_load`, `full_load`, and import aliases). `yaml.safe_load` and `Loader=SafeLoader` are not reported |
 
 These rules report dangerous APIs even when dataflow cannot prove a trust-boundary path.
 

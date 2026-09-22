@@ -52,6 +52,46 @@ class PythonRuleTests(unittest.TestCase):
         content = 'import subprocess\nsubprocess.run(["git", "status"], check=True)\n'
         self.assertEqual(rule_ids(ShellExecutionRule(), "tools.py", content), set())
 
+    def test_detects_yaml_load_without_safe_loader(self):
+        content = "import yaml\nyaml.load(document)\n"
+        self.assertEqual(rule_ids(DangerousPythonRule(), "agent.py", content), {"PY004"})
+
+    def test_detects_explicit_unsafe_and_full_loaders(self):
+        content = (
+            "import yaml\n"
+            "yaml.load(document, Loader=yaml.UnsafeLoader)\n"
+            "yaml.load(document, Loader=yaml.FullLoader)\n"
+            "yaml.load(document, yaml.Loader)\n"
+        )
+        self.assertEqual(rule_ids(DangerousPythonRule(), "agent.py", content), {"PY004"})
+
+    def test_detects_unsafe_load_alias(self):
+        content = "from yaml import unsafe_load as load_yaml\nload_yaml(document)\n"
+        self.assertEqual(rule_ids(DangerousPythonRule(), "agent.py", content), {"PY004"})
+
+    def test_allows_safe_load_and_safe_loader(self):
+        content = (
+            "import yaml\n"
+            "from yaml import SafeLoader, safe_load\n"
+            "yaml.safe_load(document)\n"
+            "safe_load(document)\n"
+            "yaml.load(document, Loader=yaml.SafeLoader)\n"
+            "yaml.load(document, Loader=SafeLoader)\n"
+        )
+        self.assertEqual(rule_ids(DangerousPythonRule(), "agent.py", content), set())
+
+    def test_ignores_unrelated_load_method(self):
+        content = "config.load(path)\n"
+        self.assertEqual(rule_ids(DangerousPythonRule(), "agent.py", content), set())
+
+    def test_ignores_malformed_python(self):
+        content = "def broken(\nyaml.load(document)\n"
+        self.assertEqual(rule_ids(DangerousPythonRule(), "agent.py", content), set())
+
+    def test_ignores_non_python_yaml_load(self):
+        content = "yaml.load(document)\n"
+        self.assertEqual(rule_ids(DangerousPythonRule(), "notes.md", content), set())
+
 
 class PromptRuleTests(unittest.TestCase):
     def test_detects_dynamic_system_prompt(self):
@@ -69,12 +109,12 @@ class PromptRuleTests(unittest.TestCase):
 class MCPRuleTests(unittest.TestCase):
     def test_detects_shell_http_and_wildcard_tools(self):
         content = """{
-          "mcpServers": {
-            "unsafe": {
-              "command": "sh",
-              "args": ["-c", "download-and-run"],
-              "url": "http://tools.example.org/mcp",
-              "allowedTools": ["*"]
+          \"mcpServers\": {
+            \"unsafe\": {
+              \"command\": \"sh\",
+              \"args\": [\"-c\", \"download-and-run\"],
+              \"url\": \"http://tools.example.org/mcp\",
+              \"allowedTools\": [\"*\"]
             }
           }
         }"""
