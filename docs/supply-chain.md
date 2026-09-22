@@ -24,9 +24,10 @@ separate security boundaries.
   replace the reviewed `setuptools` version dynamically.
 - Release CI checks the tag against package metadata, builds wheel and source distributions, runs
   Twine validation, and installs the wheel in a fresh environment.
-- Dependabot monitors Python development dependencies and GitHub Actions weekly. Pytest and
-  setuptools major updates are held while LLMSafe supports Python 3.9 because their current next
-  majors require Python 3.10; compatible minor and patch updates remain eligible.
+- Dependabot monitors Python development dependencies and GitHub Actions weekly. Pytest 9 and newer
+  are excluded with an explicit version boundary while LLMSafe supports Python 3.9; this avoids a
+  grouped update bypassing a semantic-major filter on the open-ended `pytest>=7.4` requirement.
+  Setuptools major updates are held separately. Compatible updates remain eligible.
 - The repository has a security policy, deterministic tests, a self-scan, and an isolated local
   release-candidate build record.
 

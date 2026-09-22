@@ -8,10 +8,11 @@ updates:
       python-development-dependencies:
         dependency-type: development
     ignore:
-      # pytest 9 requires Python 3.10. Keep major 9 updates out of grouped
-      # development PRs while LLMSafe supports and tests Python 3.9.
+      # pytest 9 requires Python 3.10. An explicit version boundary is used
+      # because a semver-major ignore does not constrain the open-ended
+      # pytest>=7.4 development requirement inside a grouped update.
       - dependency-name: pytest
-        update-types: ["version-update:semver-major"]
+        versions: [">=9"]
       # Setuptools is also the build backend for supported Python 3.9 installs.
       # Hold major updates until their declared Python floor remains compatible.
       - dependency-name: setuptools
