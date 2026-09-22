@@ -19,6 +19,19 @@ def test_external_actions_are_pinned_to_full_commit_shas() -> None:
     assert all(re.search(r"@[0-9a-f]{40}$", value) for value in external)
 
 
+def test_artifact_actions_use_node24_release_lines() -> None:
+    artifact_actions = re.findall(
+        r"actions/(upload|download)-artifact@[0-9a-f]{40}\s+#\s+v(\d+)",
+        workflow_text(),
+    )
+
+    assert {action for action, _ in artifact_actions} == {"upload", "download"}
+    assert all(
+        int(major) >= {"upload": 6, "download": 7}[action]
+        for action, major in artifact_actions
+    )
+
+
 def test_checkout_never_persists_workflow_credentials() -> None:
     workflows = workflow_text()
 

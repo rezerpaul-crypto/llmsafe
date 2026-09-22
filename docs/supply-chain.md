@@ -8,6 +8,8 @@ separate security boundaries.
 
 - Every third-party GitHub Action in repository workflows is pinned to a full 40-character commit
   SHA, with the reviewed major line retained as a comment.
+- Artifact upload and download use reviewed Node.js 24 release lines; a workflow contract test
+  rejects the older Node.js 20 major lines.
 - Checkout never persists the workflow token in the repository.
 - Default workflow permission is `contents: read`; no job receives `contents: write`.
 - Untrusted repository code generates SARIF in an unprivileged job. A separate job receives
