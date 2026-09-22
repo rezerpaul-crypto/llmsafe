@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   scan:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       sarif-file: ${{ steps.llmsafe.outputs.sarif-file }}
     steps:
@@ -50,7 +50,7 @@ jobs:
       needs.scan.outputs.sarif-file != '' &&
       (github.event_name != 'pull_request' ||
       github.event.pull_request.head.repo.full_name == github.repository)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       security-events: write
