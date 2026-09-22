@@ -7,6 +7,11 @@ updates:
     groups:
       python-development-dependencies:
         dependency-type: development
+    ignore:
+      # pytest 9 requires Python 3.10. Keep major 9 updates out of grouped
+      # development PRs while LLMSafe supports and tests Python 3.9.
+      - dependency-name: pytest
+        update-types: ["version-update:semver-major"]
     open-pull-requests-limit: 5
   - package-ecosystem: github-actions
     directory: /

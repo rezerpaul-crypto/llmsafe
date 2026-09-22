@@ -112,3 +112,12 @@ def test_dependabot_covers_python_and_workflow_dependencies() -> None:
 
     assert "package-ecosystem: pip" in dependabot
     assert "package-ecosystem: github-actions" in dependabot
+
+
+def test_dependabot_preserves_oldest_supported_python() -> None:
+    dependabot = (PROJECT_ROOT / ".github" / "dependabot.yml").read_text(encoding="utf-8")
+    pyproject = (PROJECT_ROOT / "pyproject.toml").read_text(encoding="utf-8")
+
+    assert 'requires-python = ">=3.9"' in pyproject
+    assert "dependency-name: pytest" in dependabot
+    assert 'update-types: ["version-update:semver-major"]' in dependabot
