@@ -32,6 +32,15 @@ def test_artifact_actions_use_node24_release_lines() -> None:
     )
 
 
+def test_linux_runner_image_is_explicitly_pinned() -> None:
+    workflows = workflow_text()
+    linux_runners = re.findall(r"^\s*runs-on:\s*(ubuntu-[^\s#]+)", workflows, flags=re.MULTILINE)
+
+    assert linux_runners
+    assert set(linux_runners) == {"ubuntu-24.04"}
+    assert "ubuntu-latest" not in workflows
+
+
 def test_checkout_never_persists_workflow_credentials() -> None:
     workflows = workflow_text()
 
