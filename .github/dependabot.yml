@@ -12,6 +12,10 @@ updates:
       # development PRs while LLMSafe supports and tests Python 3.9.
       - dependency-name: pytest
         update-types: ["version-update:semver-major"]
+      # Setuptools is also the build backend for supported Python 3.9 installs.
+      # Hold major updates until their declared Python floor remains compatible.
+      - dependency-name: setuptools
+        update-types: ["version-update:semver-major"]
     open-pull-requests-limit: 5
   - package-ecosystem: github-actions
     directory: /

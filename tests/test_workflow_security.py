@@ -120,4 +120,5 @@ def test_dependabot_preserves_oldest_supported_python() -> None:
 
     assert 'requires-python = ">=3.9"' in pyproject
     assert "dependency-name: pytest" in dependabot
-    assert 'update-types: ["version-update:semver-major"]' in dependabot
+    assert "dependency-name: setuptools" in dependabot
+    assert dependabot.count('update-types: ["version-update:semver-major"]') == 2

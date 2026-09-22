@@ -11,11 +11,12 @@ to use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Package and release jobs now install an exact, SHA-256-verified Python 3.12/Linux toolchain lock,
   accept wheels only, and disable isolated build dependency resolution.
+- The verified release toolchain now uses wheel 0.48.0 with a reproducibly regenerated lock.
 
 ### Fixed
 
-- Dependabot no longer proposes pytest 9 in grouped development updates while LLMSafe supports
-  Python 3.9; compatible minor and patch updates remain enabled.
+- Dependabot no longer proposes Python-3.10-only pytest or setuptools major updates while LLMSafe
+  supports Python 3.9; compatible minor and patch updates remain enabled.
 - Dataflow sinks now bind security-sensitive positional, keyword, and unpacked-keyword arguments
   by API signature. This detects keyword-based process and SQL inputs plus the URL in generic HTTP
   request and streaming calls without treating tainted ancillary options as the sink value.
