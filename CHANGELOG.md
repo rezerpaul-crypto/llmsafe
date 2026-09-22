@@ -7,6 +7,11 @@ to use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Security
+
+- Package and release jobs now install an exact, SHA-256-verified Python 3.12/Linux toolchain lock,
+  accept wheels only, and disable isolated build dependency resolution.
+
 ### Fixed
 
 - Dataflow sinks now bind security-sensitive positional, keyword, and unpacked-keyword arguments

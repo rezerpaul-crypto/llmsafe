@@ -19,6 +19,9 @@ separate security boundaries.
 - Fork pull requests do not receive the SARIF upload permission.
 - PyPI publication uses Trusted Publishing with an environment gate and job-scoped OIDC
   `id-token: write`, not a long-lived package token.
+- Package and release CI install an exact, transitive Python 3.12/Linux toolchain lock with SHA-256
+  verification and binary-only resolution. Builds run without isolation so the backend cannot
+  replace the reviewed `setuptools` version dynamically.
 - Release CI checks the tag against package metadata, builds wheel and source distributions, runs
   Twine validation, and installs the wheel in a fresh environment.
 - Dependabot monitors Python development dependencies and GitHub Actions weekly.
@@ -32,8 +35,9 @@ permissions, or missing dependency-update ecosystems.
 
 - Protect `main` with required CI checks, pull-request review, conversation resolution, deletion
   prevention, and force-push prevention. This is a repository setting, not a source-file claim.
-- Decide and document a reviewed lock-and-hash strategy for release tooling and development
-  dependencies. Direct version bounds alone are not a reproducible dependency graph.
+- Decide on a maintainable cross-Python lock-and-hash strategy for contributor development
+  dependencies. The release toolchain is locked separately because it has one fixed platform;
+  ordinary development still spans Python 3.9 through 3.14.
 - Add an official OpenSSF Scorecard workflow only after reviewing its permissions and pinning every
   Action by SHA.
 - Produce and retain an SBOM and verifiable build provenance for release artifacts.
@@ -52,6 +56,25 @@ other.
 Dependabot may propose a new SHA. Review the upstream release and compare the old and new commits;
 retain the human-readable version comment, run workflow contract tests, and merge through protected
 `main`. Do not replace the SHA with a mutable branch or major tag merely to make updates easier.
+
+## Updating the release toolchain
+
+`requirements/release.in` contains the four direct release-tool pins. The checked-in
+`requirements/release-linux-py312.txt` resolves their complete graph for the fixed Ubuntu 24.04,
+Python 3.12 release job and requires binary artifacts with SHA-256 hashes.
+
+Regenerate the lock with `uv 0.12.17`:
+
+```bash
+uv pip compile --python-version 3.12 \
+  --python-platform x86_64-manylinux_2_17 \
+  --generate-hashes --only-binary :all: --emit-build-options \
+  requirements/release.in -o requirements/release-linux-py312.txt
+```
+
+Review every version change, run the workflow-security tests, and let the package CI job install and
+build from the lock on its exact target runner before merging. The Python and pip supplied by the
+pinned setup Action remain bootstrap trust boundaries.
 
 ## Trust limits
 

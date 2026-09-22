@@ -21,6 +21,7 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
+          cache-dependency-path: requirements/release-linux-py312.txt
       - name: Check tag matches package version
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
@@ -31,9 +32,11 @@ jobs:
           assert actual == expected,
           f'tag {expected!r} does not match package version {actual!r}'"
       - name: Install packaging tools
-        run: python -m pip install --upgrade build twine
+        run: >-
+          python -m pip install --disable-pip-version-check --require-hashes
+          -r requirements/release-linux-py312.txt
       - name: Build distributions
-        run: python -m build
+        run: python -m build --no-isolation
       - name: Validate distributions
         run: python -m twine check dist/*
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
