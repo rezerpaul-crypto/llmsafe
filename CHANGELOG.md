@@ -9,6 +9,8 @@ to use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Security
 
+- Official MCP Python SDK v1/v2 tool decorators now establish a remote-input boundary for ordinary
+  tool parameters, including neutral names that do not match generic user-input heuristics.
 - Package and release jobs now install an exact, SHA-256-verified Python 3.12/Linux toolchain lock,
   accept wheels only, and disable isolated build dependency resolution.
 - The verified release toolchain now uses wheel 0.48.0 with a reproducibly regenerated lock.

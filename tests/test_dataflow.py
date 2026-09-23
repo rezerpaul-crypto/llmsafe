@@ -50,6 +50,88 @@ def run(user_input):
         findings = findings_for(DataflowRule(), content)
         self.assertEqual([finding.rule_id for finding in findings], ["FLOW002"])
 
+    def test_treats_mcpserver_tool_parameters_as_remote_input(self):
+        content = """
+from mcp.server import MCPServer
+
+server = MCPServer("Execution tools")
+
+@server.tool()
+def calculate(expression: str):
+    return eval(expression)
+"""
+        findings = findings_for(DataflowRule(), content)
+
+        self.assertEqual([finding.rule_id for finding in findings], ["FLOW001"])
+        self.assertIn("MCP tool parameter: expression", findings[0].evidence[0].message)
+
+    def test_supports_legacy_fastmcp_constructor_alias(self):
+        content = """
+import subprocess
+from mcp.server.fastmcp import FastMCP as Server
+
+tools = Server("Execution tools")
+
+@tools.tool()
+def launch(script: str):
+    return subprocess.run(script)
+"""
+        findings = findings_for(DataflowRule(), content)
+
+        self.assertEqual([finding.rule_id for finding in findings], ["FLOW002"])
+
+    def test_supports_module_alias_and_bare_tool_decorator(self):
+        content = """
+import requests
+import mcp.server as sdk
+
+service = sdk.MCPServer("Fetch tools")
+
+@service.tool
+async def fetch(target: str):
+    return requests.get(target)
+"""
+        findings = findings_for(DataflowRule(), content)
+
+        self.assertEqual([finding.rule_id for finding in findings], ["FLOW004"])
+
+    def test_does_not_taint_mcp_injected_parameters(self):
+        content = """
+from typing import Annotated
+from mcp.server import MCPServer
+from mcp.server.mcpserver import Context, Resolve
+
+server = MCPServer("Execution tools")
+
+@server.tool()
+def inspect(
+    user_input: Context,
+    payload: Annotated[str, Resolve(load_policy)],
+):
+    eval(user_input)
+    return eval(payload)
+"""
+        self.assertEqual(findings_for(DataflowRule(), content), [])
+
+    def test_does_not_trust_similarly_named_or_rebound_mcp_builders(self):
+        content = """
+from application import MCPServer
+from mcp.server import MCPServer as OfficialServer
+
+OfficialServer = SafeServer
+first = MCPServer("local")
+second = OfficialServer("local")
+
+@first.tool()
+def one(expression):
+    return eval(expression)
+
+@second.tool()
+def two(script):
+    return eval(script)
+"""
+        self.assertEqual(findings_for(DataflowRule(), content), [])
+
     def test_traces_request_data_to_http_client(self):
         content = """
 import requests
