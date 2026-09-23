@@ -40,6 +40,23 @@ USER_CALLS = {
 }
 USER_ATTRIBUTES = {"args", "data", "form", "json", "query_params"}
 
+MCP_SERVER_CONSTRUCTORS = {
+    "mcp.server.MCPServer",
+    "mcp.server.mcpserver.MCPServer",
+    "mcp.server.fastmcp.FastMCP",
+}
+MCP_CONTEXT_ANNOTATIONS = {
+    "mcp.server.Context",
+    "mcp.server.mcpserver.Context",
+    "mcp.server.mcpserver.context.Context",
+    "mcp.server.fastmcp.Context",
+    "mcp.server.fastmcp.server.Context",
+}
+MCP_RESOLVE_ANNOTATIONS = {
+    "mcp.server.mcpserver.Resolve",
+    "mcp.server.mcpserver.resolve.Resolve",
+}
+
 
 @dataclass(frozen=True)
 class TaintSource:
@@ -244,6 +261,11 @@ class DataflowRule:
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
         }
         module_imports, module_shadowed = self._scope_import_context(tree.body)
+        mcp_tool_functions = self._mcp_tool_functions(
+            tree.body,
+            module_imports,
+            module_shadowed,
+        )
         summaries = self._function_summaries(
             path,
             definitions,
@@ -259,7 +281,10 @@ class DataflowRule:
         analyzer.analyze_scope(tree.body, {})
         for node in ast.walk(tree):
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                environment = analyzer.parameter_environment(node.args)
+                environment = analyzer.parameter_environment(
+                    node.args,
+                    mcp_tool=id(node) in mcp_tool_functions,
+                )
                 import_aliases, shadowed_names = self._function_import_context(
                     node,
                     module_imports,
@@ -339,6 +364,11 @@ class DataflowRule:
 
         for module in sorted(modules.values(), key=lambda item: item.name):
             module_imports, module_shadowed = self._scope_import_context(module.tree.body)
+            mcp_tool_functions = self._mcp_tool_functions(
+                module.tree.body,
+                module_imports,
+                module_shadowed,
+            )
             known = self._project_summaries_for(
                 module,
                 module.tree,
@@ -354,7 +384,10 @@ class DataflowRule:
             )
             analyzer.analyze_scope(module.tree.body, {})
             for function in module.definitions.values():
-                environment = analyzer.parameter_environment(function.args)
+                environment = analyzer.parameter_environment(
+                    function.args,
+                    mcp_tool=id(function) in mcp_tool_functions,
+                )
                 import_aliases, shadowed_names = self._function_import_context(
                     function,
                     module_imports,
@@ -428,6 +461,101 @@ class DataflowRule:
             inherited_shadowed,
             blocked=tuple(argument.arg for argument in arguments),
         )
+
+    @classmethod
+    def _mcp_tool_functions(
+        cls,
+        statements: Sequence[ast.stmt],
+        import_aliases: Mapping[str, str],
+        shadowed_names: Sequence[str],
+    ) -> Set[int]:
+        """Return official MCP SDK tool functions declared at module scope."""
+
+        server_instances: Set[str] = set()
+        tool_functions: Set[int] = set()
+        for statement in statements:
+            if isinstance(statement, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                if any(
+                    cls._is_mcp_tool_decorator(decorator, server_instances)
+                    for decorator in statement.decorator_list
+                ):
+                    tool_functions.add(id(statement))
+                server_instances.discard(statement.name)
+                continue
+            if isinstance(statement, ast.ClassDef):
+                server_instances.discard(statement.name)
+                continue
+            if isinstance(statement, ast.Import):
+                server_instances.difference_update(
+                    alias.asname or alias.name.split(".", 1)[0]
+                    for alias in statement.names
+                )
+                continue
+            if isinstance(statement, ast.ImportFrom):
+                server_instances.difference_update(
+                    alias.asname or alias.name
+                    for alias in statement.names
+                    if alias.name != "*"
+                )
+                continue
+
+            value: Optional[ast.AST] = None
+            targets: Sequence[ast.AST] = ()
+            if isinstance(statement, ast.Assign):
+                value = statement.value
+                targets = statement.targets
+            elif isinstance(statement, ast.AnnAssign):
+                value = statement.value
+                targets = (statement.target,)
+            elif isinstance(statement, ast.AugAssign):
+                targets = (statement.target,)
+
+            assigned = cls._assigned_names(targets)
+            server_instances.difference_update(assigned)
+            if not isinstance(value, ast.Call):
+                continue
+            constructor = cls._resolved_external_name(
+                call_name(value) or "",
+                import_aliases,
+                shadowed_names,
+            )
+            if constructor in MCP_SERVER_CONSTRUCTORS:
+                server_instances.update(assigned)
+        return tool_functions
+
+    @staticmethod
+    def _assigned_names(targets: Sequence[ast.AST]) -> Set[str]:
+        names: Set[str] = set()
+        pending = list(targets)
+        while pending:
+            target = pending.pop()
+            if isinstance(target, ast.Name):
+                names.add(target.id)
+            elif isinstance(target, (ast.Tuple, ast.List)):
+                pending.extend(target.elts)
+        return names
+
+    @staticmethod
+    def _is_mcp_tool_decorator(decorator: ast.AST, server_instances: Set[str]) -> bool:
+        expression = decorator.func if isinstance(decorator, ast.Call) else decorator
+        return (
+            isinstance(expression, ast.Attribute)
+            and expression.attr == "tool"
+            and isinstance(expression.value, ast.Name)
+            and expression.value.id in server_instances
+        )
+
+    @staticmethod
+    def _resolved_external_name(
+        name: str,
+        import_aliases: Mapping[str, str],
+        shadowed_names: Sequence[str],
+    ) -> str:
+        first, separator, remainder = name.partition(".")
+        if first in shadowed_names:
+            return f"<shadowed>.{remainder}" if separator else "<shadowed>"
+        resolved = import_aliases.get(first, first)
+        return f"{resolved}.{remainder}" if separator else resolved
 
     @classmethod
     def _project_modules(cls, files: Mapping[Path, str]) -> Dict[str, ModuleInfo]:
@@ -795,7 +923,11 @@ class _ScopeAnalyzer:
         self.summary_returns: Taint = set()
         self._seen: Set[Tuple[str, int, int, Tuple[str, ...]]] = set()
 
-    def parameter_environment(self, arguments: ast.arguments) -> Environment:
+    def parameter_environment(
+        self,
+        arguments: ast.arguments,
+        mcp_tool: bool = False,
+    ) -> Environment:
         environment: Environment = {}
         all_arguments = (
             list(arguments.posonlyargs) + list(arguments.args) + list(arguments.kwonlyargs)
@@ -805,10 +937,44 @@ class _ScopeAnalyzer:
         if arguments.kwarg:
             all_arguments.append(arguments.kwarg)
         for argument in all_arguments:
-            source = self._named_source(argument.arg, argument)
+            if mcp_tool:
+                if self._mcp_injected_parameter(argument):
+                    continue
+                source = self._source(
+                    "user",
+                    f"MCP tool parameter: {argument.arg}",
+                    argument,
+                )
+            else:
+                source = self._named_source(argument.arg, argument)
             if source:
                 environment[argument.arg] = {source}
         return environment
+
+    def _mcp_injected_parameter(self, argument: ast.arg) -> bool:
+        annotation = argument.annotation
+        if annotation is None:
+            return False
+        annotation_base = annotation.value if isinstance(annotation, ast.Subscript) else annotation
+        annotation_name = self._resolved_call_name(
+            self._expression_name(annotation_base) or ""
+        )
+        if annotation_name in MCP_CONTEXT_ANNOTATIONS:
+            return True
+        return any(
+            isinstance(node, ast.Call)
+            and self._resolved_call_name(call_name(node) or "") in MCP_RESOLVE_ANNOTATIONS
+            for node in ast.walk(annotation)
+        )
+
+    @classmethod
+    def _expression_name(cls, node: ast.AST) -> Optional[str]:
+        if isinstance(node, ast.Name):
+            return node.id
+        if isinstance(node, ast.Attribute):
+            parent = cls._expression_name(node.value)
+            return f"{parent}.{node.attr}" if parent else None
+        return None
 
     def analyze_scope(
         self, statements: Sequence[ast.stmt], environment: Environment

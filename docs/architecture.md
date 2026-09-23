@@ -38,7 +38,9 @@ flowchart TD
 
 The `DataflowRule` analyzes the module body and every function:
 
-1. Function arguments with trust-boundary names become user or model sources.
+1. Function arguments with trust-boundary names become user or model sources; ordinary parameters
+   of statically resolved official MCP Python SDK tools become remote-input sources regardless of
+   their names.
 2. Known request objects and LLM SDK calls create additional sources.
 3. Assignments, interpolation, containers, attribute access, calls, branches, loops, and exception
    branches propagate source sets through an environment keyed by variable name.

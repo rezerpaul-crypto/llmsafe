@@ -8,5 +8,5 @@ mcp = MCPServer("Repository tools")
 
 
 @mcp.tool()
-def run_command(command: str) -> str:
-    return subprocess.check_output(command, shell=True, text=True)
+def run_command(script: str) -> str:
+    return subprocess.check_output(script, shell=True, text=True)

@@ -43,6 +43,11 @@ including patterns such as `import subprocess as process`, `from requests import
 `from agents import Runner as AgentRunner`. A binding is not resolved when the imported name is
 reassigned, shadowed by a parameter or local value, or mapped to multiple imports in the same scope.
 
+For the official MCP Python SDK, parameters of functions decorated with `@server.tool()` become
+remote-input sources when `server` is created from a statically resolved `MCPServer` (v2) or
+`FastMCP` (v1) constructor. The analysis excludes SDK-injected `Context` and `Resolve(...)`
+parameters, and it does not guess the identity of similarly named local builders.
+
 ## Agent-framework rules
 
 | ID | Severity | Detects |

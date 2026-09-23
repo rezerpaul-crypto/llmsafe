@@ -124,7 +124,7 @@ LLMSafe currently publishes 23 stable built-in rule IDs:
 
 | Family | Rule IDs | Examples |
 | --- | --- | --- |
-| Dataflow | `FLOW001`–`FLOW005` | Model/user data reaching code, shell, SQL, URL, or tool dispatch |
+| Dataflow | `FLOW001`–`FLOW005` | Model/user data—including MCP tool arguments—reaching code, shell, SQL, URL, or tool dispatch |
 | Agent tools | `AGENT001`–`AGENT003` | Python/shell tools, dangerous capability flags, disabled approval |
 | Secrets | `SECRET001`–`SECRET005` | Provider keys, tokens, private keys, hard-coded credentials |
 | Python | `PY001`–`PY004` | `eval`, `exec`, unsafe pickle and YAML deserialization |
