@@ -23,8 +23,31 @@ class SecretRuleTests(unittest.TestCase):
         self.assertEqual(findings[0].line, 1)
 
     def test_ignores_explicit_placeholders(self):
-        content = 'api_key = "your-api-key-here"\npassword = "change-me-now"\n'
+        content = (
+            'api_key = "your-api-key-here"\n'
+            'password = "change-me-now"\n'
+            'api_key = "api_key_123"\n'
+            'api_key = "test-key"\n'
+            'api_key = "test_api_key"\n'
+            'api_key = "ghp_test_token"\n'
+            'client_secret = "test-client-secret"\n'
+            'client_secret = "test_client_secret"\n'
+            'access_token = "bearer_token"\n'
+            'AWS_ACCESS_KEY_ID = "AKIAIOSFODNN7EXAMPLE"\n'
+        )
         self.assertEqual(list(SecretRule().scan(Path("settings.py"), content)), [])
+
+    def test_placeholder_suppression_is_exact(self):
+        near_generic_placeholder = "test-key-" + "production-value"
+        near_aws_example = "AKIA" + "IOSFODNN7EXAMPLF"
+        content = (
+            f'api_key = "{near_generic_placeholder}"\n'
+            f'AWS_ACCESS_KEY_ID = "{near_aws_example}"\n'
+        )
+
+        findings = list(SecretRule().scan(Path("settings.py"), content))
+
+        self.assertEqual([item.rule_id for item in findings], ["SECRET002", "SECRET005"])
 
 
 class PythonRuleTests(unittest.TestCase):
