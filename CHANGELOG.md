@@ -20,6 +20,9 @@ to use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Secret scanning now ignores narrowly allow-listed synthetic fixture values and the exact canonical
+  AWS documentation access-key identifier while continuing to report near matches and extended
+  lookalikes.
 - Dependabot now uses an explicit `pytest>=9` exclusion so grouped updates cannot bypass the
   Python 3.9 compatibility boundary; setuptools major updates remain held separately.
 - Dataflow sinks now bind security-sensitive positional, keyword, and unpacked-keyword arguments

@@ -74,8 +74,10 @@ detectable. It does not resolve re-exports across project files.
 | `SECRET004` | Critical | Private-key headers |
 | `SECRET005` | High | Literal values assigned to credential-like variables |
 
-Reported messages never include the matched credential. Placeholder values such as `change-me` and
-`your-api-key-here` are ignored by the generic credential rule.
+Reported messages never include the matched credential. Placeholder values such as `change-me`,
+`your-api-key-here`, and exact synthetic markers such as `test-key` are ignored by the generic
+credential rule. Provider-shaped examples are ignored only when they exactly match a documented
+canonical value; lookalike prefixes, suffixes, and near matches remain findings.
 
 ## Python execution rules
 
