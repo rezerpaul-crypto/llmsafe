@@ -39,6 +39,76 @@ async def run(agent):
         self.assertEqual([finding.rule_id for finding in findings], ["FLOW002"])
         self.assertIn("model", findings[0].message)
 
+    def test_treats_openai_function_tool_parameters_as_model_input(self):
+        content = """
+from agents import function_tool
+
+@function_tool
+def calculate(expression: str):
+    return eval(expression)
+"""
+        findings = findings_for(DataflowRule(), content)
+
+        self.assertEqual([finding.rule_id for finding in findings], ["FLOW001"])
+        self.assertIn(
+            "OpenAI function tool parameter: expression",
+            findings[0].evidence[0].message,
+        )
+
+    def test_supports_openai_tool_alias_and_excludes_sdk_context(self):
+        content = """
+import requests
+from agents import RunContextWrapper
+from agents.decorators import tool as register_tool
+from agents.tool_context import ToolContext
+
+@register_tool(name_override="fetch")
+def fetch(context: RunContextWrapper[dict], target: str):
+    eval(context)
+    return requests.get(target)
+
+@register_tool
+def inspect(context: ToolContext[dict]):
+    return eval(context)
+"""
+        findings = findings_for(DataflowRule(), content)
+
+        self.assertEqual([finding.rule_id for finding in findings], ["FLOW004"])
+        self.assertIn(
+            "OpenAI function tool parameter: target",
+            findings[0].evidence[0].message,
+        )
+
+    def test_supports_openai_agents_module_alias(self):
+        content = """
+import subprocess
+import agents as sdk
+
+@sdk.function_tool()
+def launch(script: str):
+    return subprocess.run(script)
+"""
+        findings = findings_for(DataflowRule(), content)
+
+        self.assertEqual([finding.rule_id for finding in findings], ["FLOW002"])
+
+    def test_does_not_trust_similarly_named_or_rebound_openai_decorators(self):
+        content = """
+from application import function_tool
+from agents import function_tool as official_tool
+
+official_tool = local_decorator
+
+@function_tool
+def one(expression):
+    return eval(expression)
+
+@official_tool
+def two(script):
+    return eval(script)
+"""
+        self.assertEqual(findings_for(DataflowRule(), content), [])
+
     def test_traces_user_input_through_interpolation_to_shell(self):
         content = """
 import subprocess
