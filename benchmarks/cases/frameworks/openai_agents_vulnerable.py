@@ -1,10 +1,15 @@
-"""OpenAI Agents SDK: model output is executed through a shell."""
+"""OpenAI Agents SDK: model output and function-tool input reach execution."""
 
 import subprocess
 
-from agents import Agent, Runner
+from agents import Agent, Runner, function_tool
 
 agent = Agent(name="Repository assistant", instructions="Inspect the local repository")
+
+
+@function_tool
+def calculate(expression: str) -> object:
+    return eval(expression)
 
 
 async def inspect_repository() -> None:

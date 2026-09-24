@@ -78,6 +78,24 @@ class ProjectDataflowTests(unittest.TestCase):
         sink = next(step for step in findings[0].evidence if "helper reaches" in step.message)
         self.assertEqual(sink.path.name, "helpers.py")
 
+    def test_openai_function_tool_boundary_flows_into_cross_file_helper(self):
+        findings = self.scan(
+            {
+                "helpers.py": "def evaluate(value):\n    return eval(value)\n",
+                "agent.py": (
+                    "from agents.decorators import tool\n"
+                    "from helpers import evaluate\n\n"
+                    "@tool\n"
+                    "def calculate(expression):\n"
+                    "    return evaluate(expression)\n"
+                ),
+            }
+        )
+
+        self.assertEqual([finding.rule_id for finding in findings], ["FLOW001"])
+        sink = next(step for step in findings[0].evidence if "helper reaches" in step.message)
+        self.assertEqual(sink.path.name, "helpers.py")
+
     def test_preserves_keyword_sink_binding_across_files(self):
         findings = self.scan(
             {

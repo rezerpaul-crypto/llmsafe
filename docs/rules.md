@@ -48,6 +48,11 @@ remote-input sources when `server` is created from a statically resolved `MCPSer
 `FastMCP` (v1) constructor. The analysis excludes SDK-injected `Context` and `Resolve(...)`
 parameters, and it does not guess the identity of similarly named local builders.
 
+For the official OpenAI Agents SDK, ordinary parameters of functions decorated with
+`@function_tool` or `@tool` become model-input sources even when their names are neutral. Direct,
+renamed, and module imports are resolved only when they identify the official SDK decorators.
+SDK-injected `RunContextWrapper` and `ToolContext` parameters are excluded.
+
 ## Agent-framework rules
 
 | ID | Severity | Detects |

@@ -61,7 +61,7 @@
     },
     {
       "path": "cases/frameworks/openai_agents_vulnerable.py",
-      "expected_rules": ["FLOW002", "SHELL002"]
+      "expected_rules": ["FLOW001", "FLOW002", "PY001", "SHELL002"]
     },
     {
       "path": "cases/frameworks/openai_agents_safe.py",

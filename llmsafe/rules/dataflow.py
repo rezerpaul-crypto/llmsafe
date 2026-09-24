@@ -56,6 +56,17 @@ MCP_RESOLVE_ANNOTATIONS = {
     "mcp.server.mcpserver.Resolve",
     "mcp.server.mcpserver.resolve.Resolve",
 }
+OPENAI_TOOL_DECORATORS = {
+    "agents.function_tool",
+    "agents.tool.function_tool",
+    "agents.decorators.function_tool",
+    "agents.decorators.tool",
+}
+OPENAI_TOOL_CONTEXT_ANNOTATIONS = {
+    "agents.RunContextWrapper",
+    "agents.run_context.RunContextWrapper",
+    "agents.tool_context.ToolContext",
+}
 
 
 @dataclass(frozen=True)
@@ -266,6 +277,11 @@ class DataflowRule:
             module_imports,
             module_shadowed,
         )
+        openai_tool_functions = self._openai_tool_functions(
+            tree.body,
+            module_imports,
+            module_shadowed,
+        )
         summaries = self._function_summaries(
             path,
             definitions,
@@ -284,6 +300,7 @@ class DataflowRule:
                 environment = analyzer.parameter_environment(
                     node.args,
                     mcp_tool=id(node) in mcp_tool_functions,
+                    openai_tool=id(node) in openai_tool_functions,
                 )
                 import_aliases, shadowed_names = self._function_import_context(
                     node,
@@ -369,6 +386,11 @@ class DataflowRule:
                 module_imports,
                 module_shadowed,
             )
+            openai_tool_functions = self._openai_tool_functions(
+                module.tree.body,
+                module_imports,
+                module_shadowed,
+            )
             known = self._project_summaries_for(
                 module,
                 module.tree,
@@ -387,6 +409,7 @@ class DataflowRule:
                 environment = analyzer.parameter_environment(
                     function.args,
                     mcp_tool=id(function) in mcp_tool_functions,
+                    openai_tool=id(function) in openai_tool_functions,
                 )
                 import_aliases, shadowed_names = self._function_import_context(
                     function,
@@ -522,6 +545,42 @@ class DataflowRule:
             if constructor in MCP_SERVER_CONSTRUCTORS:
                 server_instances.update(assigned)
         return tool_functions
+
+    @classmethod
+    def _openai_tool_functions(
+        cls,
+        statements: Sequence[ast.stmt],
+        import_aliases: Mapping[str, str],
+        shadowed_names: Sequence[str],
+    ) -> Set[int]:
+        """Return official OpenAI Agents SDK function tools declared at module scope."""
+
+        return {
+            id(statement)
+            for statement in statements
+            if isinstance(statement, (ast.FunctionDef, ast.AsyncFunctionDef))
+            and any(
+                cls._resolved_external_name(
+                    cls._simple_expression_name(
+                        decorator.func if isinstance(decorator, ast.Call) else decorator
+                    )
+                    or "",
+                    import_aliases,
+                    shadowed_names,
+                )
+                in OPENAI_TOOL_DECORATORS
+                for decorator in statement.decorator_list
+            )
+        }
+
+    @classmethod
+    def _simple_expression_name(cls, node: ast.AST) -> Optional[str]:
+        if isinstance(node, ast.Name):
+            return node.id
+        if isinstance(node, ast.Attribute):
+            parent = cls._simple_expression_name(node.value)
+            return f"{parent}.{node.attr}" if parent else None
+        return None
 
     @staticmethod
     def _assigned_names(targets: Sequence[ast.AST]) -> Set[str]:
@@ -927,6 +986,7 @@ class _ScopeAnalyzer:
         self,
         arguments: ast.arguments,
         mcp_tool: bool = False,
+        openai_tool: bool = False,
     ) -> Environment:
         environment: Environment = {}
         all_arguments = (
@@ -943,6 +1003,14 @@ class _ScopeAnalyzer:
                 source = self._source(
                     "user",
                     f"MCP tool parameter: {argument.arg}",
+                    argument,
+                )
+            elif openai_tool:
+                if self._openai_tool_injected_parameter(argument):
+                    continue
+                source = self._source(
+                    "model",
+                    f"OpenAI function tool parameter: {argument.arg}",
                     argument,
                 )
             else:
@@ -966,6 +1034,16 @@ class _ScopeAnalyzer:
             and self._resolved_call_name(call_name(node) or "") in MCP_RESOLVE_ANNOTATIONS
             for node in ast.walk(annotation)
         )
+
+    def _openai_tool_injected_parameter(self, argument: ast.arg) -> bool:
+        annotation = argument.annotation
+        if annotation is None:
+            return False
+        annotation_base = annotation.value if isinstance(annotation, ast.Subscript) else annotation
+        annotation_name = self._resolved_call_name(
+            self._expression_name(annotation_base) or ""
+        )
+        return annotation_name in OPENAI_TOOL_CONTEXT_ANNOTATIONS
 
     @classmethod
     def _expression_name(cls, node: ast.AST) -> Optional[str]:

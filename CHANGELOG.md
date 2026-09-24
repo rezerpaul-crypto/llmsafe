@@ -9,6 +9,9 @@ to use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Security
 
+- Official OpenAI Agents SDK `@function_tool` and `@tool` parameters now establish a model-input
+  boundary while SDK-injected `RunContextWrapper` and `ToolContext` parameters remain trusted
+  application context.
 - Official MCP Python SDK v1/v2 tool decorators now establish a remote-input boundary for ordinary
   tool parameters, including neutral names that do not match generic user-input heuristics.
 - Package and release jobs now install an exact, SHA-256-verified Python 3.12/Linux toolchain lock,
