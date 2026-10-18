@@ -70,6 +70,34 @@ PLACEHOLDER_WORDS = (
     "your-",
 )
 
+# Keep this list exact and intentionally small. Substring-based matching would let a real secret
+# evade detection merely by containing words such as "test" or "example".
+EXACT_PLACEHOLDER_VALUES = frozenset(
+    {
+        "api_key_123",
+        "bearer_token",
+        "ghp_test_token",
+        "test-client-secret",
+        "test-key",
+        "test_api_key",
+        "test_client_secret",
+    }
+)
+
+# Some provider documentation publishes fixed identifiers that satisfy the provider's real format.
+# Suppress only the exact documented value, never a prefix, suffix, or fuzzy variant.
+EXACT_PROVIDER_EXAMPLES = {
+    "SECRET002": frozenset({"AKIAIOSFODNN7EXAMPLE"}),
+}
+
+
+def _is_standalone_provider_example(content: str, match: re.Match[str]) -> bool:
+    # Word boundaries also match inside hyphenated, path-like, or other compound tokens.
+    # Keep those findings rather than exempting only the canonical-looking substring.
+    adjacent = content[max(0, match.start() - 1) : match.start()]
+    adjacent += content[match.end() : match.end() + 1]
+    return not any(character in "-+./" for character in adjacent)
+
 
 class SecretRule:
     """Search text files for a focused set of high-confidence secret patterns."""
@@ -77,9 +105,16 @@ class SecretRule:
     def scan(self, path: Path, content: str) -> Iterable[Finding]:
         for pattern in PATTERNS:
             for match in pattern.regex.finditer(content):
+                if (
+                    match.group(0) in EXACT_PROVIDER_EXAMPLES.get(pattern.rule_id, ())
+                    and _is_standalone_provider_example(content, match)
+                ):
+                    continue
                 if pattern.rule_id == "SECRET005":
                     value = match.group(1).lower()
-                    if any(word in value for word in PLACEHOLDER_WORDS):
+                    if value in EXACT_PLACEHOLDER_VALUES or any(
+                        word in value for word in PLACEHOLDER_WORDS
+                    ):
                         continue
                 line, column = line_and_column(content, match.start())
                 yield Finding(

@@ -23,8 +23,78 @@ class SecretRuleTests(unittest.TestCase):
         self.assertEqual(findings[0].line, 1)
 
     def test_ignores_explicit_placeholders(self):
-        content = 'api_key = "your-api-key-here"\npassword = "change-me-now"\n'
+        content = (
+            'api_key = "your-api-key-here"\n'
+            'password = "change-me-now"\n'
+            'api_key = "api_key_123"\n'
+            'api_key = "test-key"\n'
+            'api_key = "test_api_key"\n'
+            'api_key = "TEST_API_KEY"\n'
+            'api_key = "ghp_test_token"\n'
+            'client_secret = "test-client-secret"\n'
+            'client_secret = "test_client_secret"\n'
+            'access_token = "bearer_token"\n'
+            'AWS_ACCESS_KEY_ID = "AKIAIOSFODNN7EXAMPLE"\n'
+        )
         self.assertEqual(list(SecretRule().scan(Path("settings.py"), content)), [])
+
+    def test_placeholder_suppression_is_exact(self):
+        near_generic_placeholder = "test-key-" + "production-value"
+        near_aws_example = "AKIA" + "IOSFODNN7EXAMPLF"
+        content = (
+            f'api_key = "{near_generic_placeholder}"\n'
+            f'AWS_ACCESS_KEY_ID = "{near_aws_example}"\n'
+        )
+
+        findings = list(SecretRule().scan(Path("settings.py"), content))
+
+        self.assertEqual([item.rule_id for item in findings], ["SECRET002", "SECRET005"])
+
+    def test_provider_example_is_ignored_with_standalone_delimiters(self):
+        example = "AKIA" + "IOSFODNN7EXAMPLE"
+        templates = (
+            "{key}",
+            "{key}\n",
+            'identifier = "{key}"',
+            "AWS_ACCESS_KEY_ID={key}",
+            '{{"identifier": "{key}"}}',
+            "The documented identifier is `{key}`.",
+            "({key}), another value",
+        )
+
+        for template in templates:
+            with self.subTest(template=template):
+                content = template.format(key=example)
+                findings = list(SecretRule().scan(Path("settings.txt"), content))
+                self.assertEqual(findings, [])
+
+    def test_provider_example_embedded_in_longer_token_is_reported(self):
+        example = "AKIA" + "IOSFODNN7EXAMPLE"
+        values = (
+            "prefix-" + example,
+            example + "-suffix",
+            "prefix/" + example,
+            example + "/suffix",
+            "prefix+" + example,
+            example + "+suffix",
+            "prefix." + example,
+            example + ".suffix",
+        )
+
+        for value in values:
+            with self.subTest(value=value):
+                content = f'identifier = "{value}"'
+                findings = list(SecretRule().scan(Path("tests/fixture.py"), content))
+                self.assertEqual([item.rule_id for item in findings], ["SECRET002"])
+                self.assertNotIn(value, findings[0].message)
+
+    def test_generic_placeholder_near_matches_remain_findings(self):
+        for value in ("test_api_key", "test_client_secret", "bearer_token"):
+            for near_match in ("prefix-" + value, value + "-suffix", value[:-1] + "x"):
+                with self.subTest(value=near_match):
+                    content = 'api_key = "{}"'.format(near_match)
+                    findings = list(SecretRule().scan(Path("tests/fixture.py"), content))
+                    self.assertEqual([item.rule_id for item in findings], ["SECRET005"])
 
 
 class PythonRuleTests(unittest.TestCase):

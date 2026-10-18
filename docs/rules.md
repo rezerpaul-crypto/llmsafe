@@ -74,8 +74,16 @@ detectable. It does not resolve re-exports across project files.
 | `SECRET004` | Critical | Private-key headers |
 | `SECRET005` | High | Literal values assigned to credential-like variables |
 
-Reported messages never include the matched credential. Placeholder values such as `change-me` and
-`your-api-key-here` are ignored by the generic credential rule.
+Reported messages never include the matched credential. Placeholder values such as `change-me`,
+`your-api-key-here`, and exact synthetic markers such as `test-key` are ignored by the generic
+credential rule. Provider-shaped examples are ignored only when they exactly match a documented
+canonical value; lookalike prefixes, suffixes, and near matches remain findings.
+
+Generic synthetic markers are compared case-insensitively. The `SECRET002` provider exception is
+limited to the exact AWS documentation identifier `AKIAIOSFODNN7EXAMPLE`. If an existing provider
+pattern matches that identifier next to `-`, `+`, `/`, or `.`, it is part of a longer token and the
+finding is retained. Quotes, whitespace, backticks, and assignment delimiters allow the standalone
+example. These exceptions apply to values in any file; test directories receive no blanket exemption.
 
 ## Python execution rules
 
