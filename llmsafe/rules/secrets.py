@@ -91,13 +91,24 @@ EXACT_PROVIDER_EXAMPLES = {
 }
 
 
+def _is_standalone_provider_example(content: str, match: re.Match[str]) -> bool:
+    # Word boundaries also match inside hyphenated, path-like, or other compound tokens.
+    # Keep those findings rather than exempting only the canonical-looking substring.
+    adjacent = content[max(0, match.start() - 1) : match.start()]
+    adjacent += content[match.end() : match.end() + 1]
+    return not any(character in "-+./" for character in adjacent)
+
+
 class SecretRule:
     """Search text files for a focused set of high-confidence secret patterns."""
 
     def scan(self, path: Path, content: str) -> Iterable[Finding]:
         for pattern in PATTERNS:
             for match in pattern.regex.finditer(content):
-                if match.group(0) in EXACT_PROVIDER_EXAMPLES.get(pattern.rule_id, ()):
+                if (
+                    match.group(0) in EXACT_PROVIDER_EXAMPLES.get(pattern.rule_id, ())
+                    and _is_standalone_provider_example(content, match)
+                ):
                     continue
                 if pattern.rule_id == "SECRET005":
                     value = match.group(1).lower()

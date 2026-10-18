@@ -79,6 +79,12 @@ Reported messages never include the matched credential. Placeholder values such 
 credential rule. Provider-shaped examples are ignored only when they exactly match a documented
 canonical value; lookalike prefixes, suffixes, and near matches remain findings.
 
+Generic synthetic markers are compared case-insensitively. The `SECRET002` provider exception is
+limited to the exact AWS documentation identifier `AKIAIOSFODNN7EXAMPLE`. If an existing provider
+pattern matches that identifier next to `-`, `+`, `/`, or `.`, it is part of a longer token and the
+finding is retained. Quotes, whitespace, backticks, and assignment delimiters allow the standalone
+example. These exceptions apply to values in any file; test directories receive no blanket exemption.
+
 ## Python execution rules
 
 | ID | Severity | Detects |
