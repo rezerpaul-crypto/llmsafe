@@ -1,0 +1,142 @@
+{
+  "accessed": "2026-10-23",
+  "method": "Official documentation and original project repositories. No competitor execution or independent accuracy ranking.",
+  "sources": [
+    {
+      "id": "S01",
+      "title": "LLMSafe README, Architektur und Quellcode",
+      "url": "https://github.com/rezerpaul-crypto/llmsafe/tree/c761627ad224a6f540d7ae6f06d2c076f426a6a6",
+      "evidence": "Repository mit 127 blob-SHAs abgeglichen; main lokal geprüft.",
+      "accessed": "2026-10-23",
+      "source_type": "primary"
+    },
+    {
+      "id": "S02",
+      "title": "LLMSafe PR #44",
+      "url": "https://github.com/rezerpaul-crypto/llmsafe/pull/44",
+      "evidence": "Offen, nicht gemergt; Head 9041d7e1e9bc5312707ab3ced38e80a23f40c559.",
+      "accessed": "2026-10-23",
+      "source_type": "primary"
+    },
+    {
+      "id": "S03",
+      "title": "Agent Audit",
+      "url": "https://github.com/HeadyZhang/agent-audit",
+      "evidence": "README: AST, TaintTracker, Tool-Grenzen, MCP und Secrets.",
+      "accessed": "2026-10-23",
+      "source_type": "primary"
+    },
+    {
+      "id": "S04",
+      "title": "Agentic Radar",
+      "url": "https://github.com/splx-ai/agentic-radar",
+      "evidence": "README: lokaler statischer Kern, Workflow-Graphen und optionale Modellfunktionen.",
+      "accessed": "2026-10-23",
+      "source_type": "primary"
+    },
+    {
+      "id": "S05",
+      "title": "Cisco MCP Scanner",
+      "url": "https://github.com/cisco-ai-defense/mcp-scanner",
+      "evidence": "README: YARA, LLM, AI Defense und verschiedene Scanmodi.",
+      "accessed": "2026-10-23",
+      "source_type": "primary"
+    },
+    {
+      "id": "S06",
+      "title": "Cisco Behavioral Scanning",
+      "url": "https://github.com/cisco-ai-defense/mcp-scanner/blob/main/docs/behavioral-scanning.md",
+      "evidence": "LLM-gestützte Verhaltensanalyse und dateiübergreifende Datenflüsse.",
+      "accessed": "2026-10-23",
+      "source_type": "primary"
+    },
+    {
+      "id": "S07",
+      "title": "Snyk Agent Scan",
+      "url": "https://raw.githubusercontent.com/snyk/agent-scan/main/README.md",
+      "evidence": "README: Komponentenerkennung, API-Analyse, Einwilligung zum Start von stdio-Servern und experimentelles Rohformat.",
+      "accessed": "2026-10-23",
+      "source_type": "primary"
+    },
+    {
+      "id": "S08",
+      "title": "Promptfoo Code Scanning",
+      "url": "https://www.promptfoo.dev/docs/code-scanning/",
+      "evidence": "Direkter Code-Scanning-Wettbewerber; Cloud standardmäßig, On-Prem separat.",
+      "accessed": "2026-10-23",
+      "source_type": "primary"
+    },
+    {
+      "id": "S09",
+      "title": "cruxet/mcp-audit",
+      "url": "https://github.com/cruxet/mcp-audit",
+      "evidence": "Offline-MCP-Konfigurationsscanner ohne Start von Servern.",
+      "accessed": "2026-10-23",
+      "source_type": "primary"
+    },
+    {
+      "id": "S10",
+      "title": "Semgrep CE und AppSec Platform",
+      "url": "https://docs.semgrep.dev/semgrep-pro-vs-oss",
+      "evidence": "CE- und Pro-Analysegrenzen getrennt bewertet.",
+      "accessed": "2026-10-23",
+      "source_type": "primary"
+    },
+    {
+      "id": "S11",
+      "title": "Akto MCP Security",
+      "url": "https://www.akto.io/mcp-security",
+      "evidence": "Discovery und Governance zur Laufzeit; angrenzende Produktklasse.",
+      "accessed": "2026-10-23",
+      "source_type": "primary"
+    },
+    {
+      "id": "S12",
+      "title": "NVIDIA garak",
+      "url": "https://garak.ai/",
+      "evidence": "Modell-/Systemprüfungen; angrenzende Produktklasse.",
+      "accessed": "2026-10-23",
+      "source_type": "primary"
+    },
+    {
+      "id": "S13",
+      "title": "LangChain Tool-Dokumentation",
+      "url": "https://docs.langchain.com/oss/python/langchain/tools",
+      "evidence": "@tool und injizierter ToolRuntime als Grundlage des Adapterentwurfs.",
+      "accessed": "2026-10-23",
+      "source_type": "primary"
+    },
+    {
+      "id": "S14",
+      "title": "Pydantic AI Function Tools",
+      "url": "https://pydantic.dev/docs/ai/tools-toolsets/tools/",
+      "evidence": "@agent.tool, @agent.tool_plain und RunContext.",
+      "accessed": "2026-10-23",
+      "source_type": "primary"
+    },
+    {
+      "id": "S15",
+      "title": "Python subprocess",
+      "url": "https://docs.python.org/3/library/subprocess.html",
+      "evidence": "Shell-, Argument- und Plattformkontext der Sink-Modellierung.",
+      "accessed": "2026-10-23",
+      "source_type": "primary"
+    },
+    {
+      "id": "S16",
+      "title": "VS Code MCP-Konfigurationsreferenz",
+      "url": "https://code.visualstudio.com/docs/agents/reference/mcp-configuration",
+      "evidence": "servers und mcpServers sind unterschiedliche Container.",
+      "accessed": "2026-10-23",
+      "source_type": "primary"
+    },
+    {
+      "id": "S17",
+      "title": "MCP-Spezifikation Tools 2025-06-18",
+      "url": "https://modelcontextprotocol.io/specification/2025-06-18/server/tools",
+      "evidence": "Tool-Annotationen sind nicht automatisch vertrauenswürdig.",
+      "accessed": "2026-10-23",
+      "source_type": "primary"
+    }
+  ]
+}
