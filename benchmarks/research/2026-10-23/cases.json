@@ -1,0 +1,188 @@
+{
+  "schema_version": 1,
+  "purpose": "Targeted future acceptance cases, not an unbiased accuracy benchmark. Only the focus signal is evaluated. Other structural findings are retained as evidence.",
+  "reference_commit": "c761627ad224a6f540d7ae6f06d2c076f426a6a6",
+  "cases": [
+    {
+      "id": "B01",
+      "label": "Direkter Nutzereingang nach eval",
+      "group": "control",
+      "focus": "FLOW001",
+      "expected": true,
+      "files": {
+        "agent.py": "def handle(user_input):\n    return eval(user_input)\n"
+      }
+    },
+    {
+      "id": "B02",
+      "label": "Dateiübergreifender Shell-Helper",
+      "group": "control",
+      "focus": "FLOW002",
+      "expected": true,
+      "files": {
+        "agent.py": "from helper import run\ndef handle(user_input):\n    return run(user_input)\n",
+        "helper.py": "import os\ndef run(value):\n    return os.system(value)\n"
+      }
+    },
+    {
+      "id": "B03",
+      "label": "Offizieller MCP-Toolparameter",
+      "group": "control",
+      "focus": "FLOW001",
+      "expected": true,
+      "files": {
+        "agent.py": "from mcp.server.fastmcp import FastMCP\nmcp = FastMCP(\"demo\")\n@mcp.tool()\ndef calculate(expression: str):\n    return eval(expression)\n"
+      }
+    },
+    {
+      "id": "B04",
+      "label": "Parametrisiertes SQL: Daten bleiben Daten",
+      "group": "control",
+      "focus": "FLOW003",
+      "expected": false,
+      "files": {
+        "agent.py": "def handle(cursor, user_input):\n    return cursor.execute(\"SELECT * FROM items WHERE id = ?\", (user_input,))\n"
+      }
+    },
+    {
+      "id": "B05",
+      "label": "Zusammengebautes SQL",
+      "group": "control",
+      "focus": "FLOW003",
+      "expected": true,
+      "files": {
+        "agent.py": "def handle(cursor, user_input):\n    return cursor.execute(\"SELECT * FROM items WHERE id = \" + user_input)\n"
+      }
+    },
+    {
+      "id": "G01",
+      "label": "LangChain-Tool mit beliebigem Parameternamen",
+      "group": "gap",
+      "focus": "FLOW001",
+      "expected": true,
+      "files": {
+        "agent.py": "from langchain.tools import tool\n@tool\ndef calculate(expression: str) -> str:\n    \"\"\"Calculate an expression.\"\"\"\n    return str(eval(expression))\n"
+      }
+    },
+    {
+      "id": "G02",
+      "label": "Pydantic-AI tool_plain als Vertrauensgrenze",
+      "group": "gap",
+      "focus": "FLOW001",
+      "expected": true,
+      "files": {
+        "agent.py": "from pydantic_ai import Agent\nagent = Agent()\n@agent.tool_plain\ndef calculate(expression: str) -> str:\n    \"\"\"Calculate an expression.\"\"\"\n    return str(eval(expression))\n"
+      }
+    },
+    {
+      "id": "G03",
+      "label": "Instanzmethode führt Shell-Helper aus",
+      "group": "gap",
+      "focus": "FLOW002",
+      "expected": true,
+      "files": {
+        "agent.py": "import os\nclass Executor:\n    def execute(self, value):\n        return os.system(value)\ndef handle(user_input):\n    worker = Executor()\n    return worker.execute(user_input)\n"
+      }
+    },
+    {
+      "id": "G04",
+      "label": "Festes echo: Datenargument ist keine Shell-Injection",
+      "group": "gap",
+      "focus": "FLOW002",
+      "expected": false,
+      "files": {
+        "agent.py": "import subprocess\ndef handle(user_input):\n    return subprocess.run([\"/bin/echo\", user_input], check=True, shell=False)\n"
+      }
+    },
+    {
+      "id": "G05",
+      "label": "Geschlossene, harmlose Funktionsauswahl",
+      "group": "gap",
+      "focus": "FLOW005",
+      "expected": false,
+      "files": {
+        "agent.py": "def status():\n    return \"ok\"\ndef help_text():\n    return \"help\"\nOPS = {\"status\": status, \"help\": help_text}\ndef handle(user_input):\n    return OPS[user_input]()\n"
+      }
+    },
+    {
+      "id": "G06",
+      "label": "Syntaxfehler benötigt Analyse-Diagnose",
+      "group": "gap",
+      "focus": "diagnostic",
+      "expected": true,
+      "files": {
+        "agent.py": "def broken(:\n    pass\n"
+      }
+    },
+    {
+      "id": "G07",
+      "label": "Schreibzugriff auf Dictionary-Feld erhält Taint",
+      "group": "gap",
+      "focus": "FLOW001",
+      "expected": true,
+      "files": {
+        "agent.py": "def handle(user_input):\n    box = {}\n    box[\"dangerous\"] = user_input\n    box[\"safe\"] = \"1+1\"\n    return eval(box[\"dangerous\"])\n"
+      }
+    },
+    {
+      "id": "G08",
+      "label": "Benigne execute-Methode ist kein SQL-Sink",
+      "group": "gap",
+      "focus": "FLOW003",
+      "expected": false,
+      "files": {
+        "agent.py": "class Recorder:\n    def execute(self, value):\n        return value\ndef handle(user_input):\n    recorder = Recorder()\n    return recorder.execute(user_input)\n"
+      }
+    },
+    {
+      "id": "G09",
+      "label": "Absoluter Shell-Pfad in MCP-Konfiguration",
+      "group": "gap",
+      "focus": "MCP001",
+      "expected": true,
+      "files": {
+        "mcp.json": "{\"mcpServers\":{\"demo\":{\"command\":\"/bin/bash\",\"args\":[\"-c\",\"echo demo\"]}}}\n"
+      }
+    },
+    {
+      "id": "G10",
+      "label": "VS-Code-Konfiguration mit servers-Container",
+      "group": "gap",
+      "focus": "MCP001",
+      "expected": true,
+      "files": {
+        ".vscode/mcp.json": "{\"servers\":{\"demo\":{\"command\":\"bash\",\"args\":[\"-c\",\"echo demo\"]}}}\n"
+      }
+    },
+    {
+      "id": "C01",
+      "label": "LangChain-Laufzeitkontext ist kein Modellargument",
+      "group": "control",
+      "focus": "FLOW001",
+      "expected": false,
+      "files": {
+        "agent.py": "from langchain.tools import tool, ToolRuntime\n@tool\ndef configured(runtime: ToolRuntime) -> str:\n    \"\"\"Evaluate an application-owned configuration expression.\"\"\"\n    return str(eval(runtime.context.expression))\n"
+      }
+    },
+    {
+      "id": "C02",
+      "label": "Pydantic RunContext ist kein Modellargument",
+      "group": "control",
+      "focus": "FLOW001",
+      "expected": false,
+      "files": {
+        "agent.py": "from pydantic_ai import Agent, RunContext\nagent = Agent()\n@agent.tool\ndef configured(ctx: RunContext[str]) -> str:\n    \"\"\"Evaluate an application-owned configuration expression.\"\"\"\n    return str(eval(ctx.deps))\n"
+      }
+    },
+    {
+      "id": "C03",
+      "label": "Unabhängiges Dictionary-Feld bleibt getrennt",
+      "group": "control",
+      "focus": "FLOW001",
+      "expected": false,
+      "files": {
+        "agent.py": "def handle(user_input):\n    box = {}\n    box[\"dangerous\"] = user_input\n    box[\"safe\"] = \"1+1\"\n    return eval(box[\"safe\"])\n"
+      }
+    }
+  ]
+}
