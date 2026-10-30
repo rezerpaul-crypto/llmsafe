@@ -76,14 +76,23 @@ detectable. It does not resolve re-exports across project files.
 
 Reported messages never include the matched credential. Placeholder values such as `change-me`,
 `your-api-key-here`, and exact synthetic markers such as `test-key` are ignored by the generic
-credential rule. Provider-shaped examples are ignored only when they exactly match a documented
-canonical value; lookalike prefixes, suffixes, and near matches remain findings.
+credential rule. Provider-format matches are exempted only for documented canonical values at
+explicitly allowed boundaries; other matching values remain findings.
 
-Generic synthetic markers are compared case-insensitively. The `SECRET002` provider exception is
-limited to the exact AWS documentation identifier `AKIAIOSFODNN7EXAMPLE`. If an existing provider
-pattern matches that identifier next to `-`, `+`, `/`, or `.`, it is part of a longer token and the
-finding is retained. Quotes, whitespace, backticks, and assignment delimiters allow the standalone
-example. These exceptions apply to values in any file; test directories receive no blanket exemption.
+The exact generic markers are `api_key_123`, `bearer_token`, `ghp_test_token`, `test-client-secret`,
+`test-key`, `test_api_key`, and `test_client_secret`. They are compared case-insensitively for all
+credential-like variable names, including `password`. This is a noise-reduction policy: a real weak
+credential equal to a marker is also ignored. The older substring-based placeholders, including
+`dummy` and `example`, remain unchanged and can also hide longer generic credential values; the
+exact-match guarantee applies to the new marker list only.
+
+The `SECRET002` provider exception is limited to the exact AWS documentation identifier
+`AKIAIOSFODNN7EXAMPLE`. Both boundaries must be a file boundary, whitespace, a quote, or a backtick,
+or an explicitly allowed delimiter: `=`, `:`, `(`, `[`, `{`, and `,` may precede it; `)`, `]`, `}`,
+`,`, and `;` may follow it. Assignment delimiters are accepted only before the identifier.
+Other adjacent characters retain an existing provider match, including `-`, `+`, `/`, `.`, `\`,
+`%`, `@`, and non-whitespace format characters. These boundary checks do not expand the underlying
+provider regexes. Exceptions apply in any file; test directories receive no blanket exemption.
 
 ## Python execution rules
 

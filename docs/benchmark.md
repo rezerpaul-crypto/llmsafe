@@ -56,6 +56,10 @@ The corpus is small, authored with knowledge of the rules, and does not estimate
 or false-positive rate. A result of 100% means implementation and expectations agree. It does not
 mean LLMSafe finds every agent vulnerability.
 
+The current manifest contains no expected `SECRET` rule signals. Its 37/37 result therefore does
+not validate secret-detection recall or the placeholder exceptions. Focused unit and CLI regression
+tests cover those boundaries, including compound values and ordinary source versus fixture paths.
+
 Future benchmark additions should come from minimized real patterns, include a safe counterpart,
 and explain the trust boundary under test.
 

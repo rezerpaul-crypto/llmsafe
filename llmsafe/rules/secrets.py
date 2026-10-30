@@ -92,11 +92,13 @@ EXACT_PROVIDER_EXAMPLES = {
 
 
 def _is_standalone_provider_example(content: str, match: re.Match[str]) -> bool:
-    # Word boundaries also match inside hyphenated, path-like, or other compound tokens.
-    # Keep those findings rather than exempting only the canonical-looking substring.
-    adjacent = content[max(0, match.start() - 1) : match.start()]
-    adjacent += content[match.end() : match.end() + 1]
-    return not any(character in "-+./" for character in adjacent)
+    # Word boundaries also match inside compound tokens. Suppress only at known delimiters;
+    # unknown punctuation and non-whitespace format characters must retain the finding.
+    before = content[max(0, match.start() - 1) : match.start()]
+    after = content[match.end() : match.end() + 1]
+    leading_boundary = not before or before.isspace() or before in "\"'`=([{,:"
+    trailing_boundary = not after or after.isspace() or after in "\"'`)]},;"
+    return leading_boundary and trailing_boundary
 
 
 class SecretRule:
