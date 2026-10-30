@@ -55,3 +55,10 @@ source code, repository policy, or the CI environment.
 LLMSafe does not execute analyzed code, import the target project, or send code over the network.
 Findings are evidence for human review. High-impact tools should still be sandboxed, least-privilege,
 and protected by approval enforced outside model-controlled state.
+
+Secret detection uses format and variable-name heuristics. Its generic placeholder policy applies
+in every directory, so a real weak credential equal to an ignored marker can be missed. Legacy
+substring placeholders can also hide longer generic values. The canonical AWS example exception
+uses explicit token boundaries; it does not validate credentials or broaden the provider patterns.
+See the [secret-rule policy](rules.md#secret-rules) for the exact exceptions. A clean scan is not
+proof that a repository contains no credentials.
