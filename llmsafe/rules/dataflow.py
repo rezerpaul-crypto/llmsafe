@@ -510,8 +510,31 @@ class DataflowRule:
     ) -> Dict[str, FunctionSummary]:
         """Summarize direct local methods without importing scanned classes."""
         methods: Dict[str, FunctionSummary] = {}
+        # If local code replaces class methods, a statically summarized class
+        # body cannot safely stand in for the runtime callable.
+        mutated_classes: Set[str] = set()
+        for statement in statements:
+            if isinstance(statement, ast.ClassDef):
+                continue
+            for node in ast.walk(statement):
+                if isinstance(node, (ast.Assign, ast.AnnAssign, ast.AugAssign)):
+                    targets = (
+                        node.targets if isinstance(node, ast.Assign) else (node.target,)
+                    )
+                    for target in targets:
+                        if isinstance(target, ast.Attribute) and isinstance(
+                            target.value, ast.Name
+                        ):
+                            mutated_classes.add(target.value.id)
+                if isinstance(node, ast.Call) and call_name(node) in {
+                    "setattr", "delattr"
+                }:
+                    if node.args and isinstance(node.args[0], ast.Name):
+                        mutated_classes.add(node.args[0].id)
         for statement in statements:
             if not isinstance(statement, ast.ClassDef):
+                continue
+            if statement.name in mutated_classes or statement.bases:
                 continue
             for method in statement.body:
                 if not isinstance(method, (ast.FunctionDef, ast.AsyncFunctionDef)):
@@ -1474,6 +1497,9 @@ class _ScopeAnalyzer:
                     return combined
             name = call_name(node) or ""
             resolved_name = self._resolved_call_name(name)
+            if name in {"setattr", "delattr"} and node.args:
+                if isinstance(node.args[0], ast.Name):
+                    self._invalidate_instance_class(node.args[0].id, environment)
             local_method = self._local_method_target(node, environment)
             receiver_taint = (
                 self._expression(node.func.value, environment)
@@ -1665,6 +1691,22 @@ class _ScopeAnalyzer:
         if dispatch_taint:
             self._report(TOOL_SINK, node, "dynamic dispatch", dispatch_taint)
 
+    @staticmethod
+    def _invalidate_instance_class(name: str, environment: Environment) -> None:
+        """Conservatively poison class identity for all possible aliases."""
+        current = environment.get(f"{_CLASS_PREFIX}{name}", set())
+        if not current:
+            return
+        affected_labels = {source.label for source in current}
+        for key, refs in tuple(environment.items()):
+            if not key.startswith(_CLASS_PREFIX):
+                continue
+            if any(ref.label in affected_labels for ref in refs):
+                environment[key] = {
+                    TaintSource("class-unknown", source.label, 0, 0)
+                    for source in refs
+                }
+
     def _local_method_target(
         self, node: ast.Call, environment: Environment
     ) -> Optional[str]:
@@ -1674,7 +1716,10 @@ class _ScopeAnalyzer:
         classes = environment.get(f"{_CLASS_PREFIX}{func.value.id}", set())
         if len(classes) != 1:
             return None
-        target = f"{next(iter(classes)).label}.{func.attr}"
+        selected = next(iter(classes))
+        if selected.kind != "local-class":
+            return None
+        target = f"{selected.label}.{func.attr}"
         return target if target in self.function_summaries else None
 
     @staticmethod
@@ -2164,6 +2209,17 @@ class _ScopeAnalyzer:
                 else:
                     environment.pop(target.id, None)
         elif isinstance(target, (ast.Subscript, ast.Attribute)):
+            if isinstance(target, ast.Attribute) and isinstance(
+                target.value, ast.Name
+            ):
+                self._invalidate_instance_class(target.value.id, environment)
+            if (
+                isinstance(target, ast.Subscript)
+                and isinstance(target.value, ast.Attribute)
+                and target.value.attr == "__dict__"
+                and isinstance(target.value.value, ast.Name)
+            ):
+                self._invalidate_instance_class(target.value.value.id, environment)
             location = self._field_location(target)
             if location:
                 name, segments, indices = location
