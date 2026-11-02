@@ -109,6 +109,107 @@ def two(script):
 """
         self.assertEqual(findings_for(DataflowRule(), content), [])
 
+    def test_langchain_tool_input_is_model_source_g01(self):
+        content = """
+from langchain.tools import tool
+@tool
+def calculate(expression: str) -> str:
+    return str(eval(expression))
+"""
+        findings = findings_for(DataflowRule(), content)
+        self.assertEqual([finding.rule_id for finding in findings], ["FLOW001"])
+        self.assertTrue(any("LangChain" in step.message for step in findings[0].evidence))
+
+    def test_langchain_alias_named_and_async_tool(self):
+        content = """
+from langchain.tools import tool as register
+@register("execute")
+async def calculate(expression: str):
+    return eval(expression)
+"""
+        self.assertEqual(
+            [item.rule_id for item in findings_for(DataflowRule(), content)],
+            ["FLOW001"],
+        )
+
+    def test_langchain_injected_toolruntime_not_model_source_c01(self):
+        content = """
+from langchain.tools import tool, ToolRuntime
+@tool
+def configured(runtime: ToolRuntime):
+    return eval(runtime.context.expression)
+"""
+        self.assertEqual(findings_for(DataflowRule(), content), [])
+
+    def test_langchain_rebound_or_fake_decorator_not_trusted(self):
+        content = """
+from langchain.tools import tool
+from unrelated import tool as other
+tool = other
+@tool
+def evaluate(expression):
+    return eval(expression)
+"""
+        self.assertEqual(findings_for(DataflowRule(), content), [])
+
+    def test_pydantic_tool_plain_is_model_source_g02(self):
+        content = """
+from pydantic_ai import Agent
+agent = Agent()
+@agent.tool_plain
+def calculate(expression: str):
+    return eval(expression)
+"""
+        findings = findings_for(DataflowRule(), content)
+        self.assertEqual([finding.rule_id for finding in findings], ["FLOW001"])
+        self.assertTrue(any("PydanticAI" in step.message for step in findings[0].evidence))
+
+    def test_pydantic_agent_alias_and_async_tool(self):
+        content = """
+import pydantic_ai as ai
+owner = ai.Agent()
+agent = owner
+@agent.tool
+async def calculate(expression: str):
+    return eval(expression)
+"""
+        self.assertEqual(
+            [item.rule_id for item in findings_for(DataflowRule(), content)],
+            ["FLOW001"],
+        )
+
+    def test_pydantic_runcontext_not_model_source_c02(self):
+        content = """
+from pydantic_ai import Agent, RunContext
+agent = Agent()
+@agent.tool
+def configured(ctx: RunContext[str]):
+    return eval(ctx.deps)
+"""
+        self.assertEqual(findings_for(DataflowRule(), content), [])
+
+    def test_pydantic_rebound_agent_and_fake_method_are_not_tool_boundary(self):
+        content = """
+from pydantic_ai import Agent
+from unrelated import make_agent
+agent = Agent()
+agent = make_agent()
+@agent.tool_plain
+def calculate(expression):
+    return eval(expression)
+"""
+        self.assertEqual(findings_for(DataflowRule(), content), [])
+
+    def test_pydantic_non_agent_tool_plain_is_not_model_source(self):
+        content = """
+from unrelated import Agent
+agent = Agent()
+@agent.tool_plain
+def calculate(expression):
+    return eval(expression)
+"""
+        self.assertEqual(findings_for(DataflowRule(), content), [])
+
     def test_traces_user_input_through_interpolation_to_shell(self):
         content = """
 import subprocess
@@ -737,6 +838,99 @@ def handle(user_input):
 """
         self.assertEqual(
             [f.rule_id for f in findings_for(DataflowRule(), content)], ["FLOW001"]
+        )
+
+    def test_echo_data_argument_does_not_control_shell_g04(self):
+        content = """
+import subprocess
+def handle(user_input):
+    return subprocess.run(["/bin/echo", user_input], check=True, shell=False)
+"""
+        self.assertEqual(findings_for(DataflowRule(), content), [])
+
+    def test_echo_data_argument_without_shell_flag_is_quiet(self):
+        content = """
+import subprocess
+def handle(user_input):
+    return subprocess.check_output(["/usr/bin/echo", user_input])
+"""
+        self.assertEqual(findings_for(DataflowRule(), content), [])
+
+    def test_dynamic_program_selection_remains_reported(self):
+        content = """
+import subprocess
+def handle(user_input):
+    return subprocess.run([user_input, "safe"], shell=False)
+"""
+        self.assertEqual(
+            [item.rule_id for item in findings_for(DataflowRule(), content)],
+            ["FLOW002"],
+        )
+
+    def test_shell_true_never_gets_echo_data_only_exemption(self):
+        content = """
+import subprocess
+def handle(user_input):
+    return subprocess.run(["/bin/echo", user_input], shell=True)
+"""
+        self.assertEqual(
+            [item.rule_id for item in findings_for(DataflowRule(), content)],
+            ["FLOW002"],
+        )
+
+    def test_unknown_shell_flag_blocks_echo_exemption(self):
+        content = """
+import subprocess
+def handle(user_input, use_shell):
+    return subprocess.run(["/bin/echo", user_input], shell=use_shell)
+"""
+        self.assertEqual(
+            [item.rule_id for item in findings_for(DataflowRule(), content)],
+            ["FLOW002"],
+        )
+
+    def test_fixed_interpreter_with_untrusted_code_is_reported(self):
+        content = """
+import subprocess
+def handle(user_input):
+    return subprocess.run(["/usr/bin/python3", "-c", user_input], shell=False)
+"""
+        self.assertEqual(
+            [item.rule_id for item in findings_for(DataflowRule(), content)],
+            ["FLOW002"],
+        )
+
+    def test_fixed_unknown_executable_with_untrusted_argument_is_reported(self):
+        content = """
+import subprocess
+def handle(user_input):
+    return subprocess.run(["/usr/bin/git", user_input], shell=False)
+"""
+        self.assertEqual(
+            [item.rule_id for item in findings_for(DataflowRule(), content)],
+            ["FLOW002"],
+        )
+
+    def test_changed_executable_never_gets_echo_exemption(self):
+        content = """
+import subprocess
+def handle(user_input):
+    return subprocess.run(["/bin/echo", "safe"], executable=user_input)
+"""
+        self.assertEqual(
+            [item.rule_id for item in findings_for(DataflowRule(), content)],
+            ["FLOW002"],
+        )
+
+    def test_dynamic_kwargs_never_get_echo_exemption(self):
+        content = """
+import subprocess
+def handle(user_input):
+    return subprocess.run(["/bin/echo", user_input], **{"shell": False})
+"""
+        self.assertEqual(
+            [item.rule_id for item in findings_for(DataflowRule(), content)],
+            ["FLOW002"],
         )
 
     def test_does_not_flag_constant_operations(self):

@@ -323,6 +323,53 @@ class ProjectDataflowTests(unittest.TestCase):
         self.assertEqual(findings, [])
 
 
+    def test_langchain_tool_source_crosses_imported_helper(self):
+        findings = self.scan(
+            {
+                "helpers.py": "def evaluate(value):\n    return eval(value)\n",
+                "agent.py": (
+                    "from langchain.tools import tool\n"
+                    "from helpers import evaluate\n\n"
+                    "@tool\n"
+                    "def calculate(expression: str):\n"
+                    "    return evaluate(expression)\n"
+                ),
+            }
+        )
+        self.assertEqual([finding.rule_id for finding in findings], ["FLOW001"])
+
+    def test_pydantic_tool_plain_source_crosses_imported_helper(self):
+        findings = self.scan(
+            {
+                "helpers.py": "def evaluate(value):\n    return eval(value)\n",
+                "agent.py": (
+                    "from pydantic_ai import Agent\n"
+                    "from helpers import evaluate\n"
+                    "agent = Agent()\n\n"
+                    "@agent.tool_plain\n"
+                    "def calculate(expression: str):\n"
+                    "    return evaluate(expression)\n"
+                ),
+            }
+        )
+        self.assertEqual([finding.rule_id for finding in findings], ["FLOW001"])
+
+    def test_pydantic_context_does_not_flow_across_files(self):
+        findings = self.scan(
+            {
+                "helpers.py": "def evaluate(value):\n    return eval(value)\n",
+                "agent.py": (
+                    "from pydantic_ai import Agent, RunContext\n"
+                    "from helpers import evaluate\n"
+                    "agent = Agent()\n\n"
+                    "@agent.tool\n"
+                    "def configured(ctx: RunContext[str]):\n"
+                    "    return evaluate(ctx.deps)\n"
+                ),
+            }
+        )
+        self.assertEqual(findings, [])
+
     def test_does_not_guess_external_imports(self):
         findings = self.scan(
             {

@@ -67,6 +67,25 @@ OPENAI_TOOL_CONTEXT_ANNOTATIONS = {
     "agents.run_context.RunContextWrapper",
     "agents.tool_context.ToolContext",
 }
+LANGCHAIN_TOOL_DECORATORS = {
+    "langchain.tools.tool",
+    "langchain_core.tools.tool",
+    "langchain_core.tools.convert.tool",
+}
+LANGCHAIN_INJECTED_ANNOTATIONS = {
+    "langchain.tools.ToolRuntime",
+    "langchain_core.tools.ToolRuntime",
+    "langchain_core.tools.base.ToolRuntime",
+    "langchain.tools.InjectedToolArg",
+    "langchain_core.tools.InjectedToolArg",
+    "langgraph.prebuilt.InjectedState",
+    "langgraph.prebuilt.InjectedStore",
+}
+PYDANTIC_AGENT_CONSTRUCTORS = {"pydantic_ai.Agent", "pydantic_ai.agent.Agent"}
+PYDANTIC_CONTEXT_ANNOTATIONS = {
+    "pydantic_ai.RunContext",
+    "pydantic_ai.tools.RunContext",
+}
 
 
 @dataclass(frozen=True)
@@ -186,6 +205,10 @@ SUBPROCESS_CALLS = {
     "subprocess.Popen",
     "subprocess.run",
 }
+# Narrow POSIX literal-only case: echo cannot reinterpret argument data as
+# source code, even if the argument itself came from an untrusted user.
+# Other programs may accept dangerous flags, so no generic shell=False bypass.
+DATA_ONLY_EXECUTABLES = {"/bin/echo", "/usr/bin/echo"}
 HTTP_CALL_SUFFIXES = {
     ".delete",
     ".get",
@@ -288,6 +311,9 @@ class DataflowRule:
             module_imports,
             module_shadowed,
         )
+        langchain_tools, pydantic_tools = self._additional_tool_functions(
+            tree.body, module_imports, module_shadowed
+        )
         summaries = self._function_summaries(
             path,
             definitions,
@@ -307,6 +333,8 @@ class DataflowRule:
                     node.args,
                     mcp_tool=id(node) in mcp_tool_functions,
                     openai_tool=id(node) in openai_tool_functions,
+                    langchain_tool=id(node) in langchain_tools,
+                    pydantic_tool=id(node) in pydantic_tools,
                 )
                 import_aliases, shadowed_names = self._function_import_context(
                     node,
@@ -397,6 +425,9 @@ class DataflowRule:
                 module_imports,
                 module_shadowed,
             )
+            langchain_tools, pydantic_tools = self._additional_tool_functions(
+                module.tree.body, module_imports, module_shadowed
+            )
             known = self._project_summaries_for(
                 module,
                 module.tree,
@@ -416,6 +447,8 @@ class DataflowRule:
                     function.args,
                     mcp_tool=id(function) in mcp_tool_functions,
                     openai_tool=id(function) in openai_tool_functions,
+                    langchain_tool=id(function) in langchain_tools,
+                    pydantic_tool=id(function) in pydantic_tools,
                 )
                 import_aliases, shadowed_names = self._function_import_context(
                     function,
@@ -578,6 +611,69 @@ class DataflowRule:
                 for decorator in statement.decorator_list
             )
         }
+
+    @classmethod
+    def _additional_tool_functions(
+        cls,
+        statements: Sequence[ast.stmt],
+        import_aliases: Mapping[str, str],
+        shadowed_names: Sequence[str],
+    ) -> Tuple[Set[int], Set[int]]:
+        """Identify explicit LangChain decorators and Pydantic Agent tools only.
+
+        The Pydantic receiver must originate from a recognized constructor.
+        Rebindings invalidate it; a similarly named object is not sufficient.
+        """
+        langchain: Set[int] = set()
+        pydantic: Set[int] = set()
+        agent_instances: Set[str] = set()
+        for statement in statements:
+            if isinstance(statement, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                for decorator in statement.decorator_list:
+                    expression = decorator.func if isinstance(decorator, ast.Call) else decorator
+                    name = cls._simple_expression_name(expression) or ""
+                    if cls._resolved_external_name(
+                        name, import_aliases, shadowed_names
+                    ) in LANGCHAIN_TOOL_DECORATORS:
+                        langchain.add(id(statement))
+                    if (
+                        isinstance(expression, ast.Attribute)
+                        and expression.attr in {"tool", "tool_plain"}
+                        and isinstance(expression.value, ast.Name)
+                        and expression.value.id in agent_instances
+                    ):
+                        pydantic.add(id(statement))
+                agent_instances.discard(statement.name)
+                continue
+            if isinstance(statement, ast.ClassDef):
+                agent_instances.discard(statement.name)
+                continue
+            if isinstance(statement, (ast.Import, ast.ImportFrom)):
+                continue
+            value: Optional[ast.AST] = None
+            targets: Sequence[ast.AST] = ()
+            if isinstance(statement, ast.Assign):
+                value = statement.value
+                targets = statement.targets
+            elif isinstance(statement, ast.AnnAssign):
+                value = statement.value
+                targets = (statement.target,)
+            elif isinstance(statement, ast.AugAssign):
+                targets = (statement.target,)
+            assigned = cls._assigned_names(targets)
+            was_agent = (
+                isinstance(value, ast.Name) and value.id in agent_instances
+            )
+            agent_instances.difference_update(assigned)
+            if was_agent:
+                agent_instances.update(assigned)
+            if isinstance(value, ast.Call):
+                constructor = cls._resolved_external_name(
+                    call_name(value) or "", import_aliases, shadowed_names
+                )
+                if constructor in PYDANTIC_AGENT_CONSTRUCTORS:
+                    agent_instances.update(assigned)
+        return langchain, pydantic
 
     @classmethod
     def _simple_expression_name(cls, node: ast.AST) -> Optional[str]:
@@ -993,6 +1089,8 @@ class _ScopeAnalyzer:
         arguments: ast.arguments,
         mcp_tool: bool = False,
         openai_tool: bool = False,
+        langchain_tool: bool = False,
+        pydantic_tool: bool = False,
     ) -> Environment:
         environment: Environment = {}
         all_arguments = (
@@ -1017,6 +1115,17 @@ class _ScopeAnalyzer:
                 source = self._source(
                     "model",
                     f"OpenAI function tool parameter: {argument.arg}",
+                    argument,
+                )
+            elif langchain_tool or pydantic_tool:
+                if self._framework_injected_parameter(
+                    argument, langchain=langchain_tool
+                ):
+                    continue
+                source = self._source(
+                    "model",
+                    f"{'LangChain' if langchain_tool else 'PydanticAI'} tool parameter: "
+                    f"{argument.arg}",
                     argument,
                 )
             else:
@@ -1050,6 +1159,21 @@ class _ScopeAnalyzer:
             self._expression_name(annotation_base) or ""
         )
         return annotation_name in OPENAI_TOOL_CONTEXT_ANNOTATIONS
+
+    def _framework_injected_parameter(
+        self, argument: ast.arg, langchain: bool
+    ) -> bool:
+        annotation = argument.annotation
+        if annotation is None:
+            return False
+        base = annotation.value if isinstance(annotation, ast.Subscript) else annotation
+        name = self._resolved_call_name(self._expression_name(base) or "")
+        allowed = (
+            LANGCHAIN_INJECTED_ANNOTATIONS
+            if langchain
+            else PYDANTIC_CONTEXT_ANNOTATIONS
+        )
+        return name in allowed
 
     @classmethod
     def _expression_name(cls, node: ast.AST) -> Optional[str]:
@@ -1349,6 +1473,21 @@ class _ScopeAnalyzer:
                 unpacked_keyword_taint,
                 keyword_names=("args",),
             )
+            # A fixed, known data-only executable invoked without a shell
+            # does not parse untrusted argv[1:] as shell commands. This is
+            # intentionally NOT a sanitizer for arbitrary programs/flags.
+            safe_data_argv = self._literal_data_only_argv(node)
+            if not safe_data_argv:
+                # Explicit execution environment changes can control which
+                # program runs, independent of whether args are constant.
+                taint.update(
+                    self._combine(
+                        *(keyword_taints.get(key, set())
+                          for key in ("executable", "shell"))
+                    )
+                )
+            else:
+                taint = set()
             if taint:
                 self._report(SHELL_SINK, node, name, taint)
         elif name.endswith(".execute") or name.endswith(".executemany"):
@@ -1382,6 +1521,46 @@ class _ScopeAnalyzer:
                 dispatch_taint = self._expression(node.func.args[1], environment)
         if dispatch_taint:
             self._report(TOOL_SINK, node, "dynamic dispatch", dispatch_taint)
+
+    @staticmethod
+    def _literal_data_only_argv(node: ast.Call) -> bool:
+        """Prove a very narrow no-shell data-only subprocess call.
+
+        Dynamic kwargs, changed execution environments, shell=True, relative
+        executable names, and other programs all stay on the conservative path.
+        """
+        if any(keyword.arg is None for keyword in node.keywords):
+            return False
+        if any(
+            keyword.arg in {"executable", "cwd", "env"} for keyword in node.keywords
+        ):
+            return False
+        shell = next(
+            (keyword.value for keyword in node.keywords if keyword.arg == "shell"),
+            None,
+        )
+        if shell is not None and not (
+            isinstance(shell, ast.Constant) and shell.value is False
+        ):
+            return False
+        command = (
+            node.args[0]
+            if node.args
+            else next(
+                (keyword.value for keyword in node.keywords if keyword.arg == "args"),
+                None,
+            )
+        )
+        if not isinstance(command, (ast.List, ast.Tuple)) or not command.elts:
+            return False
+        if any(isinstance(item, ast.Starred) for item in command.elts):
+            return False
+        executable = command.elts[0]
+        return (
+            isinstance(executable, ast.Constant)
+            and isinstance(executable.value, str)
+            and executable.value in DATA_ONLY_EXECUTABLES
+        )
 
     @classmethod
     def _sink_argument_taint(

@@ -9,6 +9,9 @@ to use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Security
 
+- Recognize statically resolved LangChain and PydanticAI function-tool registrations
+  as model-input boundaries, excluding officially injected ToolRuntime and RunContext
+  annotations. Rebound/non-SDK decorators do not receive an implied trusted API identity.
 - Official OpenAI Agents SDK `@function_tool` and `@tool` parameters now establish a model-input
   boundary while SDK-injected `RunContextWrapper` and `ToolContext` parameters remain trusted
   application context.
@@ -20,6 +23,14 @@ to use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- A narrow literal POSIX `/bin/echo` / `/usr/bin/echo` argv-only process call
+  no longer reports FLOW002 solely because data arguments are untrusted.
+  Dynamic programs, interpreter options, shell use, and executable/environment
+  overrides stay subject to the conservative process-execution rule.
+
+- Malformed Python no longer silently yields a successful scan: parser failures are recorded as
+  scan errors (exit 2) while text-based security checks still run; JSON v1 and SARIF retain their
+  documented output contracts without echoing source lines.
 - The dataflow analyzer now distinguishes one-level constant dictionary fields and tracks
   local dictionary mutations through aliases, including `dict.update()` calls,
   conservative unknown-index writes and branch merges. Safe sibling fields avoid unrelated FLOW findings; field-derived

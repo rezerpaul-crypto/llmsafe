@@ -66,6 +66,24 @@ retain per-key provenance across a call. Unknown container types, unknown aliase
 and external behavior are not asserted to be safe. This is static source analysis,
 not a runtime guarantee.
 
+## Process argument roles
+
+For `subprocess.run`, `call`, `check_call`, `check_output`, and `Popen`,
+a very narrow literal `["/bin/echo", data]` or `["/usr/bin/echo", data]`
+call is not a FLOW002 sink when no shell or executable/environment override is
+present. The same applies to a static `shell=False` argument. Unlike a shell
+command, the literal echo program treats subsequent argv items as data.
+
+**This is not a generic `shell=False` sanitizer.** Dynamic program selection,
+interpreter `-c` arguments, shell-enabled execution, arbitrary executable
+options, unknown keyword unpacking, and alternate or tainted execution controls
+remain on the existing conservative detection path. The heuristic is POSIX-only,
+limited to literal expressions and does not prove the host executable is
+authentic. On Windows, batch-file invocation may still enter a shell even with
+`shell=False`; no Windows-specific exemption is inferred.
+
+Primary reference: https://docs.python.org/3/library/subprocess.html
+
 ## Evidence path
 
 The primary finding location is the caller where untrusted data reaches the terminal operation. A
