@@ -553,6 +553,57 @@ def handle(user_input):
 """
         self.assertEqual(findings_for(DataflowRule(), content), [])
 
+    def test_dictionary_update_literal_fields_keep_precise_taint(self):
+        content = """
+def handle(user_input):
+    box = {}
+    box.update({"dangerous": user_input, "safe": "1+1"})
+    eval(box["safe"])
+    eval(box["dangerous"])
+"""
+        findings = findings_for(DataflowRule(), content)
+        self.assertEqual([finding.rule_id for finding in findings], ["FLOW001"])
+
+    def test_dictionary_update_keyword_and_alias_mutation(self):
+        content = """
+def handle(user_input):
+    box = {}
+    alias = box
+    alias.update(dangerous=user_input)
+    return eval(box["dangerous"])
+"""
+        findings = findings_for(DataflowRule(), content)
+        self.assertEqual([finding.rule_id for finding in findings], ["FLOW001"])
+
+    def test_dictionary_update_overwrite_removes_old_field_taint(self):
+        content = """
+def handle(user_input):
+    box = {"dangerous": user_input}
+    box.update({"dangerous": "1+1"})
+    return eval(box["dangerous"])
+"""
+        self.assertEqual(findings_for(DataflowRule(), content), [])
+
+    def test_dictionary_update_unknown_mapping_is_conservative(self):
+        content = """
+def handle(user_input):
+    box = {"safe": "1+1"}
+    box.update(user_input)
+    return eval(box["safe"])
+"""
+        findings = findings_for(DataflowRule(), content)
+        self.assertEqual([finding.rule_id for finding in findings], ["FLOW001"])
+
+    def test_dictionary_update_dynamic_key_is_conservative(self):
+        content = """
+def handle(user_input, key):
+    box = {"safe": "1+1"}
+    box.update({key: user_input})
+    return eval(box["safe"])
+"""
+        findings = findings_for(DataflowRule(), content)
+        self.assertEqual([finding.rule_id for finding in findings], ["FLOW001"])
+
     def test_does_not_flag_constant_operations(self):
         content = """
 import requests
