@@ -20,6 +20,9 @@ to use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Malformed Python no longer silently yields a successful scan: parser failures are recorded as
+  scan errors (exit 2) while text-based security checks still run; JSON v1 and SARIF retain their
+  documented output contracts without echoing source lines.
 - Secret scanning now ignores narrowly allow-listed synthetic fixture values and the exact canonical
   AWS documentation access-key identifier while continuing to report near matches and extended
   lookalikes at existing provider matches. The example exception requires explicit delimiters and
