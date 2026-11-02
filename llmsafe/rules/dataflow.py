@@ -1180,6 +1180,36 @@ class _ScopeAnalyzer:
                     for reference in references:
                         taint.update(self._read_field(reference, node.args[0], environment))
                     return taint
+            # setdefault mutates a missing key and returns its existing or new
+            # value. Without a proven key-presence model, merge both possibilities.
+            if (
+                isinstance(node.func, ast.Attribute)
+                and node.func.attr == "setdefault"
+                and isinstance(node.func.value, ast.Name)
+                and 1 <= len(node.args) <= 2
+                and not node.keywords
+            ):
+                references = self._references(node.func.value.id, environment)
+                if references:
+                    key_taint = self._expression(node.args[0], environment)
+                    default_taint = (
+                        self._expression(node.args[1], environment)
+                        if len(node.args) == 2
+                        else set()
+                    )
+                    current_taint = self._combine(
+                        *(self._read_field(reference, node.args[0], environment)
+                          for reference in references)
+                    )
+                    combined = current_taint | default_taint | key_taint
+                    token = self._field_token(node.args[0])
+                    self._write_field(
+                        references,
+                        token if token is not None and not key_taint else _UNKNOWN_FIELD,
+                        combined,
+                        environment,
+                    )
+                    return combined
             name = call_name(node) or ""
             resolved_name = self._resolved_call_name(name)
             receiver_taint = (
