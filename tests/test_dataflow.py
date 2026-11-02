@@ -118,7 +118,7 @@ def calculate(expression: str) -> str:
 """
         findings = findings_for(DataflowRule(), content)
         self.assertEqual([finding.rule_id for finding in findings], ["FLOW001"])
-        self.assertIn("LangChain", findings[0].message)
+        self.assertTrue(any("LangChain" in step.message for step in findings[0].evidence))
 
     def test_langchain_alias_named_and_async_tool(self):
         content = """
@@ -162,7 +162,7 @@ def calculate(expression: str):
 """
         findings = findings_for(DataflowRule(), content)
         self.assertEqual([finding.rule_id for finding in findings], ["FLOW001"])
-        self.assertIn("PydanticAI", findings[0].message)
+        self.assertTrue(any("PydanticAI" in step.message for step in findings[0].evidence))
 
     def test_pydantic_agent_alias_and_async_tool(self):
         content = """
