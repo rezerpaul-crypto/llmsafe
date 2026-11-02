@@ -284,7 +284,45 @@ class ProjectDataflowTests(unittest.TestCase):
         self.assertIsNotNone(source.path)
         self.assertEqual(source.path.name, "helpers.py")
 
-    def test_does_not_guess_external_imports(self):
+    def test_imported_helper_return_from_dictionary_field(self):
+        findings = self.scan(
+            {
+                "helpers.py": (
+                    "def select(value):\\n"
+                    "    box = {}\\n"
+                    '    box["dangerous"] = value\\n'
+                    '    box["safe"] = "1+1"\\n'
+                    '    return box["dangerous"]\\n'
+                ),
+                "app.py": (
+                    "from helpers import select\\n\\n"
+                    "def handle(user_input):\\n"
+                    "    return eval(select(user_input))\\n"
+                ),
+            }
+        )
+        self.assertEqual([finding.rule_id for finding in findings], ["FLOW001"])
+
+    def test_imported_helper_safe_dictionary_field_does_not_raise_flow(self):
+        findings = self.scan(
+            {
+                "helpers.py": (
+                    "def select(value):\\n"
+                    "    box = {}\\n"
+                    '    box["dangerous"] = value\\n'
+                    '    box["safe"] = "1+1"\\n'
+                    '    return box["safe"]\\n'
+                ),
+                "app.py": (
+                    "from helpers import select\\n\\n"
+                    "def handle(user_input):\\n"
+                    "    return eval(select(user_input))\\n"
+                ),
+            }
+        )
+        self.assertEqual(findings, [])
+
+
         findings = self.scan(
             {
                 "app.py": (
