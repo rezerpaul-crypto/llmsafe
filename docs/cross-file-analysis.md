@@ -51,7 +51,7 @@ For a locally constructed dictionary, simple `get(key[, default])` calls use the
 field model; a supplied default remains a possible source because its runtime selection
 cannot always be proven. Simple `dict.update()` calls on a tracked local dictionary
 propagate literal fields, keyword fields, and conservative unknown-mapping writes
-through aliases; exact field overwrites replace prior values. Repeated literal keys
+through aliases; exact field overwrites replace prior values. `dict.setdefault()` is modeled conservatively as a possible field write and possible return of the default when field presence is not proven; this can create false positives for definitely-existing keys. Repeated literal keys
 honor Python's last-value-wins behavior.
 
 When the dictionary itself is consumed as a value, the analyzer conservatively combines
