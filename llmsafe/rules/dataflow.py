@@ -1166,7 +1166,7 @@ class _ScopeAnalyzer:
         return name in allowed
 
     @classmethod
-    def _expression_name(cls, node: ast.AST) -> Optional[str>:
+    def _expression_name(cls, node: ast.AST) -> Optional[str]:
         if isinstance(node, ast.Name):
             return node.id
         if isinstance(node, ast.Attribute):
