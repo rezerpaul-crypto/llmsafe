@@ -351,7 +351,12 @@ class DataflowRule:
                 for stmt in node.body:
                     collector.visit(stmt)
                 blocked = collector.bindings | {
-                    arg.arg for arg in (*node.args.posonlyargs, *node.args.args, *node.args.kwonlyargs)
+                    arg.arg
+                    for arg in (
+                        *node.args.posonlyargs,
+                        *node.args.args,
+                        *node.args.kwonlyargs,
+                    )
                 }
                 function_analyzer = _ScopeAnalyzer(
                     path,
@@ -477,7 +482,12 @@ class DataflowRule:
                 for stmt in function.body:
                     collector.visit(stmt)
                 blocked = collector.bindings | {
-                    arg.arg for arg in (*function.args.posonlyargs, *function.args.args, *function.args.kwonlyargs)
+                    arg.arg
+                    for arg in (
+                        *function.args.posonlyargs,
+                        *function.args.args,
+                        *function.args.kwonlyargs,
+                    )
                 }
                 function_analyzer = _ScopeAnalyzer(
                     module.path,
@@ -1608,7 +1618,10 @@ class _ScopeAnalyzer:
                 taint = set()
             if taint:
                 self._report(SHELL_SINK, node, name, taint)
-        elif (name.endswith(".execute") or name.endswith(".executemany")) and not known_local_method:
+        elif (
+            (name.endswith(".execute") or name.endswith(".executemany"))
+            and not known_local_method
+        ):
             taint = self._sink_argument_taint(
                 argument_taints,
                 keyword_taints,
