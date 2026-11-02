@@ -516,6 +516,17 @@ class DataflowRule:
         for statement in statements:
             if isinstance(statement, ast.ClassDef):
                 continue
+            # Module-scope rebinding invalidates the class constructor itself.
+            if isinstance(statement, (ast.Assign, ast.AnnAssign, ast.AugAssign)):
+                top_targets = (
+                    statement.targets
+                    if isinstance(statement, ast.Assign)
+                    else (statement.target,)
+                )
+                mutated_classes.update(
+                    target.id for target in top_targets
+                    if isinstance(target, ast.Name)
+                )
             for node in ast.walk(statement):
                 if isinstance(node, (ast.Assign, ast.AnnAssign, ast.AugAssign)):
                     targets = (
@@ -2267,4 +2278,12 @@ class _ScopeAnalyzer:
         for environment in environments:
             for name, taint in environment.items():
                 merged.setdefault(name, set()).update(taint)
+        # A missing identity binding on one branch means that the receiver
+        # might have been rebound to an unknown type. Set union alone would
+        # incorrectly restore its "known local class" identity at the join.
+        for name in tuple(merged):
+            if name.startswith(_CLASS_PREFIX) and any(
+                name not in environment for environment in environments
+            ):
+                merged[name].add(TaintSource("class-unknown", "branch-rebind", 0, 0))
         return merged
