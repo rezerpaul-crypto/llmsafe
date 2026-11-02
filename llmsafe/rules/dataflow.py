@@ -594,11 +594,12 @@ class DataflowRule:
         definition_counts: Dict[str, int] = {}
         rebound: Set[str] = set()
         for stmt in statements:
+            # A method or nested function may also rebind a module global.
+            for node in ast.walk(stmt):
+                if isinstance(node, ast.Global):
+                    rebound.update(node.names)
             if isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 definition_counts[stmt.name] = definition_counts.get(stmt.name, 0) + 1
-                for node in ast.walk(stmt):
-                    if isinstance(node, ast.Global):
-                        rebound.update(node.names)
                 continue
             collector = _ScopeBindingCollector()
             collector.visit(stmt)
