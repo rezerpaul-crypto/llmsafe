@@ -109,6 +109,107 @@ def two(script):
 """
         self.assertEqual(findings_for(DataflowRule(), content), [])
 
+    def test_langchain_tool_input_is_model_source_g01(self):
+        content = """
+from langchain.tools import tool
+@tool
+def calculate(expression: str) -> str:
+    return str(eval(expression))
+"""
+        findings = findings_for(DataflowRule(), content)
+        self.assertEqual([finding.rule_id for finding in findings], ["FLOW001"])
+        self.assertIn("LangChain", findings[0].message)
+
+    def test_langchain_alias_named_and_async_tool(self):
+        content = """
+from langchain.tools import tool as register
+@register("execute")
+async def calculate(expression: str):
+    return eval(expression)
+"""
+        self.assertEqual(
+            [item.rule_id for item in findings_for(DataflowRule(), content)],
+            ["FLOW001"],
+        )
+
+    def test_langchain_injected_toolruntime_not_model_source_c01(self):
+        content = """
+from langchain.tools import tool, ToolRuntime
+@tool
+def configured(runtime: ToolRuntime):
+    return eval(runtime.context.expression)
+"""
+        self.assertEqual(findings_for(DataflowRule(), content), [])
+
+    def test_langchain_rebound_or_fake_decorator_not_trusted(self):
+        content = """
+from langchain.tools import tool
+from unrelated import tool as other
+tool = other
+@tool
+def evaluate(expression):
+    return eval(expression)
+"""
+        self.assertEqual(findings_for(DataflowRule(), content), [])
+
+    def test_pydantic_tool_plain_is_model_source_g02(self):
+        content = """
+from pydantic_ai import Agent
+agent = Agent()
+@agent.tool_plain
+def calculate(expression: str):
+    return eval(expression)
+"""
+        findings = findings_for(DataflowRule(), content)
+        self.assertEqual([finding.rule_id for finding in findings], ["FLOW001"])
+        self.assertIn("PydanticAI", findings[0].message)
+
+    def test_pydantic_agent_alias_and_async_tool(self):
+        content = """
+import pydantic_ai as ai
+owner = ai.Agent()
+agent = owner
+@agent.tool
+async def calculate(expression: str):
+    return eval(expression)
+"""
+        self.assertEqual(
+            [item.rule_id for item in findings_for(DataflowRule(), content)],
+            ["FLOW001"],
+        )
+
+    def test_pydantic_runcontext_not_model_source_c02(self):
+        content = """
+from pydantic_ai import Agent, RunContext
+agent = Agent()
+@agent.tool
+def configured(ctx: RunContext[str]):
+    return eval(ctx.deps)
+"""
+        self.assertEqual(findings_for(DataflowRule(), content), [])
+
+    def test_pydantic_rebound_agent_and_fake_method_are_not_tool_boundary(self):
+        content = """
+from pydantic_ai import Agent
+from unrelated import make_agent
+agent = Agent()
+agent = make_agent()
+@agent.tool_plain
+def calculate(expression):
+    return eval(expression)
+"""
+        self.assertEqual(findings_for(DataflowRule(), content), [])
+
+    def test_pydantic_non_agent_tool_plain_is_not_model_source(self):
+        content = """
+from unrelated import Agent
+agent = Agent()
+@agent.tool_plain
+def calculate(expression):
+    return eval(expression)
+"""
+        self.assertEqual(findings_for(DataflowRule(), content), [])
+
     def test_traces_user_input_through_interpolation_to_shell(self):
         content = """
 import subprocess
