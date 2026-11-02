@@ -1682,6 +1682,14 @@ class _ScopeAnalyzer:
             taint.update(environment.get(exact, set()))
             wildcard = prefix + cls._field_path((*parts[:-1], _UNKNOWN_FIELD))
             taint.update(environment.get(wildcard, set()))
+            # An unknown ancestor key can designate any concrete container.
+            # Preserve mutations to its descendants when a known path is read.
+            taint.update(
+                cls._combine(
+                    *(value for key, value in environment.items()
+                      if key.startswith(wildcard + "\0"))
+                )
+            )
             if depth == len(segments):
                 taint.update(
                     cls._combine(
