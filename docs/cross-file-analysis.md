@@ -47,6 +47,10 @@ that affects later constant-key reads. Branch joins preserve possible taint; a d
 overwrite of one known field can clear its prior taint. A scalar reassignment to a fresh
 dictionary no longer aliases the prior object.
 
+For a locally constructed dictionary, simple `get(key[, default])` calls use the same
+field model; a supplied default remains a possible source because its runtime selection
+cannot always be proven. Repeated literal keys honor Python's last-value-wins behavior.
+
 When the dictionary itself is consumed as a value, the analyzer conservatively combines
 its field values. Returning a selected scalar field from a local or imported helper
 participates in the existing function-summary analysis.
