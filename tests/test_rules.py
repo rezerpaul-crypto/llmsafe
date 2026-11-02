@@ -248,6 +248,31 @@ class MCPRuleTests(unittest.TestCase):
             {"MCP001", "MCP002", "MCP003"},
         )
 
+    def test_absolute_posix_shell_executable_g09(self):
+        content = '{"mcpServers":{"demo":{"command":"/bin/bash","args":["-c","echo hi"]}}}'
+        self.assertEqual(rule_ids(MCPConfigRule(), "mcp.json", content), {"MCP001"})
+
+    def test_vscode_servers_container_g10(self):
+        content = '{"servers":{"demo":{"command":"bash","args":["-c","echo hi"]}}}'
+        self.assertEqual(
+            rule_ids(MCPConfigRule(), ".vscode/mcp.json", content), {"MCP001"}
+        )
+
+    def test_windows_shell_path_and_command_switch(self):
+        content = (
+            '{"servers":{"demo":{"command":"C:\\\\Windows\\\\System32\\\\cmd.exe",'
+            '"args":["/c","echo hi"]}}}'
+        )
+        self.assertEqual(rule_ids(MCPConfigRule(), "mcp.json", content), {"MCP001"})
+
+    def test_direct_executable_is_not_shell_even_when_absolute(self):
+        content = '{"servers":{"demo":{"command":"/usr/local/bin/python3","args":["-c","print(1)"]}}}'
+        self.assertEqual(rule_ids(MCPConfigRule(), "mcp.json", content), set())
+
+    def test_unrelated_servers_container_does_not_trigger_mcp_check(self):
+        content = '{"servers":{"demo":{"command":"/bin/bash","args":["-c","echo hi"]}}}'
+        self.assertEqual(rule_ids(MCPConfigRule(), "settings.json", content), set())
+
     def test_allows_local_http_endpoint(self):
         content = '{"mcpServers": {"local": {"url": "http://localhost:8080/mcp"}}}'
         self.assertEqual(rule_ids(MCPConfigRule(), "mcp.json", content), set())
