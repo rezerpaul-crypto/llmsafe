@@ -180,6 +180,10 @@ SUBPROCESS_CALLS = {
     "subprocess.Popen",
     "subprocess.run",
 }
+# Narrow POSIX literal-only case: echo cannot reinterpret argument data as
+# source code, even if the argument itself came from an untrusted user.
+# Other programs may accept dangerous flags, so no generic shell=False bypass.
+DATA_ONLY_EXECUTABLES = {"/bin/echo", "/usr/bin/echo"}
 HTTP_CALL_SUFFIXES = {
     ".delete",
     ".get",
@@ -1231,6 +1235,21 @@ class _ScopeAnalyzer:
                 unpacked_keyword_taint,
                 keyword_names=("args",),
             )
+            # A fixed, known data-only executable invoked without a shell
+            # does not parse untrusted argv[1:] as shell commands. This is
+            # intentionally NOT a sanitizer for arbitrary programs/flags.
+            safe_data_argv = self._literal_data_only_argv(node)
+            if not safe_data_argv:
+                # Explicit execution environment changes can control which
+                # program runs, independent of whether args are constant.
+                taint.update(
+                    self._combine(
+                        *(keyword_taints.get(key, set())
+                          for key in ("executable", "shell", "cwd", "env"))
+                    )
+                )
+            else:
+                taint = set()
             if taint:
                 self._report(SHELL_SINK, node, name, taint)
         elif name.endswith(".execute") or name.endswith(".executemany"):
@@ -1264,6 +1283,46 @@ class _ScopeAnalyzer:
                 dispatch_taint = self._expression(node.func.args[1], environment)
         if dispatch_taint:
             self._report(TOOL_SINK, node, "dynamic dispatch", dispatch_taint)
+
+    @staticmethod
+    def _literal_data_only_argv(node: ast.Call) -> bool:
+        """Prove a very narrow no-shell data-only subprocess call.
+
+        Dynamic kwargs, changed execution environments, shell=True, relative
+        executable names, and other programs all stay on the conservative path.
+        """
+        if any(keyword.arg is None for keyword in node.keywords):
+            return False
+        if any(
+            keyword.arg in {"executable", "cwd", "env"} for keyword in node.keywords
+        ):
+            return False
+        shell = next(
+            (keyword.value for keyword in node.keywords if keyword.arg == "shell"),
+            None,
+        )
+        if shell is not None and not (
+            isinstance(shell, ast.Constant) and shell.value is False
+        ):
+            return False
+        command = (
+            node.args[0]
+            if node.args
+            else next(
+                (keyword.value for keyword in node.keywords if keyword.arg == "args"),
+                None,
+            )
+        )
+        if not isinstance(command, (ast.List, ast.Tuple)) or not command.elts:
+            return False
+        if any(isinstance(item, ast.Starred) for item in command.elts):
+            return False
+        executable = command.elts[0]
+        return (
+            isinstance(executable, ast.Constant)
+            and isinstance(executable.value, str)
+            and executable.value in DATA_ONLY_EXECUTABLES
+        )
 
     @classmethod
     def _sink_argument_taint(
