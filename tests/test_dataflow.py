@@ -604,6 +604,44 @@ def handle(user_input, key):
         findings = findings_for(DataflowRule(), content)
         self.assertEqual([finding.rule_id for finding in findings], ["FLOW001"])
 
+    def test_dictionary_setdefault_mutation_reaches_sink(self):
+        content = """
+def handle(user_input):
+    box = {}
+    box.setdefault("command", user_input)
+    return eval(box["command"])
+"""
+        findings = findings_for(DataflowRule(), content)
+        self.assertEqual([finding.rule_id for finding in findings], ["FLOW001"])
+
+    def test_dictionary_setdefault_return_reaches_sink(self):
+        content = """
+def handle(user_input):
+    box = {}
+    return eval(box.setdefault("command", user_input))
+"""
+        findings = findings_for(DataflowRule(), content)
+        self.assertEqual([finding.rule_id for finding in findings], ["FLOW001"])
+
+    def test_dictionary_setdefault_no_untrusted_default_is_quiet(self):
+        content = """
+def handle(user_input):
+    box = {}
+    box.setdefault("command", "1+1")
+    return eval(box["command"])
+"""
+        self.assertEqual(findings_for(DataflowRule(), content), [])
+
+    def test_dictionary_setdefault_dynamic_key_is_conservative(self):
+        content = """
+def handle(user_input, key):
+    box = {"command": "1+1"}
+    box.setdefault(key, user_input)
+    return eval(box["command"])
+"""
+        findings = findings_for(DataflowRule(), content)
+        self.assertEqual([finding.rule_id for finding in findings], ["FLOW001"])
+
     def test_does_not_flag_constant_operations(self):
         content = """
 import requests
