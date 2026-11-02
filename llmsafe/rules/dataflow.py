@@ -1143,19 +1143,25 @@ class _ScopeAnalyzer:
             return taint
         if isinstance(node, ast.Constant):
             return set()
-        if isinstance(node, ast.Attribute):
-            taint = self._expression(node.value, environment)
-            if node.attr in USER_ATTRIBUTES and self._root_name(node) == "request":
-                taint.add(self._source("user", f"request.{node.attr}", node))
-            return taint
-        if isinstance(node, ast.Subscript):
-            if isinstance(node.value, ast.Name):
-                references = self._references(node.value.id, environment)
+        if isinstance(node, (ast.Attribute, ast.Subscript)):
+            location = self._field_location(node)
+            if location is not None:
+                name, segments, indices = location
+                references = self._references(name, environment)
                 if references:
-                    taint = self._expression(node.slice, environment)
-                    for reference in references:
-                        taint.update(self._read_field(reference, node.slice, environment))
-                    return taint
+                    index_taint = self._combine(
+                        *(self._expression(index, environment) for index in indices)
+                    )
+                    field_taint = self._combine(
+                        *(self._read_path(reference, segments, environment)
+                          for reference in references)
+                    )
+                    return field_taint | index_taint
+            if isinstance(node, ast.Attribute):
+                taint = self._expression(node.value, environment)
+                if node.attr in USER_ATTRIBUTES and self._root_name(node) == "request":
+                    taint.add(self._source("user", f"request.{node.attr}", node))
+                return taint
             taint = self._expression(node.value, environment) | self._expression(
                 node.slice, environment
             )
