@@ -49,7 +49,10 @@ dictionary no longer aliases the prior object.
 
 For a locally constructed dictionary, simple `get(key[, default])` calls use the same
 field model; a supplied default remains a possible source because its runtime selection
-cannot always be proven. Repeated literal keys honor Python's last-value-wins behavior.
+cannot always be proven. Simple `dict.update()` calls on a tracked local dictionary
+propagate literal fields, keyword fields, and conservative unknown-mapping writes
+through aliases; exact field overwrites replace prior values. Repeated literal keys
+honor Python's last-value-wins behavior.
 
 When the dictionary itself is consumed as a value, the analyzer conservatively combines
 its field values. Returning a selected scalar field from a local or imported helper
