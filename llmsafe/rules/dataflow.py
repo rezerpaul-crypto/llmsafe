@@ -1179,7 +1179,7 @@ class _ScopeAnalyzer:
                 and not node.keywords
             ):
                 references = self._references(node.func.value.id, environment)
-                if references:
+                if references and all(ref.kind == "heap-dict" for ref in references):
                     taint = self._expression(node.args[0], environment)
                     if len(node.args) == 2:
                         taint.update(self._expression(node.args[1], environment))
@@ -1196,7 +1196,7 @@ class _ScopeAnalyzer:
                 and not node.keywords
             ):
                 references = self._references(node.func.value.id, environment)
-                if references:
+                if references and all(ref.kind == "heap-dict" for ref in references):
                     key_taint = self._expression(node.args[0], environment)
                     default_taint = (
                         self._expression(node.args[1], environment)
@@ -1256,7 +1256,7 @@ class _ScopeAnalyzer:
                 and isinstance(node.func.value, ast.Name)
             ):
                 references = self._references(node.func.value.id, environment)
-                if references:
+                if references and all(ref.kind == "heap-dict" for ref in references):
                     if len(node.args) == 1 and isinstance(node.args[0], ast.Dict):
                         fields = [
                             (
@@ -1752,7 +1752,7 @@ class _ScopeAnalyzer:
         if isinstance(target, ast.Name):
             reference_key = f"{_REFERENCE_PREFIX}{target.id}"
             if isinstance(value_node, ast.Dict):
-                reference = TaintSource("heap-ref", str(id(value_node)), 0, 0)
+                reference = TaintSource("heap-dict", str(id(value_node)), 0, 0)
                 environment[reference_key] = {reference}
                 environment.pop(target.id, None)
                 self._store_literal_fields({reference}, (), value_node, environment)
@@ -1763,7 +1763,7 @@ class _ScopeAnalyzer:
                 and not value_node.args
                 and all(keyword.arg is not None for keyword in value_node.keywords)
             ):
-                reference = TaintSource("heap-ref", str(id(value_node)), 0, 0)
+                reference = TaintSource("heap-object", str(id(value_node)), 0, 0)
                 environment[reference_key] = {reference}
                 environment.pop(target.id, None)
                 for keyword in value_node.keywords:
