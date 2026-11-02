@@ -38,6 +38,25 @@ arguments remain clean even when the imported helper contains a sensitive primit
 fixed helper return remains clean even when another helper argument is tainted; parameter-selective
 and transitive returns preserve only the relevant source set.
 
+## Bounded field-sensitive dictionary analysis
+
+For locally constructed dictionary literals, the analyzer tracks one-level constant string
+and integer keys separately. An assignment through an alias updates the shared container
+location, not just the alias name. Assignments to unknown keys use a conservative wildcard
+that affects later constant-key reads. Branch joins preserve possible taint; a definite
+overwrite of one known field can clear its prior taint. A scalar reassignment to a fresh
+dictionary no longer aliases the prior object.
+
+When the dictionary itself is consumed as a value, the analyzer conservatively combines
+its field values. Returning a selected scalar field from a local or imported helper
+participates in the existing function-summary analysis.
+
+**Not covered:** nested field paths, dynamically constructed objects, mutation through
+external functions or method calls, precise keys in comprehensions, or whole-dictionary
+return summaries retaining per-key provenance across a call. Unknown container types,
+unknown aliases, and external behavior are not asserted to be safe. This is static
+source analysis, not a runtime guarantee.
+
 ## Evidence path
 
 The primary finding location is the caller where untrusted data reaches the terminal operation. A
