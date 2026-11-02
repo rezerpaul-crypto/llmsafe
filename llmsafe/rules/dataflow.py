@@ -1374,10 +1374,21 @@ class _ScopeAnalyzer:
                 statement.value,
             )
         elif isinstance(statement, ast.AugAssign):
-            taint = self._expression(statement.value, current) | self._expression(
-                statement.target, current
-            )
-            self._assign(statement.target, taint, current)
+            references = self._dictionary_references(statement.target, current)
+            if isinstance(statement.op, ast.BitOr) and references:
+                # dict |= mutates the original object; rebinding the name to a
+                # scalar taint would disconnect other aliases from this write.
+                known_dictionary = self._known_dictionary(statement.target, references, current)
+                added = self._update_dictionary(references, [statement.value], [], current)
+                if not known_dictionary:
+                    # Another branch may call an unknown __ior__ and return a
+                    # tainted scalar. Retain that possibility and shared writes.
+                    current.setdefault(statement.target.id, set()).update(added)
+            else:
+                taint = self._expression(statement.value, current) | self._expression(
+                    statement.target, current
+                )
+                self._assign(statement.target, taint, current)
         elif isinstance(statement, ast.Expr):
             self._expression(statement.value, current)
         elif isinstance(statement, ast.Return):
@@ -1446,7 +1457,9 @@ class _ScopeAnalyzer:
                         *(self._read_path(reference, segments, environment)
                           for reference in references)
                     )
-                    return field_taint | index_taint
+                    # An extracted value may carry scalar/unknown-object taint
+                    # as well as a reference to bounded nested fields.
+                    return field_taint | index_taint | set(environment.get(name, set()))
             if isinstance(node, ast.Attribute):
                 taint = self._expression(node.value, environment)
                 if node.attr in USER_ATTRIBUTES and self._root_name(node) == "request":
@@ -1459,6 +1472,35 @@ class _ScopeAnalyzer:
                 taint.add(self._source("user", "request data", node))
             return taint
         if isinstance(node, ast.Call):
+            if isinstance(node.func, ast.Attribute):
+                references = self._dictionary_references(node.func.value, environment)
+                known_dictionary = self._known_dictionary(
+                    node.func.value, references, environment
+                )
+                if references and node.func.attr == "update":
+                    receiver_taint = self._expression(node.func.value, environment)
+                    added = self._update_dictionary(
+                        references, node.args, node.keywords, environment
+                    )
+                    return set() if known_dictionary else receiver_taint | added
+                if (
+                    references
+                    and node.func.attr == "__setitem__"
+                    and len(node.args) == 2
+                    and not node.keywords
+                ):
+                    receiver_taint = self._expression(node.func.value, environment)
+                    key_taint = self._expression(node.args[0], environment)
+                    value_taint = self._expression(node.args[1], environment)
+                    token = self._field_token(node.args[0]) if not key_taint else None
+                    self._write_field(
+                        references, token or _UNKNOWN_FIELD,
+                        key_taint | value_taint, environment,
+                    )
+                    return (
+                        set() if known_dictionary
+                        else receiver_taint | key_taint | value_taint
+                    )
             # A locally constructed dictionary's get() reads only the selected
             # field. Still include the default: it may be returned at runtime.
             if (
@@ -1485,8 +1527,12 @@ class _ScopeAnalyzer:
                 and 1 <= len(node.args) <= 2
                 and not node.keywords
             ):
-                references = self._references(node.func.value.id, environment)
-                if references and all(ref.kind == "heap-dict" for ref in references):
+                references = self._dictionary_references(node.func.value, environment)
+                if references:
+                    known_dictionary = self._known_dictionary(
+                        node.func.value, references, environment
+                    )
+                    receiver_taint = self._expression(node.func.value, environment)
                     key_taint = self._expression(node.args[0], environment)
                     default_taint = (
                         self._expression(node.args[1], environment)
@@ -1505,7 +1551,7 @@ class _ScopeAnalyzer:
                         combined,
                         environment,
                     )
-                    return combined
+                    return combined if known_dictionary else combined | receiver_taint
             name = call_name(node) or ""
             resolved_name = self._resolved_call_name(name)
             if name in {"setattr", "delattr"} and node.args:
@@ -1542,50 +1588,6 @@ class _ScopeAnalyzer:
                 keyword_taints,
                 unpacked_keyword_taint,
             )
-            # dict.update() mutates the object even though it returns None.
-            # Evaluate all input expressions above, then apply writes so an
-            # alias and the original variable observe the same field taint.
-            if (
-                isinstance(node.func, ast.Attribute)
-                and node.func.attr == "update"
-                and isinstance(node.func.value, ast.Name)
-            ):
-                references = self._references(node.func.value.id, environment)
-                if references and all(ref.kind == "heap-dict" for ref in references):
-                    if len(node.args) == 1 and isinstance(node.args[0], ast.Dict):
-                        fields = [
-                            (
-                                self._field_token(key) if key is not None else None,
-                                self._expression(value, environment),
-                            )
-                            for key, value in zip(
-                                node.args[0].keys, node.args[0].values
-                            )
-                        ]
-                        for token, field_taint in fields:
-                            self._write_field(
-                                references,
-                                token or _UNKNOWN_FIELD,
-                                field_taint,
-                                environment,
-                            )
-                    elif node.args:
-                        self._write_field(
-                            references,
-                            _UNKNOWN_FIELD,
-                            self._combine(*argument_taints),
-                            environment,
-                        )
-                    for keyword, (_, field_taint) in zip(node.keywords, keyword_pairs):
-                        token = (
-                            f"str:{keyword.arg!r}"
-                            if keyword.arg is not None
-                            else _UNKNOWN_FIELD
-                        )
-                        self._write_field(
-                            references, token, field_taint, environment
-                        )
-                    return set()
             summary = self.function_summaries.get(name)
             if summary is None:
                 combined = self._combine(
@@ -2035,6 +2037,48 @@ class _ScopeAnalyzer:
     def _references(name: str, environment: Environment) -> Taint:
         return set(environment.get(f"{_REFERENCE_PREFIX}{name}", set()))
 
+    @classmethod
+    def _dictionary_references(cls, node: ast.AST, environment: Environment) -> Taint:
+        """Find possible literal-dictionary receivers; keep uncertain branch alternatives."""
+        references = cls._references(node.id, environment) if isinstance(node, ast.Name) else set()
+        return references if any(ref.kind == "heap-dict" for ref in references) else set()
+
+    @staticmethod
+    def _known_dictionary(node: ast.AST, references: Taint, environment: Environment) -> bool:
+        return (
+            isinstance(node, ast.Name)
+            and bool(references)
+            and all(ref.kind == "heap-dict" for ref in references)
+            and not environment.get(node.id)
+        )
+
+    def _update_dictionary(
+        self,
+        references: Taint,
+        arguments: Sequence[ast.AST],
+        keywords: Sequence[ast.keyword],
+        environment: Environment,
+    ) -> Taint:
+        # Python evaluates arguments before update/|= starts replacing fields.
+        # Snapshot each expression once; do not reread a mutated RHS afterwards.
+        fields: List[Tuple[str, Taint]] = []
+        for argument in arguments:
+            if isinstance(argument, ast.Dict):
+                for key, value in zip(argument.keys, argument.values):
+                    key_taint = self._expression(key, environment) if key is not None else set()
+                    value_taint = self._expression(value, environment)
+                    token = self._field_token(key) if key is not None and not key_taint else None
+                    fields.append((token or _UNKNOWN_FIELD, key_taint | value_taint))
+            else:
+                # Unknown mappings and iterable pairs can write any key.
+                fields.append((_UNKNOWN_FIELD, self._expression(argument, environment)))
+        for keyword in keywords:
+            token = f"str:{keyword.arg!r}" if keyword.arg is not None else _UNKNOWN_FIELD
+            fields.append((token, self._expression(keyword.value, environment)))
+        for token, field_taint in fields:
+            self._write_field(references, token, field_taint, environment)
+        return self._combine(*(field_taint for _, field_taint in fields))
+
     @staticmethod
     def _field_prefix(reference: TaintSource) -> str:
         if reference.kind == "heap-field":
@@ -2061,6 +2105,7 @@ class _ScopeAnalyzer:
         reference: TaintSource,
         segments: Sequence[str],
         environment: Environment,
+        include_children: bool = True,
     ) -> Taint:
         if _UNKNOWN_FIELD in segments:
             return cls._all_fields(reference, environment)
@@ -2080,7 +2125,7 @@ class _ScopeAnalyzer:
                       if key.startswith(wildcard + "\0"))
                 )
             )
-            if depth == len(segments):
+            if include_children and depth == len(segments):
                 taint.update(
                     cls._combine(
                         *(value for key, value in environment.items()
@@ -2192,6 +2237,13 @@ class _ScopeAnalyzer:
                     name, segments, _ = location
                     roots = self._references(name, environment)
                     if roots:
+                        # A scalar read is a value snapshot, not a live field
+                        # alias. Preserve direct/ancestor provenance separately
+                        # from descendants so clean siblings stay precise.
+                        scalar = set(environment.get(name, set())) | self._combine(
+                            *(self._read_path(ref, segments, environment, include_children=False)
+                              for ref in roots)
+                        )
                         environment[reference_key] = {
                             TaintSource(
                                 "heap-field",
@@ -2200,7 +2252,10 @@ class _ScopeAnalyzer:
                             )
                             for ref in roots
                         }
-                        environment.pop(target.id, None)
+                        if scalar:
+                            environment[target.id] = scalar
+                        else:
+                            environment.pop(target.id, None)
                     else:
                         environment.pop(reference_key, None)
                         if taint:
@@ -2286,4 +2341,10 @@ class _ScopeAnalyzer:
                 name not in environment for environment in environments
             ):
                 merged[name].add(TaintSource("class-unknown", "branch-rebind", 0, 0))
+            if name.startswith(_REFERENCE_PREFIX) and any(
+                name not in environment for environment in environments
+            ):
+                # A dictionary on one branch does not prove the same receiver
+                # is a built-in dictionary on every other branch.
+                merged[name].add(TaintSource("heap-unknown", "branch-rebind", 0, 0))
         return merged

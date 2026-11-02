@@ -370,6 +370,66 @@ class ProjectDataflowTests(unittest.TestCase):
         )
         self.assertEqual(findings, [])
 
+    def test_extracted_scalar_return_keeps_cross_file_source(self):
+        findings = self.scan(
+            {
+                "helpers.py": (
+                    "def select(value):\n"
+                    "    box = {'command': value}\n"
+                    "    selected = box['command']\n"
+                    "    return selected\n"
+                ),
+                "app.py": (
+                    "from helpers import select\n"
+                    "def handle(user_input):\n"
+                    "    return eval(select(user_input))\n"
+                ),
+            }
+        )
+        self.assertEqual([finding.rule_id for finding in findings], ["FLOW001"])
+
+    def test_inplace_dictionary_write_reaches_cross_file_process_sink(self):
+        findings = self.scan(
+            {
+                "helpers.py": (
+                    "import subprocess\n"
+                    "def launch(value):\n"
+                    "    box = {}\n"
+                    "    alias = box\n"
+                    "    alias |= {'command': value}\n"
+                    "    selected = box['command']\n"
+                    "    return subprocess.run(selected, shell=True)\n"
+                ),
+                "app.py": (
+                    "from helpers import launch\n"
+                    "def handle(user_input):\n"
+                    "    return launch(user_input)\n"
+                ),
+            }
+        )
+        self.assertEqual([finding.rule_id for finding in findings], ["FLOW002"])
+        helper = next(step for step in findings[0].evidence if "helper reaches" in step.message)
+        self.assertEqual(helper.path.name, "helpers.py")
+        self.assertEqual(helper.line, 7)
+
+    def test_extracted_safe_sibling_return_stays_clean_across_files(self):
+        findings = self.scan(
+            {
+                "helpers.py": (
+                    "def select(value):\n"
+                    "    box = {'dangerous': value, 'safe': '1+1'}\n"
+                    "    selected = box['safe']\n"
+                    "    return selected\n"
+                ),
+                "app.py": (
+                    "from helpers import select\n"
+                    "def handle(user_input):\n"
+                    "    return eval(select(user_input))\n"
+                ),
+            }
+        )
+        self.assertEqual(findings, [])
+
     def test_does_not_guess_external_imports(self):
         findings = self.scan(
             {

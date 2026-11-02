@@ -23,6 +23,12 @@ to use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Extracted dictionary fields and `SimpleNamespace` attributes retain their scalar
+  source provenance, including across helper returns and later overwrites of the
+  original field. Direct local dictionary `|=` and `__setitem__()` writes now update
+  shared aliases. Dictionary updates preserve untrusted key provenance and evaluate
+  arguments before applying writes; possible receiver rebinding remains conservative.
+
 - A narrow literal POSIX `/bin/echo` / `/usr/bin/echo` argv-only process call
   no longer reports FLOW002 solely because data arguments are untrusted.
   Dynamic programs, interpreter options, shell use, and executable/environment

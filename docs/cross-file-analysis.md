@@ -55,6 +55,22 @@ propagate literal fields, keyword fields, and conservative unknown-mapping write
 through aliases; exact field overwrites replace prior values. `dict.setdefault()` is modeled conservatively as a possible field write and possible return of the default when field presence is not proven; this can create false positives for definitely-existing keys. Repeated literal keys
 honor Python's last-value-wins behavior.
 
+Selected scalar values retain their source provenance when assigned to another
+variable, including nested dictionary reads and `SimpleNamespace` attributes. A
+later overwrite of the original field cannot clear that previously extracted
+scalar. Descendant fields remain separate so extracting a safe sibling does not
+inherit an unrelated child's taint.
+
+For directly tracked literal-dictionary names and their aliases, `|=` and direct
+`__setitem__(key, value)` calls mutate the shared field state. The update model
+evaluates argument expressions before applying field replacements, and preserves
+taint in dynamic keys. Unknown mappings and iterable key/value pairs are joined
+conservatively rather than interpreted as exact per-key writes. A receiver that
+may have been rebound on another branch cannot justify clearing a shared field
+or assuming an unknown method returns `None`.
+
+Primary semantics: [Python dictionary operations](https://docs.python.org/3/library/stdtypes.html#mapping-types-dict).
+
 When the dictionary itself is consumed as a value, the analyzer conservatively combines
 its field values. Returning a selected scalar field from a local or imported helper
 participates in the existing function-summary analysis.
@@ -65,6 +81,13 @@ methods, precise keys in comprehensions, or whole-dictionary return summaries th
 retain per-key provenance across a call. Unknown container types, unknown aliases,
 and external behavior are not asserted to be safe. This is static source analysis,
 not a runtime guarantee.
+
+In particular, dictionary mutator calls through a nested expression such as
+`box["inner"].update(...)`, or through a path alias such as `inner = box["inner"]`,
+are not modeled as heap mutations. Path aliases do not yet preserve the old
+container's identity when an ancestor field is replaced. These can cause false
+negatives; the scalar-value snapshot fix above does not resolve general mutable
+heap identity. See the [acceptance record](container-dataflow-acceptance-2026-11-02.md).
 
 ## Process argument roles
 
