@@ -573,6 +573,13 @@ class DataflowRule:
                     if isinstance(node, ast.Name) and node.id == name:
                         if isinstance(node.ctx, (ast.Store, ast.Del)):
                             bindings += 1
+                    if (
+                        isinstance(node, ast.Subscript)
+                        and isinstance(node.value, ast.Name)
+                        and node.value.id == name
+                        and isinstance(node.ctx, (ast.Store, ast.Del))
+                    ):
+                        unsafe = True
                     if isinstance(node, ast.Call) and any(
                         isinstance(arg, ast.Name) and arg.id == name
                         for arg in (*node.args, *(kw.value for kw in node.keywords))
