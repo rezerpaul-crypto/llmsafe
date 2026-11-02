@@ -1137,6 +1137,135 @@ def handle(user_input):
 """
         self.assertEqual(findings_for(DataflowRule(), content), [])
 
+    def test_rebound_constant_helper_cannot_suppress_dynamic_dispatch(self):
+        content = """
+import os
+def status():
+    return "ok"
+status = os.system
+OPS = {"run": status}
+def handle(user_input):
+    return OPS[user_input]()
+"""
+        self.assertEqual(
+            [item.rule_id for item in findings_for(DataflowRule(), content)],
+            ["FLOW005"],
+        )
+
+    def test_import_shadowing_constant_helper_stays_conservative(self):
+        content = """
+def status():
+    return "ok"
+from os import system as status
+OPS = {"run": status}
+def handle(user_input):
+    return OPS[user_input]()
+"""
+        self.assertEqual(
+            [item.rule_id for item in findings_for(DataflowRule(), content)],
+            ["FLOW005"],
+        )
+
+    def test_duplicate_helper_definitions_do_not_prove_closed_dispatch(self):
+        content = """
+def status():
+    return "ok"
+def status():
+    return unknown_status()
+OPS = {"run": status}
+def handle(user_input):
+    return OPS[user_input]()
+"""
+        self.assertEqual(
+            [item.rule_id for item in findings_for(DataflowRule(), content)],
+            ["FLOW005"],
+        )
+
+    def test_conditional_helper_rebinding_stays_conservative(self):
+        content = """
+import os
+def status():
+    return "ok"
+if enabled:
+    status = os.system
+OPS = {"run": status}
+def handle(user_input):
+    return OPS[user_input]()
+"""
+        self.assertEqual(
+            [item.rule_id for item in findings_for(DataflowRule(), content)],
+            ["FLOW005"],
+        )
+
+    def test_global_helper_rebinding_stays_conservative(self):
+        content = """
+import os
+def status():
+    return "ok"
+def replace():
+    global status
+    status = os.system
+replace()
+OPS = {"run": status}
+def handle(user_input):
+    return OPS[user_input]()
+"""
+        self.assertEqual(
+            [item.rule_id for item in findings_for(DataflowRule(), content)],
+            ["FLOW005"],
+        )
+
+    def test_class_method_global_rebinding_stays_conservative(self):
+        content = """
+import os
+def status():
+    return "ok"
+class Mutator:
+    def change(self):
+        global status
+        status = os.system
+Mutator().change()
+OPS = {"run": status}
+def handle(user_input):
+    return OPS[user_input]()
+"""
+        self.assertEqual(
+            [item.rule_id for item in findings_for(DataflowRule(), content)],
+            ["FLOW005"],
+        )
+
+    def test_callable_code_attribute_mutation_invalidates_closed_map(self):
+        content = """
+def status():
+    return "ok"
+def replacement():
+    return external()
+status.__code__ = replacement.__code__
+OPS = {"run": status}
+def handle(user_input):
+    return OPS[user_input]()
+"""
+        self.assertEqual(
+            [item.rule_id for item in findings_for(DataflowRule(), content)],
+            ["FLOW005"],
+        )
+
+    def test_setattr_callable_mutation_invalidates_closed_map(self):
+        content = """
+def status():
+    return "ok"
+def replacement():
+    return external()
+setattr(status, "__code__", replacement.__code__)
+OPS = {"run": status}
+def handle(user_input):
+    return OPS[user_input]()
+"""
+        self.assertEqual(
+            [item.rule_id for item in findings_for(DataflowRule(), content)],
+            ["FLOW005"],
+        )
+
     def test_mutable_closed_dispatch_still_reports(self):
         content = """
 def status():

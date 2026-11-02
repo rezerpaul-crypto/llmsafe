@@ -586,6 +586,41 @@ class DataflowRule:
             and isinstance(stmt.body[0], ast.Return)
             and isinstance(stmt.body[0].value, ast.Constant)
         }
+        # A constant-return definition is not proof of the callable stored
+        # in a registry if its name can be rebound before map construction.
+        # Reject duplicate definitions, module-scope stores/imports and
+        # explicit global rebinding in nested functions. Keep this exception
+        # conservative rather than suppressing a potential FLOW005 finding.
+        definition_counts: Dict[str, int] = {}
+        rebound: Set[str] = set()
+        for stmt in statements:
+            # A method or nested function may also rebind a module global.
+            for node in ast.walk(stmt):
+                if isinstance(node, ast.Global):
+                    rebound.update(node.names)
+                if (
+                    isinstance(node, ast.Attribute)
+                    and isinstance(node.ctx, (ast.Store, ast.Del))
+                    and isinstance(node.value, ast.Name)
+                ):
+                    rebound.add(node.value.id)
+                if (
+                    isinstance(node, ast.Call)
+                    and call_name(node) in {"setattr", "delattr"}
+                    and node.args and isinstance(node.args[0], ast.Name)
+                ):
+                    rebound.add(node.args[0].id)
+            if isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                definition_counts[stmt.name] = definition_counts.get(stmt.name, 0) + 1
+                continue
+            collector = _ScopeBindingCollector()
+            collector.visit(stmt)
+            rebound.update(collector.bindings)
+            rebound.update(collector.imports)
+        safe_functions = {
+            name for name in safe_functions
+            if definition_counts.get(name) == 1 and name not in rebound
+        }
         candidates: Set[str] = set()
         for stmt in statements:
             if not isinstance(stmt, ast.Assign) or len(stmt.targets) != 1:
