@@ -598,6 +598,18 @@ class DataflowRule:
             for node in ast.walk(stmt):
                 if isinstance(node, ast.Global):
                     rebound.update(node.names)
+                if (
+                    isinstance(node, ast.Attribute)
+                    and isinstance(node.ctx, (ast.Store, ast.Del))
+                    and isinstance(node.value, ast.Name)
+                ):
+                    rebound.add(node.value.id)
+                if (
+                    isinstance(node, ast.Call)
+                    and call_name(node) in {"setattr", "delattr"}
+                    and node.args and isinstance(node.args[0], ast.Name)
+                ):
+                    rebound.add(node.args[0].id)
             if isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 definition_counts[stmt.name] = definition_counts.get(stmt.name, 0) + 1
                 continue
