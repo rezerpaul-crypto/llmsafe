@@ -717,6 +717,17 @@ def handle(user_input):
 """
         self.assertEqual(findings_for(DataflowRule(), content), [])
 
+    def test_unknown_outer_key_mutation_reaches_known_nested_read(self):
+        content = """
+def handle(user_input, unknown_key):
+    box = {"inner": {"safe": "1+1"}}
+    box[unknown_key]["dangerous"] = user_input
+    return eval(box["inner"]["dangerous"])
+"""
+        self.assertEqual(
+            [f.rule_id for f in findings_for(DataflowRule(), content)], ["FLOW001"]
+        )
+
     def test_does_not_flag_constant_operations(self):
         content = """
 import requests
