@@ -9,6 +9,9 @@ to use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Security
 
+- Recognize statically resolved LangChain and PydanticAI function-tool registrations
+  as model-input boundaries, excluding officially injected ToolRuntime and RunContext
+  annotations. Rebound/non-SDK decorators do not receive an implied trusted API identity.
 - Official OpenAI Agents SDK `@function_tool` and `@tool` parameters now establish a model-input
   boundary while SDK-injected `RunContextWrapper` and `ToolContext` parameters remain trusted
   application context.
