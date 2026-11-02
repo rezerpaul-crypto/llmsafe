@@ -1234,6 +1234,38 @@ def handle(user_input):
             ["FLOW005"],
         )
 
+    def test_callable_code_attribute_mutation_invalidates_closed_map(self):
+        content = """
+def status():
+    return "ok"
+def replacement():
+    return external()
+status.__code__ = replacement.__code__
+OPS = {"run": status}
+def handle(user_input):
+    return OPS[user_input]()
+"""
+        self.assertEqual(
+            [item.rule_id for item in findings_for(DataflowRule(), content)],
+            ["FLOW005"],
+        )
+
+    def test_setattr_callable_mutation_invalidates_closed_map(self):
+        content = """
+def status():
+    return "ok"
+def replacement():
+    return external()
+setattr(status, "__code__", replacement.__code__)
+OPS = {"run": status}
+def handle(user_input):
+    return OPS[user_input]()
+"""
+        self.assertEqual(
+            [item.rule_id for item in findings_for(DataflowRule(), content)],
+            ["FLOW005"],
+        )
+
     def test_mutable_closed_dispatch_still_reports(self):
         content = """
 def status():
