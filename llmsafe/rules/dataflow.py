@@ -1163,6 +1163,23 @@ class _ScopeAnalyzer:
                 taint.add(self._source("user", "request data", node))
             return taint
         if isinstance(node, ast.Call):
+            # A locally constructed dictionary's get() reads only the selected
+            # field. Still include the default: it may be returned at runtime.
+            if (
+                isinstance(node.func, ast.Attribute)
+                and node.func.attr == "get"
+                and isinstance(node.func.value, ast.Name)
+                and 1 <= len(node.args) <= 2
+                and not node.keywords
+            ):
+                references = self._references(node.func.value.id, environment)
+                if references:
+                    taint = self._expression(node.args[0], environment)
+                    if len(node.args) == 2:
+                        taint.update(self._expression(node.args[1], environment))
+                    for reference in references:
+                        taint.update(self._read_field(reference, node.args[0], environment))
+                    return taint
             name = call_name(node) or ""
             resolved_name = self._resolved_call_name(name)
             receiver_taint = (
@@ -1573,8 +1590,14 @@ class _ScopeAnalyzer:
                 environment.pop(target.id, None)
                 for token, field_taint in fields:
                     field_key = self._field_prefix(reference) + (token or _UNKNOWN_FIELD)
-                    if field_taint:
-                        environment.setdefault(field_key, set()).update(field_taint)
+                    if token is None:
+                        if field_taint:
+                            environment.setdefault(field_key, set()).update(field_taint)
+                    elif field_taint:
+                        # Later duplicate literal keys replace earlier values.
+                        environment[field_key] = set(field_taint)
+                    else:
+                        environment.pop(field_key, None)
             elif isinstance(value_node, ast.Name) and self._references(
                 value_node.id, environment
             ):
