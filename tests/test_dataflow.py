@@ -728,6 +728,17 @@ def handle(user_input, unknown_key):
             [f.rule_id for f in findings_for(DataflowRule(), content)], ["FLOW001"]
         )
 
+    def test_simple_namespace_get_callable_is_not_dict_get(self):
+        content = """
+from types import SimpleNamespace
+def handle(user_input):
+    state = SimpleNamespace(get=lambda name: user_input)
+    return eval(state.get("missing"))
+"""
+        self.assertEqual(
+            [f.rule_id for f in findings_for(DataflowRule(), content)], ["FLOW001"]
+        )
+
     def test_does_not_flag_constant_operations(self):
         content = """
 import requests
