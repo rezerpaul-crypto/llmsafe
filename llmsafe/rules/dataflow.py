@@ -1562,11 +1562,16 @@ class _ScopeAnalyzer:
                 # An AST literal is a fresh container. Its identity survives alias
                 # assignments and branch copies without executing the target code.
                 reference = TaintSource("heap-ref", str(id(value_node)), 0, 0)
+                fields = [
+                    (
+                        self._field_token(key) if key is not None else None,
+                        self._expression(value, environment),
+                    )
+                    for key, value in zip(value_node.keys, value_node.values)
+                ]
                 environment[reference_key] = {reference}
                 environment.pop(target.id, None)
-                for key, value in zip(value_node.keys, value_node.values):
-                    field_taint = self._expression(value, environment)
-                    token = self._field_token(key) if key is not None else None
+                for token, field_taint in fields:
                     field_key = self._field_prefix(reference) + (token or _UNKNOWN_FIELD)
                     if field_taint:
                         environment.setdefault(field_key, set()).update(field_taint)
