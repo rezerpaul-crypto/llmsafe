@@ -20,6 +20,12 @@ to use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- The dataflow analyzer now distinguishes one-level constant dictionary fields and tracks
+  local dictionary mutations through aliases, including `dict.update()` calls,
+  conservative unknown-index writes and branch merges. Safe sibling fields avoid unrelated FLOW findings; field-derived
+  helper return values can cross module boundaries. Nested and external mutations remain
+  unsupported.
+
 - Secret scanning now ignores narrowly allow-listed synthetic fixture values and the exact canonical
   AWS documentation access-key identifier while continuing to report near matches and extended
   lookalikes at existing provider matches. The example exception requires explicit delimiters and
