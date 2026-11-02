@@ -288,16 +288,16 @@ class ProjectDataflowTests(unittest.TestCase):
         findings = self.scan(
             {
                 "helpers.py": (
-                    "def select(value):\\n"
-                    "    box = {}\\n"
-                    '    box["dangerous"] = value\\n'
-                    '    box["safe"] = "1+1"\\n'
-                    '    return box["dangerous"]\\n'
+                    "def select(value):\n"
+                    "    box = {}\n"
+                    '    box["dangerous"] = value\n'
+                    '    box["safe"] = "1+1"\n'
+                    '    return box["dangerous"]\n'
                 ),
                 "app.py": (
-                    "from helpers import select\\n\\n"
-                    "def handle(user_input):\\n"
-                    "    return eval(select(user_input))\\n"
+                    "from helpers import select\n\n"
+                    "def handle(user_input):\n"
+                    "    return eval(select(user_input))\n"
                 ),
             }
         )
@@ -307,22 +307,23 @@ class ProjectDataflowTests(unittest.TestCase):
         findings = self.scan(
             {
                 "helpers.py": (
-                    "def select(value):\\n"
-                    "    box = {}\\n"
-                    '    box["dangerous"] = value\\n'
-                    '    box["safe"] = "1+1"\\n'
-                    '    return box["safe"]\\n'
+                    "def select(value):\n"
+                    "    box = {}\n"
+                    '    box["dangerous"] = value\n'
+                    '    box["safe"] = "1+1"\n'
+                    '    return box["safe"]\n'
                 ),
                 "app.py": (
-                    "from helpers import select\\n\\n"
-                    "def handle(user_input):\\n"
-                    "    return eval(select(user_input))\\n"
+                    "from helpers import select\n\n"
+                    "def handle(user_input):\n"
+                    "    return eval(select(user_input))\n"
                 ),
             }
         )
         self.assertEqual(findings, [])
 
 
+    def test_does_not_guess_external_imports(self):
         findings = self.scan(
             {
                 "app.py": (
