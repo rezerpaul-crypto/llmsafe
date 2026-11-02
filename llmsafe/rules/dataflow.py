@@ -1618,12 +1618,37 @@ class _ScopeAnalyzer:
             return f"{type(node.value).__name__}:{node.value!r}"
         return None
 
+    @classmethod
+    def _field_location(
+        cls, node: ast.AST
+    ) -> Optional[Tuple[str, Tuple[str, ...], Tuple[ast.AST, ...]]]:
+        """Resolve at most three literal fields from a tracked local root."""
+        segments: List[str] = []
+        indices: List[ast.AST] = []
+        current = node
+        while isinstance(current, (ast.Subscript, ast.Attribute)) and len(segments) < 3:
+            if isinstance(current, ast.Subscript):
+                segments.append(cls._field_token(current.slice) or _UNKNOWN_FIELD)
+                indices.append(current.slice)
+            else:
+                segments.append(f"attr:{current.attr}")
+            current = current.value
+        if not isinstance(current, ast.Name) or not segments:
+            return None
+        return current.id, tuple(reversed(segments)), tuple(indices)
+
+    @staticmethod
+    def _field_path(segments: Sequence[str]) -> str:
+        return "\0".join(segments)
+
     @staticmethod
     def _references(name: str, environment: Environment) -> Taint:
         return set(environment.get(f"{_REFERENCE_PREFIX}{name}", set()))
 
     @staticmethod
     def _field_prefix(reference: TaintSource) -> str:
+        if reference.kind == "heap-field":
+            return reference.label
         return f"{_FIELD_PREFIX}{reference.label}:"
 
     @classmethod
@@ -1637,14 +1662,34 @@ class _ScopeAnalyzer:
     def _read_field(
         cls, reference: TaintSource, index: ast.AST, environment: Environment
     ) -> Taint:
-        prefix = cls._field_prefix(reference)
-        token = cls._field_token(index)
-        if token is None:
+        token = cls._field_token(index) or _UNKNOWN_FIELD
+        return cls._read_path(reference, (token,), environment)
+
+    @classmethod
+    def _read_path(
+        cls,
+        reference: TaintSource,
+        segments: Sequence[str],
+        environment: Environment,
+    ) -> Taint:
+        if _UNKNOWN_FIELD in segments:
             return cls._all_fields(reference, environment)
-        return cls._combine(
-            environment.get(prefix + token, set()),
-            environment.get(prefix + _UNKNOWN_FIELD, set()),
-        )
+        prefix = cls._field_prefix(reference)
+        taint: Taint = set()
+        for depth in range(1, len(segments) + 1):
+            parts = segments[:depth]
+            exact = prefix + cls._field_path(parts)
+            taint.update(environment.get(exact, set()))
+            wildcard = prefix + cls._field_path((*parts[:-1], _UNKNOWN_FIELD))
+            taint.update(environment.get(wildcard, set()))
+            if depth == len(segments):
+                taint.update(
+                    cls._combine(
+                        *(value for key, value in environment.items()
+                          if key.startswith(exact + "\0"))
+                    )
+                )
+        return taint
 
     @classmethod
     def _write_field(
@@ -1656,13 +1701,38 @@ class _ScopeAnalyzer:
     ) -> None:
         for reference in references:
             field_key = cls._field_prefix(reference) + token
-            if token == _UNKNOWN_FIELD or len(references) != 1:
+            if _UNKNOWN_FIELD in token.split("\0") or len(references) != 1:
                 if field_taint:
                     environment.setdefault(field_key, set()).update(field_taint)
-            elif field_taint:
-                environment[field_key] = set(field_taint)
             else:
-                environment.pop(field_key, None)
+                # A definite assignment replaces previous nested children.
+                for key in tuple(environment):
+                    if key.startswith(field_key + "\0"):
+                        del environment[key]
+                if field_taint:
+                    environment[field_key] = set(field_taint)
+                else:
+                    environment.pop(field_key, None)
+
+    def _store_literal_fields(
+        self,
+        references: Taint,
+        base: Tuple[str, ...],
+        literal: ast.Dict,
+        environment: Environment,
+    ) -> None:
+        for key, value in zip(literal.keys, literal.values):
+            token = self._field_token(key) if key is not None else None
+            path = (*base, token or _UNKNOWN_FIELD)
+            joined = self._field_path(path)
+            if isinstance(value, ast.Dict) and len(path) < 3:
+                self._write_field(references, joined, set(), environment)
+                self._store_literal_fields(references, path, value, environment)
+            else:
+                self._write_field(
+                    references, joined, self._expression(value, environment),
+                    environment
+                )
 
     def _assign(
         self,
