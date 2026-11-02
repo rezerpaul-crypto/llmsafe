@@ -526,6 +526,33 @@ def handle(user_input):
         findings = findings_for(DataflowRule(), content)
         self.assertEqual([finding.rule_id for finding in findings], ["FLOW001"])
 
+    def test_dictionary_get_reads_selected_field_not_sibling(self):
+        content = """
+def handle(user_input):
+    box = {"dangerous": user_input, "safe": "1+1"}
+    eval(box.get("safe"))
+    eval(box.get("dangerous"))
+"""
+        findings = findings_for(DataflowRule(), content)
+        self.assertEqual([finding.rule_id for finding in findings], ["FLOW001"])
+
+    def test_dictionary_get_default_remains_conservative(self):
+        content = """
+def handle(user_input):
+    box = {"safe": "1+1"}
+    return eval(box.get("missing", user_input))
+"""
+        findings = findings_for(DataflowRule(), content)
+        self.assertEqual([finding.rule_id for finding in findings], ["FLOW001"])
+
+    def test_duplicate_dictionary_literal_keys_take_final_value(self):
+        content = """
+def handle(user_input):
+    box = {"command": user_input, "command": "1+1"}
+    return eval(box["command"])
+"""
+        self.assertEqual(findings_for(DataflowRule(), content), [])
+
     def test_does_not_flag_constant_operations(self):
         content = """
 import requests
