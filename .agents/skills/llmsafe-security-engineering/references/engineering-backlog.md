@@ -1,0 +1,26 @@
+# Engineering backlog — reconcile with live GitHub before choosing work
+
+This is a decision map, **not a claim that a PR has shipped**. Last mapped against `main` commit `186c866205a14b8a2540eeea1b7f0207841f4541` and open draft PRs as of 2026-11-02. Re-read actual heads, CI, and changed-file diffs each session. Prioritize a verified failure over the numeric order below. Never rewrite an already implemented feature on a parallel branch.
+
+## P0 — correctness and trustworthy scan completion
+
+1. **Integrate the existing analyzer work without losing evidence.** Review stack #55 (Python AST parse errors), #56 (dictionary field/alias writes), #57 (LangChain/PydanticAI tools), #58 (fixed argv shell-flow noise), #59 (macOS/integration), #61 (research G03/G05/G08/G09/G10), and #63 (extracted values and alias-visible mutations). Verify dependencies, shared base, real CI checks and independent review before merge decisions. For new fixes extend the suitable existing branch, not main. If stacked PRs cannot be safely rebased without overwriting work, document the conflict.
+2. **No false-clean results.** Fail visibly on malformed Python (including Python version incompatibility), unreadable/oversized files and scope gaps where they materially invalidate a scan; preserve text/secret checks where possible. Treat skip counts and parse errors separately. Check #55 first. Ensure exit `2` is not converted into `0`. Preserve public schema v1 unless deliberately versioned.
+3. **Source-to-sink precision.** Verify nested field writes, dictionary aliases, extraction into scalars, cross-file helpers, parameter binding, tool argument sources and trustworthy SDK-injected context exemptions. Test safe sibling fields, definite overwrites, branch joins and unknown receiver paths. Compare before and after against the frozen 18-case research harness where available. Check #56/#57/#61/#63 before new implementation.
+
+## P1 — real finding quality (work only after P0 correctness gates)
+
+4. **Variable-held shell options and process sinks.** Current main's `ShellExecutionRule._uses_shell` recognizes direct AST literal `shell=True`, not `shell=shell` where `shell = sys.platform == "win32"`. Create a static test matrix for literal true, false, local bool binding, branch/platform-conditioned true, constant argv with no model input, and model-controlled shell text. Infer only provable bounded assignments; never claim a third-party vulnerability from the syntax alone. Check #58 before touching adjacent process dataflow.
+5. **Distinguish dangerous API from demonstrated attacker control.** Main's `PY001` flags `eval()` structurally, including typing-annotation introspection. Keep structural detection useful while ensuring the description/report does not present it as proven exploitable. Add fixtures for developer-owned annotation, model-controlled expression, fixed expression and aliased code-evaluation calls. Use `FLOW001` evidence for actual unsafe provenance when supported; avoid silently changing a published rule's meaning/severity.
+6. **Actionable evidence paths.** Each significant flow needs source and trust boundary, propagation/aliases, sink parameter, file/line, risk preconditions, and a concrete least-privilege or typed-validation mitigation. Add trace tests, cross-file evidence paths, deduplication, and deterministic JSON/SARIF checks. Any contract change requires explicit version migration and changelog.
+7. **Framework trust boundaries.** Improve OpenAI Agents, Anthropic, LangChain, PydanticAI, and MCP tool registration only against pinned upstream syntax with vulnerable/safe counterparts. Cover injected context, registration aliases/decorators, safe argument parsing, and command/SQL/URL sinks. Update `docs/framework-coverage.md` when coverage changes; do not claim full framework support.
+
+## P1/P2 — report readiness (no outreach)
+
+8. **End-to-end private report workflow.** On LLMSafe-owned demo fixtures or explicitly authorized pilots: pin tool SHA and target SHA, run exact CLI and record complete/skip/error counts, triage each finding, redact sensitive material, identify false positives/duplicates/unknowns, supply minimal retest and owner-friendly fixes. Apply the companion report rubric; a report with no actionable insight is not ready to send.
+9. **Evidence-based performance and portability.** Confirm Linux supported interpreters, Windows, CI-hosted macOS and separately the owner's Apple Silicon environment. Run relevant performance cases. Never label Linux CI a Mac acceptance, or a small fixture a representative real-world benchmark.
+10. **External measurement is gated.** Use `benchmarks.enrollment` and the consented frozen protocol for a formal multi-project benchmark; preselect corpus before runs and preserve private ground truth. Without consent, develop using owned synthetic fixtures, not externally named vulnerability/precision claims.
+
+## Pick a daily slice
+
+Choose the highest-priority **unblocked** item with a reproducible assertion, one positive case, one safe case, and a reviewable diff. If P0 blocked by missing CI/Mac execution or human review, collect verifiable evidence or isolate a separate non-overlapping task. Do not generate another superficial report to fill the day.
