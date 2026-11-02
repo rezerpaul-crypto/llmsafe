@@ -1211,6 +1211,50 @@ class _ScopeAnalyzer:
                 keyword_taints,
                 unpacked_keyword_taint,
             )
+            # dict.update() mutates the object even though it returns None.
+            # Evaluate all input expressions above, then apply writes so an
+            # alias and the original variable observe the same field taint.
+            if (
+                isinstance(node.func, ast.Attribute)
+                and node.func.attr == "update"
+                and isinstance(node.func.value, ast.Name)
+            ):
+                references = self._references(node.func.value.id, environment)
+                if references:
+                    if len(node.args) == 1 and isinstance(node.args[0], ast.Dict):
+                        fields = [
+                            (
+                                self._field_token(key) if key is not None else None,
+                                self._expression(value, environment),
+                            )
+                            for key, value in zip(
+                                node.args[0].keys, node.args[0].values
+                            )
+                        ]
+                        for token, field_taint in fields:
+                            self._write_field(
+                                references,
+                                token or _UNKNOWN_FIELD,
+                                field_taint,
+                                environment,
+                            )
+                    elif node.args:
+                        self._write_field(
+                            references,
+                            _UNKNOWN_FIELD,
+                            self._combine(*argument_taints),
+                            environment,
+                        )
+                    for keyword, (_, field_taint) in zip(node.keywords, keyword_pairs):
+                        token = (
+                            f"str:{keyword.arg!r}"
+                            if keyword.arg is not None
+                            else _UNKNOWN_FIELD
+                        )
+                        self._write_field(
+                            references, token, field_taint, environment
+                        )
+                    return set()
             summary = self.function_summaries.get(name)
             if summary is None:
                 combined = self._combine(
@@ -1566,6 +1610,24 @@ class _ScopeAnalyzer:
             environment.get(prefix + _UNKNOWN_FIELD, set()),
         )
 
+    @classmethod
+    def _write_field(
+        cls,
+        references: Taint,
+        token: str,
+        field_taint: Taint,
+        environment: Environment,
+    ) -> None:
+        for reference in references:
+            field_key = cls._field_prefix(reference) + token
+            if token == _UNKNOWN_FIELD or len(references) != 1:
+                if field_taint:
+                    environment.setdefault(field_key, set()).update(field_taint)
+            elif field_taint:
+                environment[field_key] = set(field_taint)
+            else:
+                environment.pop(field_key, None)
+
     def _assign(
         self,
         target: ast.AST,
@@ -1626,15 +1688,7 @@ class _ScopeAnalyzer:
                     if token is None or key_taint:
                         token = _UNKNOWN_FIELD
                     field_taint = taint | key_taint
-                    for reference in references:
-                        field_key = self._field_prefix(reference) + token
-                        if token == _UNKNOWN_FIELD or len(references) != 1:
-                            if field_taint:
-                                environment.setdefault(field_key, set()).update(field_taint)
-                        elif field_taint:
-                            environment[field_key] = set(field_taint)
-                        else:
-                            environment.pop(field_key, None)
+                    self._write_field(references, token, field_taint, environment)
         elif isinstance(target, (ast.Tuple, ast.List)):
             for element in target.elts:
                 self._assign(element, taint, environment)
