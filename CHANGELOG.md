@@ -21,8 +21,8 @@ to use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Fixed
 
 - The dataflow analyzer now distinguishes one-level constant dictionary fields and tracks
-  local dictionary mutations through aliases, including conservative unknown-index writes
-  and branch merges. Safe sibling fields avoid unrelated FLOW findings; field-derived
+  local dictionary mutations through aliases, including `dict.update()` calls,
+  conservative unknown-index writes and branch merges. Safe sibling fields avoid unrelated FLOW findings; field-derived
   helper return values can cross module boundaries. Nested and external mutations remain
   unsupported.
 
