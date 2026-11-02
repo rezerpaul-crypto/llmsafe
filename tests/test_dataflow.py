@@ -1017,6 +1017,83 @@ def handle(user_input):
             ["FLOW003"],
         )
 
+    def test_instance_execute_monkeypatch_does_not_hide_sql(self):
+        content = """
+class Recorder:
+    def execute(self, value):
+        return value
+def handle(user_input):
+    recorder = Recorder()
+    recorder.execute = cursor.execute
+    return recorder.execute(user_input)
+"""
+        self.assertEqual(
+            [item.rule_id for item in findings_for(DataflowRule(), content)],
+            ["FLOW003"],
+        )
+
+    def test_instance_method_alias_monkeypatch_does_not_hide_sql(self):
+        content = """
+class Recorder:
+    def execute(self, value):
+        return value
+def handle(user_input):
+    recorder = Recorder()
+    alias = recorder
+    alias.execute = cursor.execute
+    return recorder.execute(user_input)
+"""
+        self.assertEqual(
+            [item.rule_id for item in findings_for(DataflowRule(), content)],
+            ["FLOW003"],
+        )
+
+    def test_maybe_monkeypatched_method_in_branch_is_not_trusted(self):
+        content = """
+class Recorder:
+    def execute(self, value):
+        return value
+def handle(user_input, enabled):
+    recorder = Recorder()
+    if enabled:
+        recorder.execute = cursor.execute
+    return recorder.execute(user_input)
+"""
+        self.assertEqual(
+            [item.rule_id for item in findings_for(DataflowRule(), content)],
+            ["FLOW003"],
+        )
+
+    def test_setattr_invalidates_local_method_identity(self):
+        content = """
+class Recorder:
+    def execute(self, value):
+        return value
+def handle(user_input):
+    recorder = Recorder()
+    setattr(recorder, "execute", cursor.execute)
+    return recorder.execute(user_input)
+"""
+        self.assertEqual(
+            [item.rule_id for item in findings_for(DataflowRule(), content)],
+            ["FLOW003"],
+        )
+
+    def test_class_level_replacement_disables_local_method_suppression(self):
+        content = """
+class Recorder:
+    def execute(self, value):
+        return value
+Recorder.execute = cursor.execute
+def handle(user_input):
+    recorder = Recorder()
+    return recorder.execute(user_input)
+"""
+        self.assertEqual(
+            [item.rule_id for item in findings_for(DataflowRule(), content)],
+            ["FLOW003"],
+        )
+
     def test_closed_constant_only_dispatch_is_not_dangerous_g05(self):
         content = """
 def status():
