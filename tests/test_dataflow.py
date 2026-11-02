@@ -420,6 +420,99 @@ def run(user_input, enabled):
         findings = findings_for(DataflowRule(), content)
         self.assertEqual([finding.rule_id for finding in findings], ["FLOW002"])
 
+    def test_echo_data_argument_does_not_control_shell_g04(self):
+        content = """
+import subprocess
+def handle(user_input):
+    return subprocess.run(["/bin/echo", user_input], check=True, shell=False)
+"""
+        self.assertEqual(findings_for(DataflowRule(), content), [])
+
+    def test_echo_data_argument_without_shell_flag_is_quiet(self):
+        content = """
+import subprocess
+def handle(user_input):
+    return subprocess.check_output(["/usr/bin/echo", user_input])
+"""
+        self.assertEqual(findings_for(DataflowRule(), content), [])
+
+    def test_dynamic_program_selection_remains_reported(self):
+        content = """
+import subprocess
+def handle(user_input):
+    return subprocess.run([user_input, "safe"], shell=False)
+"""
+        self.assertEqual(
+            [item.rule_id for item in findings_for(DataflowRule(), content)],
+            ["FLOW002"],
+        )
+
+    def test_shell_true_never_gets_echo_data_only_exemption(self):
+        content = """
+import subprocess
+def handle(user_input):
+    return subprocess.run(["/bin/echo", user_input], shell=True)
+"""
+        self.assertEqual(
+            [item.rule_id for item in findings_for(DataflowRule(), content)],
+            ["FLOW002"],
+        )
+
+    def test_unknown_shell_flag_blocks_echo_exemption(self):
+        content = """
+import subprocess
+def handle(user_input, use_shell):
+    return subprocess.run(["/bin/echo", user_input], shell=use_shell)
+"""
+        self.assertEqual(
+            [item.rule_id for item in findings_for(DataflowRule(), content)],
+            ["FLOW002"],
+        )
+
+    def test_fixed_interpreter_with_untrusted_code_is_reported(self):
+        content = """
+import subprocess
+def handle(user_input):
+    return subprocess.run(["/usr/bin/python3", "-c", user_input], shell=False)
+"""
+        self.assertEqual(
+            [item.rule_id for item in findings_for(DataflowRule(), content)],
+            ["FLOW002"],
+        )
+
+    def test_fixed_unknown_executable_with_untrusted_argument_is_reported(self):
+        content = """
+import subprocess
+def handle(user_input):
+    return subprocess.run(["/usr/bin/git", user_input], shell=False)
+"""
+        self.assertEqual(
+            [item.rule_id for item in findings_for(DataflowRule(), content)],
+            ["FLOW002"],
+        )
+
+    def test_changed_executable_never_gets_echo_exemption(self):
+        content = """
+import subprocess
+def handle(user_input):
+    return subprocess.run(["/bin/echo", "safe"], executable=user_input)
+"""
+        self.assertEqual(
+            [item.rule_id for item in findings_for(DataflowRule(), content)],
+            ["FLOW002"],
+        )
+
+    def test_dynamic_kwargs_never_get_echo_exemption(self):
+        content = """
+import subprocess
+def handle(user_input):
+    return subprocess.run(["/bin/echo", user_input], **{"shell": False})
+"""
+        self.assertEqual(
+            [item.rule_id for item in findings_for(DataflowRule(), content)],
+            ["FLOW002"],
+        )
+
     def test_does_not_flag_constant_operations(self):
         content = """
 import requests
