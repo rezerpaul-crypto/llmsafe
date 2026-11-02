@@ -109,6 +109,107 @@ def two(script):
 """
         self.assertEqual(findings_for(DataflowRule(), content), [])
 
+    def test_langchain_tool_input_is_model_source_g01(self):
+        content = """
+from langchain.tools import tool
+@tool
+def calculate(expression: str) -> str:
+    return str(eval(expression))
+"""
+        findings = findings_for(DataflowRule(), content)
+        self.assertEqual([finding.rule_id for finding in findings], ["FLOW001"])
+        self.assertTrue(any("LangChain" in step.message for step in findings[0].evidence))
+
+    def test_langchain_alias_named_and_async_tool(self):
+        content = """
+from langchain.tools import tool as register
+@register("execute")
+async def calculate(expression: str):
+    return eval(expression)
+"""
+        self.assertEqual(
+            [item.rule_id for item in findings_for(DataflowRule(), content)],
+            ["FLOW001"],
+        )
+
+    def test_langchain_injected_toolruntime_not_model_source_c01(self):
+        content = """
+from langchain.tools import tool, ToolRuntime
+@tool
+def configured(runtime: ToolRuntime):
+    return eval(runtime.context.expression)
+"""
+        self.assertEqual(findings_for(DataflowRule(), content), [])
+
+    def test_langchain_rebound_or_fake_decorator_not_trusted(self):
+        content = """
+from langchain.tools import tool
+from unrelated import tool as other
+tool = other
+@tool
+def evaluate(expression):
+    return eval(expression)
+"""
+        self.assertEqual(findings_for(DataflowRule(), content), [])
+
+    def test_pydantic_tool_plain_is_model_source_g02(self):
+        content = """
+from pydantic_ai import Agent
+agent = Agent()
+@agent.tool_plain
+def calculate(expression: str):
+    return eval(expression)
+"""
+        findings = findings_for(DataflowRule(), content)
+        self.assertEqual([finding.rule_id for finding in findings], ["FLOW001"])
+        self.assertTrue(any("PydanticAI" in step.message for step in findings[0].evidence))
+
+    def test_pydantic_agent_alias_and_async_tool(self):
+        content = """
+import pydantic_ai as ai
+owner = ai.Agent()
+agent = owner
+@agent.tool
+async def calculate(expression: str):
+    return eval(expression)
+"""
+        self.assertEqual(
+            [item.rule_id for item in findings_for(DataflowRule(), content)],
+            ["FLOW001"],
+        )
+
+    def test_pydantic_runcontext_not_model_source_c02(self):
+        content = """
+from pydantic_ai import Agent, RunContext
+agent = Agent()
+@agent.tool
+def configured(ctx: RunContext[str]):
+    return eval(ctx.deps)
+"""
+        self.assertEqual(findings_for(DataflowRule(), content), [])
+
+    def test_pydantic_rebound_agent_and_fake_method_are_not_tool_boundary(self):
+        content = """
+from pydantic_ai import Agent
+from unrelated import make_agent
+agent = Agent()
+agent = make_agent()
+@agent.tool_plain
+def calculate(expression):
+    return eval(expression)
+"""
+        self.assertEqual(findings_for(DataflowRule(), content), [])
+
+    def test_pydantic_non_agent_tool_plain_is_not_model_source(self):
+        content = """
+from unrelated import Agent
+agent = Agent()
+@agent.tool_plain
+def calculate(expression):
+    return eval(expression)
+"""
+        self.assertEqual(findings_for(DataflowRule(), content), [])
+
     def test_traces_user_input_through_interpolation_to_shell(self):
         content = """
 import subprocess
@@ -419,6 +520,418 @@ def run(user_input, enabled):
 """
         findings = findings_for(DataflowRule(), content)
         self.assertEqual([finding.rule_id for finding in findings], ["FLOW002"])
+
+    def test_dictionary_field_write_reaches_eval_g07(self):
+        content = """
+def handle(user_input):
+    box = {}
+    box["dangerous"] = user_input
+    box["safe"] = "1+1"
+    return eval(box["dangerous"])
+"""
+        findings = findings_for(DataflowRule(), content)
+        self.assertEqual([finding.rule_id for finding in findings], ["FLOW001"])
+
+    def test_dictionary_fields_do_not_contaminate_each_other_c03(self):
+        content = """
+def handle(user_input):
+    box = {}
+    box["dangerous"] = user_input
+    box["safe"] = "1+1"
+    return eval(box["safe"])
+"""
+        self.assertEqual(findings_for(DataflowRule(), content), [])
+
+    def test_dictionary_literal_fields_remain_separate(self):
+        content = """
+def handle(user_input):
+    box = {"dangerous": user_input, "safe": "1+1"}
+    eval(box["safe"])
+    eval(box["dangerous"])
+"""
+        findings = findings_for(DataflowRule(), content)
+        self.assertEqual([finding.rule_id for finding in findings], ["FLOW001"])
+
+    def test_dictionary_aliases_share_mutated_fields(self):
+        content = """
+def handle(user_input):
+    box = {}
+    alias = box
+    alias["dangerous"] = user_input
+    return eval(box["dangerous"])
+"""
+        findings = findings_for(DataflowRule(), content)
+        self.assertEqual([finding.rule_id for finding in findings], ["FLOW001"])
+
+    def test_rebinding_dictionary_does_not_retain_old_alias_fields(self):
+        content = """
+def handle(user_input):
+    box = {}
+    old_box = box
+    old_box["dangerous"] = user_input
+    box = {}
+    return eval(box["dangerous"])
+"""
+        self.assertEqual(findings_for(DataflowRule(), content), [])
+
+    def test_dictionary_strong_overwrite_removes_stale_taint(self):
+        content = """
+def handle(user_input):
+    box = {}
+    box["dangerous"] = user_input
+    box["dangerous"] = "1+1"
+    return eval(box["dangerous"])
+"""
+        self.assertEqual(findings_for(DataflowRule(), content), [])
+
+    def test_unknown_dictionary_key_read_is_conservative(self):
+        content = """
+def handle(user_input, field):
+    box = {"dangerous": user_input, "safe": "1+1"}
+    return eval(box[field])
+"""
+        findings = findings_for(DataflowRule(), content)
+        self.assertEqual([finding.rule_id for finding in findings], ["FLOW001"])
+
+    def test_unknown_dictionary_key_write_is_conservative(self):
+        content = """
+def handle(user_input, field):
+    box = {}
+    box[field] = user_input
+    return eval(box["safe"])
+"""
+        findings = findings_for(DataflowRule(), content)
+        self.assertEqual([finding.rule_id for finding in findings], ["FLOW001"])
+
+    def test_conditional_dictionary_field_mutation_remains_visible(self):
+        content = """
+def handle(user_input, enabled):
+    box = {}
+    if enabled:
+        box["dangerous"] = user_input
+    return eval(box["dangerous"])
+"""
+        findings = findings_for(DataflowRule(), content)
+        self.assertEqual([finding.rule_id for finding in findings], ["FLOW001"])
+
+    def test_dictionary_field_return_is_preserved_in_helper_summary(self):
+        content = """
+def choose(value):
+    box = {}
+    box["dangerous"] = value
+    return box["dangerous"]
+
+def handle(user_input):
+    return eval(choose(user_input))
+"""
+        findings = findings_for(DataflowRule(), content)
+        self.assertEqual([finding.rule_id for finding in findings], ["FLOW001"])
+
+    def test_dictionary_get_reads_selected_field_not_sibling(self):
+        content = """
+def handle(user_input):
+    box = {"dangerous": user_input, "safe": "1+1"}
+    eval(box.get("safe"))
+    eval(box.get("dangerous"))
+"""
+        findings = findings_for(DataflowRule(), content)
+        self.assertEqual([finding.rule_id for finding in findings], ["FLOW001"])
+
+    def test_dictionary_get_default_remains_conservative(self):
+        content = """
+def handle(user_input):
+    box = {"safe": "1+1"}
+    return eval(box.get("missing", user_input))
+"""
+        findings = findings_for(DataflowRule(), content)
+        self.assertEqual([finding.rule_id for finding in findings], ["FLOW001"])
+
+    def test_duplicate_dictionary_literal_keys_take_final_value(self):
+        content = """
+def handle(user_input):
+    box = {"command": user_input, "command": "1+1"}
+    return eval(box["command"])
+"""
+        self.assertEqual(findings_for(DataflowRule(), content), [])
+
+    def test_dictionary_update_literal_fields_keep_precise_taint(self):
+        content = """
+def handle(user_input):
+    box = {}
+    box.update({"dangerous": user_input, "safe": "1+1"})
+    eval(box["safe"])
+    eval(box["dangerous"])
+"""
+        findings = findings_for(DataflowRule(), content)
+        self.assertEqual([finding.rule_id for finding in findings], ["FLOW001"])
+
+    def test_dictionary_update_keyword_and_alias_mutation(self):
+        content = """
+def handle(user_input):
+    box = {}
+    alias = box
+    alias.update(dangerous=user_input)
+    return eval(box["dangerous"])
+"""
+        findings = findings_for(DataflowRule(), content)
+        self.assertEqual([finding.rule_id for finding in findings], ["FLOW001"])
+
+    def test_dictionary_update_overwrite_removes_old_field_taint(self):
+        content = """
+def handle(user_input):
+    box = {"dangerous": user_input}
+    box.update({"dangerous": "1+1"})
+    return eval(box["dangerous"])
+"""
+        self.assertEqual(findings_for(DataflowRule(), content), [])
+
+    def test_dictionary_update_unknown_mapping_is_conservative(self):
+        content = """
+def handle(user_input):
+    box = {"safe": "1+1"}
+    box.update(user_input)
+    return eval(box["safe"])
+"""
+        findings = findings_for(DataflowRule(), content)
+        self.assertEqual([finding.rule_id for finding in findings], ["FLOW001"])
+
+    def test_dictionary_update_dynamic_key_is_conservative(self):
+        content = """
+def handle(user_input, key):
+    box = {"safe": "1+1"}
+    box.update({key: user_input})
+    return eval(box["safe"])
+"""
+        findings = findings_for(DataflowRule(), content)
+        self.assertEqual([finding.rule_id for finding in findings], ["FLOW001"])
+
+    def test_dictionary_setdefault_mutation_reaches_sink(self):
+        content = """
+def handle(user_input):
+    box = {}
+    box.setdefault("command", user_input)
+    return eval(box["command"])
+"""
+        findings = findings_for(DataflowRule(), content)
+        self.assertEqual([finding.rule_id for finding in findings], ["FLOW001"])
+
+    def test_dictionary_setdefault_return_reaches_sink(self):
+        content = """
+def handle(user_input):
+    box = {}
+    return eval(box.setdefault("command", user_input))
+"""
+        findings = findings_for(DataflowRule(), content)
+        self.assertEqual([finding.rule_id for finding in findings], ["FLOW001"])
+
+    def test_dictionary_setdefault_no_untrusted_default_is_quiet(self):
+        content = """
+def handle(user_input):
+    box = {}
+    box.setdefault("command", "1+1")
+    return eval(box["command"])
+"""
+        self.assertEqual(findings_for(DataflowRule(), content), [])
+
+    def test_dictionary_setdefault_dynamic_key_is_conservative(self):
+        content = """
+def handle(user_input, key):
+    box = {"command": "1+1"}
+    box.setdefault(key, user_input)
+    return eval(box["command"])
+"""
+        findings = findings_for(DataflowRule(), content)
+        self.assertEqual([finding.rule_id for finding in findings], ["FLOW001"])
+
+    def test_nested_dictionary_field_taint_reaches_code_sink(self):
+        content = """
+def handle(user_input):
+    box = {"inner": {"safe": "1+1"}}
+    box["inner"]["dangerous"] = user_input
+    return eval(box["inner"]["dangerous"])
+"""
+        self.assertEqual(
+            [f.rule_id for f in findings_for(DataflowRule(), content)], ["FLOW001"]
+        )
+
+    def test_nested_dictionary_sibling_remains_safe(self):
+        content = """
+def handle(user_input):
+    box = {"inner": {"safe": "1+1", "dangerous": user_input}}
+    return eval(box["inner"]["safe"])
+"""
+        self.assertEqual(findings_for(DataflowRule(), content), [])
+
+    def test_nested_dictionary_alias_mutation_is_visible(self):
+        content = """
+def handle(user_input):
+    box = {"inner": {}}
+    inner = box["inner"]
+    inner["dangerous"] = user_input
+    return eval(box["inner"]["dangerous"])
+"""
+        self.assertEqual(
+            [f.rule_id for f in findings_for(DataflowRule(), content)], ["FLOW001"]
+        )
+
+    def test_nested_dictionary_replacement_kills_old_field(self):
+        content = """
+def handle(user_input):
+    box = {"inner": {"dangerous": user_input}}
+    box["inner"] = {"dangerous": "1+1"}
+    return eval(box["inner"]["dangerous"])
+"""
+        self.assertEqual(findings_for(DataflowRule(), content), [])
+
+    def test_simple_namespace_attribute_taint_is_precise(self):
+        content = """
+from types import SimpleNamespace
+def handle(user_input):
+    state = SimpleNamespace(safe="1+1", dangerous=user_input)
+    eval(state.safe)
+    eval(state.dangerous)
+"""
+        self.assertEqual(
+            [f.rule_id for f in findings_for(DataflowRule(), content)], ["FLOW001"]
+        )
+
+    def test_simple_namespace_alias_attribute_mutation(self):
+        content = """
+import types
+def handle(user_input):
+    state = types.SimpleNamespace(safe="1+1")
+    alias = state
+    alias.dangerous = user_input
+    return eval(state.dangerous)
+"""
+        self.assertEqual(
+            [f.rule_id for f in findings_for(DataflowRule(), content)], ["FLOW001"]
+        )
+
+    def test_simple_namespace_attribute_sibling_remains_safe(self):
+        content = """
+from types import SimpleNamespace
+def handle(user_input):
+    state = SimpleNamespace(safe="1+1")
+    state.dangerous = user_input
+    return eval(state.safe)
+"""
+        self.assertEqual(findings_for(DataflowRule(), content), [])
+
+    def test_unknown_outer_key_mutation_reaches_known_nested_read(self):
+        content = """
+def handle(user_input, unknown_key):
+    box = {"inner": {"safe": "1+1"}}
+    box[unknown_key]["dangerous"] = user_input
+    return eval(box["inner"]["dangerous"])
+"""
+        self.assertEqual(
+            [f.rule_id for f in findings_for(DataflowRule(), content)], ["FLOW001"]
+        )
+
+    def test_simple_namespace_get_callable_is_not_dict_get(self):
+        content = """
+from types import SimpleNamespace
+def handle(user_input):
+    state = SimpleNamespace(get=lambda name: user_input)
+    return eval(state.get("missing"))
+"""
+        self.assertEqual(
+            [f.rule_id for f in findings_for(DataflowRule(), content)], ["FLOW001"]
+        )
+
+    def test_echo_data_argument_does_not_control_shell_g04(self):
+        content = """
+import subprocess
+def handle(user_input):
+    return subprocess.run(["/bin/echo", user_input], check=True, shell=False)
+"""
+        self.assertEqual(findings_for(DataflowRule(), content), [])
+
+    def test_echo_data_argument_without_shell_flag_is_quiet(self):
+        content = """
+import subprocess
+def handle(user_input):
+    return subprocess.check_output(["/usr/bin/echo", user_input])
+"""
+        self.assertEqual(findings_for(DataflowRule(), content), [])
+
+    def test_dynamic_program_selection_remains_reported(self):
+        content = """
+import subprocess
+def handle(user_input):
+    return subprocess.run([user_input, "safe"], shell=False)
+"""
+        self.assertEqual(
+            [item.rule_id for item in findings_for(DataflowRule(), content)],
+            ["FLOW002"],
+        )
+
+    def test_shell_true_never_gets_echo_data_only_exemption(self):
+        content = """
+import subprocess
+def handle(user_input):
+    return subprocess.run(["/bin/echo", user_input], shell=True)
+"""
+        self.assertEqual(
+            [item.rule_id for item in findings_for(DataflowRule(), content)],
+            ["FLOW002"],
+        )
+
+    def test_unknown_shell_flag_blocks_echo_exemption(self):
+        content = """
+import subprocess
+def handle(user_input, use_shell):
+    return subprocess.run(["/bin/echo", user_input], shell=use_shell)
+"""
+        self.assertEqual(
+            [item.rule_id for item in findings_for(DataflowRule(), content)],
+            ["FLOW002"],
+        )
+
+    def test_fixed_interpreter_with_untrusted_code_is_reported(self):
+        content = """
+import subprocess
+def handle(user_input):
+    return subprocess.run(["/usr/bin/python3", "-c", user_input], shell=False)
+"""
+        self.assertEqual(
+            [item.rule_id for item in findings_for(DataflowRule(), content)],
+            ["FLOW002"],
+        )
+
+    def test_fixed_unknown_executable_with_untrusted_argument_is_reported(self):
+        content = """
+import subprocess
+def handle(user_input):
+    return subprocess.run(["/usr/bin/git", user_input], shell=False)
+"""
+        self.assertEqual(
+            [item.rule_id for item in findings_for(DataflowRule(), content)],
+            ["FLOW002"],
+        )
+
+    def test_changed_executable_never_gets_echo_exemption(self):
+        content = """
+import subprocess
+def handle(user_input):
+    return subprocess.run(["/bin/echo", "safe"], executable=user_input)
+"""
+        self.assertEqual(
+            [item.rule_id for item in findings_for(DataflowRule(), content)],
+            ["FLOW002"],
+        )
+
+    def test_dynamic_kwargs_never_get_echo_exemption(self):
+        content = """
+import subprocess
+def handle(user_input):
+    return subprocess.run(["/bin/echo", user_input], **{"shell": False})
+"""
+        self.assertEqual(
+            [item.rule_id for item in findings_for(DataflowRule(), content)],
+            ["FLOW002"],
+        )
 
     def test_does_not_flag_constant_operations(self):
         content = """

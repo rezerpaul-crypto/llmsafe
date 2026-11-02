@@ -284,6 +284,92 @@ class ProjectDataflowTests(unittest.TestCase):
         self.assertIsNotNone(source.path)
         self.assertEqual(source.path.name, "helpers.py")
 
+    def test_imported_helper_return_from_dictionary_field(self):
+        findings = self.scan(
+            {
+                "helpers.py": (
+                    "def select(value):\n"
+                    "    box = {}\n"
+                    '    box["dangerous"] = value\n'
+                    '    box["safe"] = "1+1"\n'
+                    '    return box["dangerous"]\n'
+                ),
+                "app.py": (
+                    "from helpers import select\n\n"
+                    "def handle(user_input):\n"
+                    "    return eval(select(user_input))\n"
+                ),
+            }
+        )
+        self.assertEqual([finding.rule_id for finding in findings], ["FLOW001"])
+
+    def test_imported_helper_safe_dictionary_field_does_not_raise_flow(self):
+        findings = self.scan(
+            {
+                "helpers.py": (
+                    "def select(value):\n"
+                    "    box = {}\n"
+                    '    box["dangerous"] = value\n'
+                    '    box["safe"] = "1+1"\n'
+                    '    return box["safe"]\n'
+                ),
+                "app.py": (
+                    "from helpers import select\n\n"
+                    "def handle(user_input):\n"
+                    "    return eval(select(user_input))\n"
+                ),
+            }
+        )
+        self.assertEqual(findings, [])
+
+
+    def test_langchain_tool_source_crosses_imported_helper(self):
+        findings = self.scan(
+            {
+                "helpers.py": "def evaluate(value):\n    return eval(value)\n",
+                "agent.py": (
+                    "from langchain.tools import tool\n"
+                    "from helpers import evaluate\n\n"
+                    "@tool\n"
+                    "def calculate(expression: str):\n"
+                    "    return evaluate(expression)\n"
+                ),
+            }
+        )
+        self.assertEqual([finding.rule_id for finding in findings], ["FLOW001"])
+
+    def test_pydantic_tool_plain_source_crosses_imported_helper(self):
+        findings = self.scan(
+            {
+                "helpers.py": "def evaluate(value):\n    return eval(value)\n",
+                "agent.py": (
+                    "from pydantic_ai import Agent\n"
+                    "from helpers import evaluate\n"
+                    "agent = Agent()\n\n"
+                    "@agent.tool_plain\n"
+                    "def calculate(expression: str):\n"
+                    "    return evaluate(expression)\n"
+                ),
+            }
+        )
+        self.assertEqual([finding.rule_id for finding in findings], ["FLOW001"])
+
+    def test_pydantic_context_does_not_flow_across_files(self):
+        findings = self.scan(
+            {
+                "helpers.py": "def evaluate(value):\n    return eval(value)\n",
+                "agent.py": (
+                    "from pydantic_ai import Agent, RunContext\n"
+                    "from helpers import evaluate\n"
+                    "agent = Agent()\n\n"
+                    "@agent.tool\n"
+                    "def configured(ctx: RunContext[str]):\n"
+                    "    return evaluate(ctx.deps)\n"
+                ),
+            }
+        )
+        self.assertEqual(findings, [])
+
     def test_does_not_guess_external_imports(self):
         findings = self.scan(
             {

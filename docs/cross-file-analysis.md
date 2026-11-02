@@ -38,6 +38,52 @@ arguments remain clean even when the imported helper contains a sensitive primit
 fixed helper return remains clean even when another helper argument is tainted; parameter-selective
 and transitive returns preserve only the relevant source set.
 
+## Bounded field-sensitive dictionary analysis
+
+For locally constructed dictionary literals, the analyzer tracks constant string
+and integer keys separately, including bounded paths up to three levels. It also
+tracks attributes of statically constructed `types.SimpleNamespace` objects. An assignment through an alias updates the shared container
+location, not just the alias name. Assignments to unknown keys use a conservative wildcard
+that affects later constant-key reads. Branch joins preserve possible taint; a definite
+overwrite of one known field can clear its prior taint. A scalar reassignment to a fresh
+dictionary no longer aliases the prior object.
+
+For a locally constructed dictionary, simple `get(key[, default])` calls use the same
+field model; a supplied default remains a possible source because its runtime selection
+cannot always be proven. Simple `dict.update()` calls on a tracked local dictionary
+propagate literal fields, keyword fields, and conservative unknown-mapping writes
+through aliases; exact field overwrites replace prior values. `dict.setdefault()` is modeled conservatively as a possible field write and possible return of the default when field presence is not proven; this can create false positives for definitely-existing keys. Repeated literal keys
+honor Python's last-value-wins behavior.
+
+When the dictionary itself is consumed as a value, the analyzer conservatively combines
+its field values. Returning a selected scalar field from a local or imported helper
+participates in the existing function-summary analysis.
+
+**Not covered:** arbitrarily deep field paths beyond three levels, dynamically
+constructed object types, mutation through unknown external functions or unmodeled
+methods, precise keys in comprehensions, or whole-dictionary return summaries that
+retain per-key provenance across a call. Unknown container types, unknown aliases,
+and external behavior are not asserted to be safe. This is static source analysis,
+not a runtime guarantee.
+
+## Process argument roles
+
+For `subprocess.run`, `call`, `check_call`, `check_output`, and `Popen`,
+a very narrow literal `["/bin/echo", data]` or `["/usr/bin/echo", data]`
+call is not a FLOW002 sink when no shell or executable/environment override is
+present. The same applies to a static `shell=False` argument. Unlike a shell
+command, the literal echo program treats subsequent argv items as data.
+
+**This is not a generic `shell=False` sanitizer.** Dynamic program selection,
+interpreter `-c` arguments, shell-enabled execution, arbitrary executable
+options, unknown keyword unpacking, and alternate or tainted execution controls
+remain on the existing conservative detection path. The heuristic is POSIX-only,
+limited to literal expressions and does not prove the host executable is
+authentic. On Windows, batch-file invocation may still enter a shell even with
+`shell=False`; no Windows-specific exemption is inferred.
+
+Primary reference: https://docs.python.org/3/library/subprocess.html
+
 ## Evidence path
 
 The primary finding location is the caller where untrusted data reaches the terminal operation. A

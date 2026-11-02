@@ -1,5 +1,6 @@
 """Filesystem traversal and rule orchestration for LLMSafe."""
 
+import ast
 import fnmatch
 import os
 import re
@@ -104,6 +105,30 @@ class Scanner:
                     skipped_files += 1
                     continue
                 scanned_files += 1
+                if path.suffix.lower() == ".py":
+                    # A failed AST parse makes flow analysis incomplete. Retain the
+                    # file for text-based rules (including secrets), but never report
+                    # this as a successful, fully analyzed scan.
+                    try:
+                        ast.parse(content, filename=str(path))
+                    except SyntaxError as exc:
+                        line = exc.lineno or 1
+                        column = exc.offset or 1
+                        errors.append(
+                            ScanError(
+                                path,
+                                f"Python syntax error at line {line}, column {column}; "
+                                "file not fully analyzed",
+                            )
+                        )
+                    except (RecursionError, ValueError) as exc:
+                        errors.append(
+                            ScanError(
+                                path,
+                                f"Python parser error ({type(exc).__name__}); "
+                                "file not fully analyzed",
+                            )
+                        )
                 lines = content.splitlines()
                 files.append((path, content, lines))
 

@@ -43,6 +43,32 @@ jobs:
       - name: Run the contributor workflow
         run: python scripts/dev.py --current
 
+  macos:
+    name: macOS acceptance (Python 3.12)
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Record hosted macOS environment
+        run: |
+          sw_vers
+          uname -m
+          python --version
+          git rev-parse HEAD
+      - name: Run full contributor workflow on macOS
+        run: python scripts/dev.py --current
+      - name: Run all 18 research cases and assert this integration's scope
+        run: |
+          python scripts/research_gaps.py --output build/research/acceptance.json
+          python -c 'import json; d=json.load(open("build/research/acceptance.json")); targeted={"G01","G02","G04","G06","G07","C01","C02","C03"}; cases={c["id"]:c for c in d["cases"]}; failures=sorted(x for x in targeted if x not in cases or not cases[x]["passed"]); print("Targeted research acceptance:", {x:cases.get(x, {}).get("passed") for x in sorted(targeted)}); assert not failures, "Failed targeted cases: "+str(failures)'
+      - name: Measure hosted macOS 500-module analysis budget
+        run: python -m benchmarks.performance --modules 500 --budget-seconds 10
+
   package:
     name: Package
     runs-on: ubuntu-24.04
