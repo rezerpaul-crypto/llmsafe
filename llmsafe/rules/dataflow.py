@@ -1744,28 +1744,25 @@ class _ScopeAnalyzer:
         if isinstance(target, ast.Name):
             reference_key = f"{_REFERENCE_PREFIX}{target.id}"
             if isinstance(value_node, ast.Dict):
-                # An AST literal is a fresh container. Its identity survives alias
-                # assignments and branch copies without executing the target code.
                 reference = TaintSource("heap-ref", str(id(value_node)), 0, 0)
-                fields = [
-                    (
-                        self._field_token(key) if key is not None else None,
-                        self._expression(value, environment),
-                    )
-                    for key, value in zip(value_node.keys, value_node.values)
-                ]
                 environment[reference_key] = {reference}
                 environment.pop(target.id, None)
-                for token, field_taint in fields:
-                    field_key = self._field_prefix(reference) + (token or _UNKNOWN_FIELD)
-                    if token is None:
-                        if field_taint:
-                            environment.setdefault(field_key, set()).update(field_taint)
-                    elif field_taint:
-                        # Later duplicate literal keys replace earlier values.
-                        environment[field_key] = set(field_taint)
-                    else:
-                        environment.pop(field_key, None)
+                self._store_literal_fields({reference}, (), value_node, environment)
+            elif (
+                isinstance(value_node, ast.Call)
+                and self._resolved_call_name(call_name(value_node) or "")
+                == "types.SimpleNamespace"
+                and not value_node.args
+                and all(keyword.arg is not None for keyword in value_node.keywords)
+            ):
+                reference = TaintSource("heap-ref", str(id(value_node)), 0, 0)
+                environment[reference_key] = {reference}
+                environment.pop(target.id, None)
+                for keyword in value_node.keywords:
+                    self._write_field(
+                        {reference}, f"attr:{keyword.arg}",
+                        self._expression(keyword.value, environment), environment
+                    )
             elif isinstance(value_node, ast.Name) and self._references(
                 value_node.id, environment
             ):
@@ -1777,24 +1774,59 @@ class _ScopeAnalyzer:
                     environment[target.id] = scalar
                 else:
                     environment.pop(target.id, None)
+            elif isinstance(value_node, (ast.Subscript, ast.Attribute)):
+                location = self._field_location(value_node)
+                if location and _UNKNOWN_FIELD not in location[1]:
+                    name, segments, _ = location
+                    roots = self._references(name, environment)
+                    if roots:
+                        environment[reference_key] = {
+                            TaintSource(
+                                "heap-field",
+                                self._field_prefix(ref) + self._field_path(segments) + "\0",
+                                0, 0
+                            )
+                            for ref in roots
+                        }
+                        environment.pop(target.id, None)
+                    else:
+                        environment.pop(reference_key, None)
+                        if taint:
+                            environment[target.id] = set(taint)
+                        else:
+                            environment.pop(target.id, None)
+                else:
+                    environment.pop(reference_key, None)
+                    if taint:
+                        environment[target.id] = set(taint)
+                    else:
+                        environment.pop(target.id, None)
             else:
                 environment.pop(reference_key, None)
                 if taint:
                     environment[target.id] = set(taint)
                 else:
                     environment.pop(target.id, None)
-        elif isinstance(target, ast.Subscript):
-            # Only one-level fields on known local dictionary literals are
-            # strong-update candidates. Unknown indices must remain conservative.
-            if isinstance(target.value, ast.Name):
-                references = self._references(target.value.id, environment)
+        elif isinstance(target, (ast.Subscript, ast.Attribute)):
+            location = self._field_location(target)
+            if location:
+                name, segments, indices = location
+                references = self._references(name, environment)
                 if references:
-                    key_taint = self._expression(target.slice, environment)
-                    token = self._field_token(target.slice)
-                    if token is None or key_taint:
-                        token = _UNKNOWN_FIELD
+                    key_taint = self._combine(
+                        *(self._expression(index, environment) for index in indices)
+                    )
+                    if key_taint:
+                        segments = tuple(_UNKNOWN_FIELD for _ in segments)
+                    token = self._field_path(segments)
                     field_taint = taint | key_taint
                     self._write_field(references, token, field_taint, environment)
+                    if (
+                        isinstance(value_node, ast.Dict)
+                        and len(segments) < 3
+                        and _UNKNOWN_FIELD not in segments
+                    ):
+                        self._store_literal_fields(references, segments, value_node, environment)
         elif isinstance(target, (ast.Tuple, ast.List)):
             for element in target.elts:
                 self._assign(element, taint, environment)
