@@ -642,6 +642,81 @@ def handle(user_input, key):
         findings = findings_for(DataflowRule(), content)
         self.assertEqual([finding.rule_id for finding in findings], ["FLOW001"])
 
+    def test_nested_dictionary_field_taint_reaches_code_sink(self):
+        content = """
+def handle(user_input):
+    box = {"inner": {"safe": "1+1"}}
+    box["inner"]["dangerous"] = user_input
+    return eval(box["inner"]["dangerous"])
+"""
+        self.assertEqual(
+            [f.rule_id for f in findings_for(DataflowRule(), content)], ["FLOW001"]
+        )
+
+    def test_nested_dictionary_sibling_remains_safe(self):
+        content = """
+def handle(user_input):
+    box = {"inner": {"safe": "1+1", "dangerous": user_input}}
+    return eval(box["inner"]["safe"])
+"""
+        self.assertEqual(findings_for(DataflowRule(), content), [])
+
+    def test_nested_dictionary_alias_mutation_is_visible(self):
+        content = """
+def handle(user_input):
+    box = {"inner": {}}
+    inner = box["inner"]
+    inner["dangerous"] = user_input
+    return eval(box["inner"]["dangerous"])
+"""
+        self.assertEqual(
+            [f.rule_id for f in findings_for(DataflowRule(), content)], ["FLOW001"]
+        )
+
+    def test_nested_dictionary_replacement_kills_old_field(self):
+        content = """
+def handle(user_input):
+    box = {"inner": {"dangerous": user_input}}
+    box["inner"] = {"dangerous": "1+1"}
+    return eval(box["inner"]["dangerous"])
+"""
+        self.assertEqual(findings_for(DataflowRule(), content), [])
+
+    def test_simple_namespace_attribute_taint_is_precise(self):
+        content = """
+from types import SimpleNamespace
+def handle(user_input):
+    state = SimpleNamespace(safe="1+1", dangerous=user_input)
+    eval(state.safe)
+    eval(state.dangerous)
+"""
+        self.assertEqual(
+            [f.rule_id for f in findings_for(DataflowRule(), content)], ["FLOW001"]
+        )
+
+    def test_simple_namespace_alias_attribute_mutation(self):
+        content = """
+import types
+def handle(user_input):
+    state = types.SimpleNamespace(safe="1+1")
+    alias = state
+    alias.dangerous = user_input
+    return eval(state.dangerous)
+"""
+        self.assertEqual(
+            [f.rule_id for f in findings_for(DataflowRule(), content)], ["FLOW001"]
+        )
+
+    def test_simple_namespace_attribute_sibling_remains_safe(self):
+        content = """
+from types import SimpleNamespace
+def handle(user_input):
+    state = SimpleNamespace(safe="1+1")
+    state.dangerous = user_input
+    return eval(state.safe)
+"""
+        self.assertEqual(findings_for(DataflowRule(), content), [])
+
     def test_does_not_flag_constant_operations(self):
         content = """
 import requests
