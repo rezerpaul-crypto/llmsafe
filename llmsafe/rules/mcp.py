@@ -55,7 +55,7 @@ class MCPConfigRule:
         # Both absolute POSIX and Windows paths may launch a shell; matching
         # only the raw command misses /bin/bash and C:\\Windows\\System32\\cmd.exe.
         command = (
-            command_value.replace("\\\\", "/").rstrip("/").rsplit("/", 1)[-1].lower()
+            command_value.replace("\\", "/").rstrip("/").rsplit("/", 1)[-1].lower()
             if isinstance(command_value, str)
             else ""
         )
