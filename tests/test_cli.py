@@ -45,6 +45,32 @@ class CLITests(unittest.TestCase):
 
         self.assertEqual(exit_code, 0)
 
+    def test_invalid_python_returns_exit_two_and_json_v1_error(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            path = Path(temporary_directory) / "broken.py"
+            path.write_text("def broken(:\n", encoding="utf-8")
+            exit_code, output, _ = self.run_cli([str(path), "--format", "json"])
+
+        payload = json.loads(output)
+        self.assertEqual(exit_code, 2)
+        self.assertEqual(payload["schema_version"], SCAN_SCHEMA_VERSION)
+        self.assertEqual(payload["summary"]["scanned_files"], 1)
+        self.assertEqual(payload["summary"]["errors"], 1)
+        self.assertEqual(payload["findings"], [])
+        self.assertEqual(set(payload["errors"][0]), {"path", "message"})
+        self.assertIn("Python syntax error", payload["errors"][0]["message"])
+
+    def test_invalid_python_marks_sarif_invocation_unsuccessful(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            path = Path(temporary_directory) / "broken.py"
+            path.write_text("def broken(:\n", encoding="utf-8")
+            exit_code, output, _ = self.run_cli([str(path), "--format", "sarif"])
+
+        invocation = json.loads(output)["runs"][0]["invocations"][0]
+        self.assertEqual(exit_code, 2)
+        self.assertFalse(invocation["executionSuccessful"])
+        self.assertEqual(invocation["properties"]["scanErrors"], 1)
+
     def test_missing_path_exits_two(self):
         exit_code, output, _ = self.run_cli(["not-a-real-file"])
         self.assertEqual(exit_code, 2)
