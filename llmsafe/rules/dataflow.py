@@ -1245,7 +1245,7 @@ class _ScopeAnalyzer:
                 taint.update(
                     self._combine(
                         *(keyword_taints.get(key, set())
-                          for key in ("executable", "shell", "cwd", "env"))
+                          for key in ("executable", "shell"))
                     )
                 )
             else:
