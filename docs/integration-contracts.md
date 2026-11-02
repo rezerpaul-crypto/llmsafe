@@ -48,6 +48,15 @@ message. The output is deterministic for the same paths, source, configuration, 
 Configuration errors are written to stderr. Completed scan results are written to stdout or
 `--output`. Integrations must branch on the exit code and must not treat code 2 as a clean scan.
 
+For selected Python files, a syntax or parser failure is a scan error, not a clean finding-free
+result. The existing JSON v1 `errors` array and `summary.errors` counter carry the diagnostic,
+and the CLI returns 2. The file still counts as scanned after successful text decoding, and
+text-based rules (including secret rules) can still produce findings; AST-based inspection is
+incomplete. Error messages include the location or parser error class, never the offending
+source line. Parsing uses the running Python interpreter, so unsupported newer syntax can
+also trigger this diagnostic. SARIF sets `executionSuccessful: false` and increments
+`scanErrors` without changing the SARIF schema.
+
 ## Composite Action mapping
 
 The action preserves these codes as its `exit-code` output. `sarif-file` is empty when validation

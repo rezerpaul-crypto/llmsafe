@@ -46,6 +46,37 @@ class ScannerTests(unittest.TestCase):
         self.assertEqual(result.scanned_files, 1)
         self.assertEqual(result.findings, ())
 
+    def test_invalid_python_is_error_but_text_rules_still_run(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            invalid = root / "broken.py"
+            invalid.write_text(
+                'token = "sk-' + "x" * 24 + '"\ndef broken(:\n',
+                encoding="utf-8",
+            )
+            (root / "valid.py").write_text("print('ok')\n", encoding="utf-8")
+
+            result = Scanner().scan([root])
+
+        self.assertEqual(result.scanned_files, 2)
+        self.assertEqual(result.skipped_files, 0)
+        self.assertEqual(len(result.errors), 1)
+        self.assertEqual(result.errors[0].path, invalid)
+        self.assertIn("Python syntax error at line 2", result.errors[0].message)
+        self.assertIn("file not fully analyzed", result.errors[0].message)
+        self.assertNotIn("sk-", result.errors[0].message)
+        self.assertIn("SECRET001", [item.rule_id for item in result.findings])
+
+    def test_non_python_text_is_not_parsed_as_python(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            path = Path(temporary_directory) / "notes.md"
+            path.write_text("def broken(:\n", encoding="utf-8")
+
+            result = Scanner().scan([path])
+
+        self.assertEqual(result.errors, ())
+        self.assertEqual(result.scanned_files, 1)
+
     def test_missing_target_is_reported_as_error(self):
         result = Scanner().scan([Path("definitely-does-not-exist")])
         self.assertEqual(len(result.errors), 1)
