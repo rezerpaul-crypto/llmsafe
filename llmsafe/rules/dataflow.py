@@ -105,6 +105,7 @@ Environment = Dict[str, Taint]
 # Internal environment keys cannot collide with Python identifiers. They keep
 # container identities and field taints inside the existing branch-merge model.
 _REFERENCE_PREFIX = "\0ref:"
+_CLASS_PREFIX = "\0class:"
 _FIELD_PREFIX = "\0field:"
 _UNKNOWN_FIELD = "*"
 
@@ -320,11 +321,16 @@ class DataflowRule:
             module_imports,
             module_shadowed,
         )
+        summaries.update(self._class_method_summaries(
+            path, tree.body, summaries, module_imports, module_shadowed
+        ))
+        harmless_maps = self._harmless_dispatch_maps(tree.body)
         analyzer = _ScopeAnalyzer(
             path,
             summaries,
             import_aliases=module_imports,
             shadowed_names=module_shadowed,
+            harmless_dispatch_maps=harmless_maps,
         )
         analyzer.analyze_scope(tree.body, {})
         for node in ast.walk(tree):
@@ -341,11 +347,23 @@ class DataflowRule:
                     module_imports,
                     module_shadowed,
                 )
+                collector = _ScopeBindingCollector()
+                for stmt in node.body:
+                    collector.visit(stmt)
+                blocked = collector.bindings | {
+                    arg.arg
+                    for arg in (
+                        *node.args.posonlyargs,
+                        *node.args.args,
+                        *node.args.kwonlyargs,
+                    )
+                }
                 function_analyzer = _ScopeAnalyzer(
                     path,
                     summaries,
                     import_aliases=import_aliases,
                     shadowed_names=shadowed_names,
+                    harmless_dispatch_maps=harmless_maps - blocked,
                 )
                 function_analyzer.analyze_scope(node.body, environment)
                 analyzer.findings.extend(function_analyzer.findings)
@@ -435,11 +453,16 @@ class DataflowRule:
                 function_names,
                 summaries,
             )
+            known.update(self._class_method_summaries(
+                module.path, module.tree.body, known, module_imports, module_shadowed
+            ))
+            harmless_maps = self._harmless_dispatch_maps(module.tree.body)
             analyzer = _ScopeAnalyzer(
                 module.path,
                 known,
                 import_aliases=module_imports,
                 shadowed_names=module_shadowed,
+                harmless_dispatch_maps=harmless_maps,
             )
             analyzer.analyze_scope(module.tree.body, {})
             for function in module.definitions.values():
@@ -455,15 +478,156 @@ class DataflowRule:
                     module_imports,
                     module_shadowed,
                 )
+                collector = _ScopeBindingCollector()
+                for stmt in function.body:
+                    collector.visit(stmt)
+                blocked = collector.bindings | {
+                    arg.arg
+                    for arg in (
+                        *function.args.posonlyargs,
+                        *function.args.args,
+                        *function.args.kwonlyargs,
+                    )
+                }
                 function_analyzer = _ScopeAnalyzer(
                     module.path,
                     known,
                     import_aliases=import_aliases,
                     shadowed_names=shadowed_names,
+                    harmless_dispatch_maps=harmless_maps - blocked,
                 )
                 function_analyzer.analyze_scope(function.body, environment)
                 analyzer.findings.extend(function_analyzer.findings)
             yield from analyzer.findings
+
+    def _class_method_summaries(
+        self,
+        path: Path,
+        statements: Sequence[ast.stmt],
+        known: Mapping[str, FunctionSummary],
+        imports: Mapping[str, str],
+        shadowed: Sequence[str],
+    ) -> Dict[str, FunctionSummary]:
+        """Summarize direct local methods without importing scanned classes."""
+        methods: Dict[str, FunctionSummary] = {}
+        # If local code replaces class methods, a statically summarized class
+        # body cannot safely stand in for the runtime callable.
+        mutated_classes: Set[str] = set()
+        for statement in statements:
+            if isinstance(statement, ast.ClassDef):
+                continue
+            # Module-scope rebinding invalidates the class constructor itself.
+            if isinstance(statement, (ast.Assign, ast.AnnAssign, ast.AugAssign)):
+                top_targets = (
+                    statement.targets
+                    if isinstance(statement, ast.Assign)
+                    else (statement.target,)
+                )
+                mutated_classes.update(
+                    target.id for target in top_targets
+                    if isinstance(target, ast.Name)
+                )
+            for node in ast.walk(statement):
+                if isinstance(node, (ast.Assign, ast.AnnAssign, ast.AugAssign)):
+                    targets = (
+                        node.targets if isinstance(node, ast.Assign) else (node.target,)
+                    )
+                    for target in targets:
+                        if isinstance(target, ast.Attribute) and isinstance(
+                            target.value, ast.Name
+                        ):
+                            mutated_classes.add(target.value.id)
+                if isinstance(node, ast.Call) and call_name(node) in {
+                    "setattr", "delattr"
+                }:
+                    if node.args and isinstance(node.args[0], ast.Name):
+                        mutated_classes.add(node.args[0].id)
+        for statement in statements:
+            if not isinstance(statement, ast.ClassDef):
+                continue
+            if statement.name in mutated_classes or statement.bases:
+                continue
+            for method in statement.body:
+                if not isinstance(method, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    continue
+                # Only plain instance methods; classmethod/staticmethod/decorators
+                # can alter the bound parameter layout at runtime.
+                if method.decorator_list or not method.args.args:
+                    continue
+                first = method.args.args[0].arg
+                summary = self._summarize_function(
+                    path, method, known, imports, shadowed
+                )
+                if summary.positional_parameters[0] != first:
+                    continue
+                methods[f"{statement.name}.{method.name}"] = FunctionSummary(
+                    tuple(p for p in summary.parameters if p != first),
+                    summary.positional_parameters[1:],
+                    summary.vararg,
+                    summary.kwarg,
+                    summary.sinks,
+                    summary.returns,
+                )
+        return methods
+
+    @staticmethod
+    def _harmless_dispatch_maps(statements: Sequence[ast.stmt]) -> Set[str]:
+        """Prove small immutable maps to side-effect-free constant functions."""
+        safe_functions = {
+            stmt.name
+            for stmt in statements
+            if isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef))
+            and not stmt.decorator_list
+            and not (
+                stmt.args.posonlyargs or stmt.args.args or stmt.args.kwonlyargs
+                or stmt.args.vararg or stmt.args.kwarg
+            )
+            and len(stmt.body) == 1
+            and isinstance(stmt.body[0], ast.Return)
+            and isinstance(stmt.body[0].value, ast.Constant)
+        }
+        candidates: Set[str] = set()
+        for stmt in statements:
+            if not isinstance(stmt, ast.Assign) or len(stmt.targets) != 1:
+                continue
+            if not isinstance(stmt.targets[0], ast.Name) or not isinstance(stmt.value, ast.Dict):
+                continue
+            if not stmt.value.keys or not all(
+                isinstance(key, ast.Constant) and isinstance(key.value, str)
+                and isinstance(value, ast.Name) and value.id in safe_functions
+                for key, value in zip(stmt.value.keys, stmt.value.values)
+            ):
+                continue
+            candidates.add(stmt.targets[0].id)
+        for name in tuple(candidates):
+            bindings = 0
+            unsafe = False
+            for stmt in statements:
+                for node in ast.walk(stmt):
+                    if isinstance(node, ast.Name) and node.id == name:
+                        if isinstance(node.ctx, (ast.Store, ast.Del)):
+                            bindings += 1
+                    if (
+                        isinstance(node, ast.Subscript)
+                        and isinstance(node.value, ast.Name)
+                        and node.value.id == name
+                        and isinstance(node.ctx, (ast.Store, ast.Del))
+                    ):
+                        unsafe = True
+                    if isinstance(node, ast.Call) and any(
+                        isinstance(arg, ast.Name) and arg.id == name
+                        for arg in (*node.args, *(kw.value for kw in node.keywords))
+                    ):
+                        unsafe = True
+                    if isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name):
+                        if node.value.id == name:
+                            unsafe = True
+                    if isinstance(node, ast.Assign) and isinstance(node.value, ast.Name):
+                        if node.value.id == name:
+                            unsafe = True
+            if unsafe or bindings != 1:
+                candidates.discard(name)
+        return candidates
 
     @classmethod
     def _scope_import_context(
@@ -1073,12 +1237,14 @@ class _ScopeAnalyzer:
         capture_parameter_sinks: bool = False,
         import_aliases: Optional[Mapping[str, str]] = None,
         shadowed_names: Sequence[str] = (),
+        harmless_dispatch_maps: Sequence[str] = (),
     ) -> None:
         self.path = path
         self.function_summaries = dict(function_summaries or {})
         self.capture_parameter_sinks = capture_parameter_sinks
         self.import_aliases = dict(import_aliases or {})
         self.shadowed_names = set(shadowed_names)
+        self.harmless_dispatch_maps = set(harmless_dispatch_maps)
         self.findings: List[Finding] = []
         self.summary_sinks: List[FunctionSink] = []
         self.summary_returns: Taint = set()
@@ -1342,6 +1508,10 @@ class _ScopeAnalyzer:
                     return combined
             name = call_name(node) or ""
             resolved_name = self._resolved_call_name(name)
+            if name in {"setattr", "delattr"} and node.args:
+                if isinstance(node.args[0], ast.Name):
+                    self._invalidate_instance_class(node.args[0].id, environment)
+            local_method = self._local_method_target(node, environment)
             receiver_taint = (
                 self._expression(node.func.value, environment)
                 if isinstance(node.func, ast.Attribute)
@@ -1363,10 +1533,11 @@ class _ScopeAnalyzer:
                 keyword_taints,
                 unpacked_keyword_taint,
                 environment,
+                known_local_method=local_method is not None,
             )
             self._check_function_sinks(
                 node,
-                name,
+                local_method or name,
                 argument_taints,
                 keyword_taints,
                 unpacked_keyword_taint,
@@ -1447,6 +1618,7 @@ class _ScopeAnalyzer:
         keyword_taints: Mapping[str, Taint],
         unpacked_keyword_taint: Taint,
         environment: Environment,
+        known_local_method: bool = False,
     ) -> None:
         if name in {"eval", "exec"}:
             taint = self._sink_argument_taint(
@@ -1490,7 +1662,10 @@ class _ScopeAnalyzer:
                 taint = set()
             if taint:
                 self._report(SHELL_SINK, node, name, taint)
-        elif name.endswith(".execute") or name.endswith(".executemany"):
+        elif (
+            (name.endswith(".execute") or name.endswith(".executemany"))
+            and not known_local_method
+        ):
             taint = self._sink_argument_taint(
                 argument_taints,
                 keyword_taints,
@@ -1515,12 +1690,48 @@ class _ScopeAnalyzer:
 
         dispatch_taint: Taint = set()
         if isinstance(node.func, ast.Subscript):
-            dispatch_taint = self._expression(node.func.slice, environment)
+            closed_map = (
+                isinstance(node.func.value, ast.Name)
+                and node.func.value.id in self.harmless_dispatch_maps
+            )
+            if not closed_map:
+                dispatch_taint = self._expression(node.func.slice, environment)
         elif isinstance(node.func, ast.Call) and call_name(node.func) == "getattr":
             if len(node.func.args) >= 2:
                 dispatch_taint = self._expression(node.func.args[1], environment)
         if dispatch_taint:
             self._report(TOOL_SINK, node, "dynamic dispatch", dispatch_taint)
+
+    @staticmethod
+    def _invalidate_instance_class(name: str, environment: Environment) -> None:
+        """Conservatively poison class identity for all possible aliases."""
+        current = environment.get(f"{_CLASS_PREFIX}{name}", set())
+        if not current:
+            return
+        affected_labels = {source.label for source in current}
+        for key, refs in tuple(environment.items()):
+            if not key.startswith(_CLASS_PREFIX):
+                continue
+            if any(ref.label in affected_labels for ref in refs):
+                environment[key] = {
+                    TaintSource("class-unknown", source.label, 0, 0)
+                    for source in refs
+                }
+
+    def _local_method_target(
+        self, node: ast.Call, environment: Environment
+    ) -> Optional[str]:
+        func = node.func
+        if not isinstance(func, ast.Attribute) or not isinstance(func.value, ast.Name):
+            return None
+        classes = environment.get(f"{_CLASS_PREFIX}{func.value.id}", set())
+        if len(classes) != 1:
+            return None
+        selected = next(iter(classes))
+        if selected.kind != "local-class":
+            return None
+        target = f"{selected.label}.{func.attr}"
+        return target if target in self.function_summaries else None
 
     @staticmethod
     def _literal_data_only_argv(node: ast.Call) -> bool:
@@ -1929,6 +2140,20 @@ class _ScopeAnalyzer:
         value_node: Optional[ast.AST] = None,
     ) -> None:
         if isinstance(target, ast.Name):
+            class_key = f"{_CLASS_PREFIX}{target.id}"
+            if isinstance(value_node, ast.Call) and isinstance(value_node.func, ast.Name):
+                class_name = value_node.func.id
+                if any(name.startswith(class_name + ".") for name in self.function_summaries):
+                    environment[class_key] = {TaintSource("local-class", class_name, 0, 0)}
+                else:
+                    environment.pop(class_key, None)
+            elif isinstance(value_node, ast.Name):
+                if f"{_CLASS_PREFIX}{value_node.id}" in environment:
+                    environment[class_key] = set(environment[f"{_CLASS_PREFIX}{value_node.id}"])
+                else:
+                    environment.pop(class_key, None)
+            else:
+                environment.pop(class_key, None)
             reference_key = f"{_REFERENCE_PREFIX}{target.id}"
             if isinstance(value_node, ast.Dict):
                 reference = TaintSource("heap-dict", str(id(value_node)), 0, 0)
@@ -1995,6 +2220,17 @@ class _ScopeAnalyzer:
                 else:
                     environment.pop(target.id, None)
         elif isinstance(target, (ast.Subscript, ast.Attribute)):
+            if isinstance(target, ast.Attribute) and isinstance(
+                target.value, ast.Name
+            ):
+                self._invalidate_instance_class(target.value.id, environment)
+            if (
+                isinstance(target, ast.Subscript)
+                and isinstance(target.value, ast.Attribute)
+                and target.value.attr == "__dict__"
+                and isinstance(target.value.value, ast.Name)
+            ):
+                self._invalidate_instance_class(target.value.value.id, environment)
             location = self._field_location(target)
             if location:
                 name, segments, indices = location
@@ -2042,4 +2278,12 @@ class _ScopeAnalyzer:
         for environment in environments:
             for name, taint in environment.items():
                 merged.setdefault(name, set()).update(taint)
+        # A missing identity binding on one branch means that the receiver
+        # might have been rebound to an unknown type. Set union alone would
+        # incorrectly restore its "known local class" identity at the join.
+        for name in tuple(merged):
+            if name.startswith(_CLASS_PREFIX) and any(
+                name not in environment for environment in environments
+            ):
+                merged[name].add(TaintSource("class-unknown", "branch-rebind", 0, 0))
         return merged

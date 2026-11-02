@@ -933,6 +933,250 @@ def handle(user_input):
             ["FLOW002"],
         )
 
+    def test_local_instance_method_reports_shell_sink_g03(self):
+        content = """
+import os
+class Executor:
+    def execute(self, value):
+        return os.system(value)
+def handle(user_input):
+    worker = Executor()
+    return worker.execute(user_input)
+"""
+        self.assertEqual(
+            [item.rule_id for item in findings_for(DataflowRule(), content)],
+            ["FLOW002"],
+        )
+
+    def test_local_instance_method_alias_reports_shell_sink(self):
+        content = """
+import os
+class Executor:
+    def execute(self, value):
+        return os.system(value)
+def handle(user_input):
+    worker = Executor()
+    alias = worker
+    return alias.execute(user_input)
+"""
+        self.assertEqual(
+            [item.rule_id for item in findings_for(DataflowRule(), content)],
+            ["FLOW002"],
+        )
+
+    def test_local_class_not_instantiated_does_not_disguise_unknown_cursor(self):
+        content = """
+class Recorder:
+    def execute(self, value):
+        return value
+def handle(user_input):
+    return cursor.execute(user_input)
+"""
+        self.assertEqual(
+            [item.rule_id for item in findings_for(DataflowRule(), content)],
+            ["FLOW003"],
+        )
+
+    def test_known_benign_execute_is_not_sql_g08(self):
+        content = """
+class Recorder:
+    def execute(self, value):
+        return value
+def handle(user_input):
+    recorder = Recorder()
+    return recorder.execute(user_input)
+"""
+        self.assertEqual(findings_for(DataflowRule(), content), [])
+
+    def test_known_local_execute_that_reaches_database_still_reports_sql(self):
+        content = """
+class DatabaseAdapter:
+    def execute(self, value):
+        return cursor.execute(value)
+def handle(user_input):
+    adapter = DatabaseAdapter()
+    return adapter.execute(user_input)
+"""
+        self.assertEqual(
+            [item.rule_id for item in findings_for(DataflowRule(), content)],
+            ["FLOW003"],
+        )
+
+    def test_rebound_benign_receiver_does_not_hide_sql_sink(self):
+        content = """
+class Recorder:
+    def execute(self, value):
+        return value
+def handle(user_input):
+    recorder = Recorder()
+    recorder = get_cursor()
+    return recorder.execute(user_input)
+"""
+        self.assertEqual(
+            [item.rule_id for item in findings_for(DataflowRule(), content)],
+            ["FLOW003"],
+        )
+
+    def test_instance_execute_monkeypatch_does_not_hide_sql(self):
+        content = """
+class Recorder:
+    def execute(self, value):
+        return value
+def handle(user_input):
+    recorder = Recorder()
+    recorder.execute = cursor.execute
+    return recorder.execute(user_input)
+"""
+        self.assertEqual(
+            [item.rule_id for item in findings_for(DataflowRule(), content)],
+            ["FLOW003"],
+        )
+
+    def test_instance_method_alias_monkeypatch_does_not_hide_sql(self):
+        content = """
+class Recorder:
+    def execute(self, value):
+        return value
+def handle(user_input):
+    recorder = Recorder()
+    alias = recorder
+    alias.execute = cursor.execute
+    return recorder.execute(user_input)
+"""
+        self.assertEqual(
+            [item.rule_id for item in findings_for(DataflowRule(), content)],
+            ["FLOW003"],
+        )
+
+    def test_maybe_monkeypatched_method_in_branch_is_not_trusted(self):
+        content = """
+class Recorder:
+    def execute(self, value):
+        return value
+def handle(user_input, enabled):
+    recorder = Recorder()
+    if enabled:
+        recorder.execute = cursor.execute
+    return recorder.execute(user_input)
+"""
+        self.assertEqual(
+            [item.rule_id for item in findings_for(DataflowRule(), content)],
+            ["FLOW003"],
+        )
+
+    def test_setattr_invalidates_local_method_identity(self):
+        content = """
+class Recorder:
+    def execute(self, value):
+        return value
+def handle(user_input):
+    recorder = Recorder()
+    setattr(recorder, "execute", cursor.execute)
+    return recorder.execute(user_input)
+"""
+        self.assertEqual(
+            [item.rule_id for item in findings_for(DataflowRule(), content)],
+            ["FLOW003"],
+        )
+
+    def test_class_level_replacement_disables_local_method_suppression(self):
+        content = """
+class Recorder:
+    def execute(self, value):
+        return value
+Recorder.execute = cursor.execute
+def handle(user_input):
+    recorder = Recorder()
+    return recorder.execute(user_input)
+"""
+        self.assertEqual(
+            [item.rule_id for item in findings_for(DataflowRule(), content)],
+            ["FLOW003"],
+        )
+
+    def test_conditional_receiver_rebinding_cannot_hide_sql(self):
+        content = """
+class Recorder:
+    def execute(self, value):
+        return value
+def handle(user_input, enabled):
+    recorder = Recorder()
+    if enabled:
+        recorder = get_cursor()
+    return recorder.execute(user_input)
+"""
+        self.assertEqual(
+            [item.rule_id for item in findings_for(DataflowRule(), content)],
+            ["FLOW003"],
+        )
+
+    def test_module_level_class_rebinding_cannot_hide_sql(self):
+        content = """
+class Recorder:
+    def execute(self, value):
+        return value
+Recorder = get_database_factory()
+def handle(user_input):
+    recorder = Recorder()
+    return recorder.execute(user_input)
+"""
+        self.assertEqual(
+            [item.rule_id for item in findings_for(DataflowRule(), content)],
+            ["FLOW003"],
+        )
+
+    def test_closed_constant_only_dispatch_is_not_dangerous_g05(self):
+        content = """
+def status():
+    return "ok"
+def help_text():
+    return "help"
+OPS = {"status": status, "help": help_text}
+def handle(user_input):
+    return OPS[user_input]()
+"""
+        self.assertEqual(findings_for(DataflowRule(), content), [])
+
+    def test_mutable_closed_dispatch_still_reports(self):
+        content = """
+def status():
+    return "ok"
+OPS = {"status": status}
+OPS["unsafe"] = dynamic_tool
+def handle(user_input):
+    return OPS[user_input]()
+"""
+        self.assertEqual(
+            [item.rule_id for item in findings_for(DataflowRule(), content)],
+            ["FLOW005"],
+        )
+
+    def test_unknown_registered_function_still_reports_dynamic_dispatch(self):
+        content = """
+def status():
+    return "ok"
+OPS = {"status": status, "run": os.system}
+def handle(user_input):
+    return OPS[user_input]()
+"""
+        self.assertEqual(
+            [item.rule_id for item in findings_for(DataflowRule(), content)],
+            ["FLOW005"],
+        )
+
+    def test_non_constant_safe_function_body_stays_conservative(self):
+        content = """
+def status():
+    return external_status()
+OPS = {"status": status}
+def handle(user_input):
+    return OPS[user_input]()
+"""
+        self.assertEqual(
+            [item.rule_id for item in findings_for(DataflowRule(), content)],
+            ["FLOW005"],
+        )
+
     def test_does_not_flag_constant_operations(self):
         content = """
 import requests

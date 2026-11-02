@@ -15,3 +15,23 @@ This is a non-release integration branch based on PR #56 head `96eec73c4e7a9913c
 - PR #58: narrow POSIX literal echo data argv exception; no generic `shell=False` sanitizer and no Windows batch-file guarantee.
 - Must obtain an independent security reviewer and run local macOS acceptance when device-specific evidence is required.
 - No merge of original PRs, no release, no external scans and no Paid GO are authorized by this integration review.
+
+## Proposed next research fixes (stacked draft)
+
+A follow-up branch based on this integration head tests the five previously missing
+frozen cases G03/G05/G08/G09/G10. Its bounded local instance-method recognition
+does not resolve dynamic factories, inheritance, decorators, cross-module receiver
+identity, or arbitrary runtime rebinding. The harmless dispatch exception requires
+one immutable, literal-key dictionary of direct local, zero-argument functions whose
+bodies each consist of a single constant return. It does **not** imply arbitrary
+dynamic dispatch is safe. The unrelated .execute exception applies only to a
+statically proven direct local instance method; unknown database receivers remain
+conservative.
+
+MCP shell executable matching uses the final component of a POSIX/Windows path,
+and VS Code MCP configs may use a top-level servers dictionary. Neither treats
+generic settings.json servers values as MCP registration.
+
+The 18-case research harness, normal benchmark, full CI and hosted macOS gates
+remain requirements. A green result is not equivalent to independent security
+review or Paid GO.

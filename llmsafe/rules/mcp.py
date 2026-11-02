@@ -31,7 +31,16 @@ class MCPConfigRule:
         if not _looks_like_mcp_config(path, data):
             return
 
-        servers = data.get("mcpServers", data) if isinstance(data, dict) else {}
+        if not isinstance(data, dict):
+            return
+        # VS Code uses a top-level "servers" map in .vscode/mcp.json.
+        # Do not interpret unrelated JSON documents containing "servers" as MCP.
+        if isinstance(data.get("mcpServers"), dict):
+            servers = data["mcpServers"]
+        elif isinstance(data.get("servers"), dict):
+            servers = data["servers"]
+        else:
+            servers = data
         if not isinstance(servers, dict):
             return
         for server_name, config in servers.items():
@@ -42,10 +51,18 @@ class MCPConfigRule:
     def _scan_server(
         self, path: Path, content: str, server_name: str, config: Dict[str, Any]
     ) -> Iterable[Finding]:
-        command = str(config.get("command", "")).lower()
+        command_value = config.get("command", "")
+        # Both absolute POSIX and Windows paths may launch a shell; matching
+        # only the raw command misses /bin/bash and C:\\Windows\\System32\\cmd.exe.
+        command = (
+            command_value.replace("\\", "/").rstrip("/").rsplit("/", 1)[-1].lower()
+            if isinstance(command_value, str)
+            else ""
+        )
         args = config.get("args", [])
         if command in self.SHELL_COMMANDS and isinstance(args, list) and any(
-            str(arg).lower() in {"-c", "/c", "-command"} for arg in args
+            isinstance(arg, str) and arg.lower() in {"-c", "/c", "-command"}
+            for arg in args
         ):
             line, column = line_containing(content, str(config.get("command", "")))
             yield Finding(
