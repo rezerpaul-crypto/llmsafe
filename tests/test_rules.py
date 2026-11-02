@@ -266,7 +266,10 @@ class MCPRuleTests(unittest.TestCase):
         self.assertEqual(rule_ids(MCPConfigRule(), "mcp.json", content), {"MCP001"})
 
     def test_direct_executable_is_not_shell_even_when_absolute(self):
-        content = '{"servers":{"demo":{"command":"/usr/local/bin/python3","args":["-c","print(1)"]}}}'
+        content = (
+            '{"servers":{"demo":{"command":"/usr/local/bin/python3",'
+            '"args":["-c","print(1)"]}}}'
+        )
         self.assertEqual(rule_ids(MCPConfigRule(), "mcp.json", content), set())
 
     def test_unrelated_servers_container_does_not_trigger_mcp_check(self):
