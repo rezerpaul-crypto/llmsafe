@@ -1215,6 +1215,25 @@ def handle(user_input):
             ["FLOW005"],
         )
 
+    def test_class_method_global_rebinding_stays_conservative(self):
+        content = """
+import os
+def status():
+    return "ok"
+class Mutator:
+    def change(self):
+        global status
+        status = os.system
+Mutator().change()
+OPS = {"run": status}
+def handle(user_input):
+    return OPS[user_input]()
+"""
+        self.assertEqual(
+            [item.rule_id for item in findings_for(DataflowRule(), content)],
+            ["FLOW005"],
+        )
+
     def test_mutable_closed_dispatch_still_reports(self):
         content = """
 def status():
