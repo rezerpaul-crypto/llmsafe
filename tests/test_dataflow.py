@@ -1094,6 +1094,37 @@ def handle(user_input):
             ["FLOW003"],
         )
 
+    def test_conditional_receiver_rebinding_cannot_hide_sql(self):
+        content = """
+class Recorder:
+    def execute(self, value):
+        return value
+def handle(user_input, enabled):
+    recorder = Recorder()
+    if enabled:
+        recorder = get_cursor()
+    return recorder.execute(user_input)
+"""
+        self.assertEqual(
+            [item.rule_id for item in findings_for(DataflowRule(), content)],
+            ["FLOW003"],
+        )
+
+    def test_module_level_class_rebinding_cannot_hide_sql(self):
+        content = """
+class Recorder:
+    def execute(self, value):
+        return value
+Recorder = get_database_factory()
+def handle(user_input):
+    recorder = Recorder()
+    return recorder.execute(user_input)
+"""
+        self.assertEqual(
+            [item.rule_id for item in findings_for(DataflowRule(), content)],
+            ["FLOW003"],
+        )
+
     def test_closed_constant_only_dispatch_is_not_dangerous_g05(self):
         content = """
 def status():
