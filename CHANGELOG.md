@@ -20,6 +20,11 @@ to use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- A narrow literal POSIX `/bin/echo` / `/usr/bin/echo` argv-only process call
+  no longer reports FLOW002 solely because data arguments are untrusted.
+  Dynamic programs, interpreter options, shell use, and executable/environment
+  overrides stay subject to the conservative process-execution rule.
+
 - Secret scanning now ignores narrowly allow-listed synthetic fixture values and the exact canonical
   AWS documentation access-key identifier while continuing to report near matches and extended
   lookalikes at existing provider matches. The example exception requires explicit delimiters and
