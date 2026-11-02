@@ -15,6 +15,32 @@ API changes.
 | PydanticAI | A registered tool performs a sensitive action without approval or validation | [`@agent.tool_plain` and `requires_approval`](https://github.com/pydantic/pydantic-ai/blob/5815470ac72356d164af57efdc41635e943170f1/docs/tools.md) | Explicit `requires_approval=False` on tool-like calls is checked. Generic dataflow covers user/model-like arguments inside tool functions. | `requires_approval=True`, typed arguments, bounded operations. | [`pydantic_ai_vulnerable.py`](../benchmarks/cases/frameworks/pydantic_ai_vulnerable.py) / [`pydantic_ai_safe.py`](../benchmarks/cases/frameworks/pydantic_ai_safe.py) |
 | MCP Python SDK v1/v2 | An MCP tool exposes process, filesystem, network, or dynamic execution to a remote caller | [`FastMCP` to `MCPServer` migration and unchanged `@mcp.tool()` boundary](https://github.com/modelcontextprotocol/python-sdk/blob/6affe5c0d3588fd1705713b3703dc68015cfe3eb/docs/whats-new.md#fastmcp-is-now-mcpserver) | Parameters of tools registered on a statically resolved official `FastMCP`/`MCPServer` instance are remote-input sources. SDK-injected `Context` and `Resolve(...)` parameters are excluded. MCP JSON checks shell launch, plaintext remote transport, and wildcard grants. | Expose a fixed tool surface with validated arguments and fixed subprocess arguments. | [`mcp_vulnerable.py`](../benchmarks/cases/frameworks/mcp_vulnerable.py) / [`mcp_safe.py`](../benchmarks/cases/frameworks/mcp_safe.py) |
 
+## Focused SDK tool-boundary additions (proposed)
+
+The implementation now recognizes explicit `langchain.tools.tool` and
+`langchain_core.tools.tool` decorators, including import aliases and named
+decorator calls, as model-controlled entry points. A `ToolRuntime` argument with
+a resolved official SDK annotation is treated as injected application context
+rather than a tool argument. This does not prove the context's content is trusted
+or validated.
+
+For PydanticAI, direct module-level instantiation of imported `Agent` followed
+by `@agent.tool_plain` / `@agent.tool` establishes the model-input boundary.
+Statically identifiable aliases are supported; rebindings invalidate the
+registered instance. Explicitly annotated `RunContext` receives no implicit
+model taint. Other user/model sources inside its data can still propagate
+through normal rules.
+
+These are currently backed by **focused unit/project tests**; do not count them
+as new curated benchmark entries until corresponding benchmark fixtures are
+enrolled. Dynamic registration, arbitrary toolset wrappers, untracked agent
+factories, type aliases, post-definition registrations, and mixed import
+rebinding remain outside the modeled boundary.
+
+Primary syntax references:
+- https://docs.langchain.com/oss/python/langchain/tools
+- https://pydantic.dev/docs/ai/tools-toolsets/tools/
+
 ## What “covered” means
 
 A framework fixture is covered only when a vulnerable example produces the expected stable rule IDs,
