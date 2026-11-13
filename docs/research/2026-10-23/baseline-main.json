@@ -1,0 +1,285 @@
+{
+  "cases": [
+    {
+      "all_rule_ids": [
+        "FLOW001",
+        "PY001"
+      ],
+      "diagnostics": 0,
+      "error_messages": [],
+      "errors": 0,
+      "expected": true,
+      "focus": "FLOW001",
+      "group": "control",
+      "id": "B01",
+      "label": "Direkter Nutzereingang nach eval",
+      "observed": true,
+      "passed": true
+    },
+    {
+      "all_rule_ids": [
+        "FLOW002",
+        "SHELL001"
+      ],
+      "diagnostics": 0,
+      "error_messages": [],
+      "errors": 0,
+      "expected": true,
+      "focus": "FLOW002",
+      "group": "control",
+      "id": "B02",
+      "label": "Dateiübergreifender Shell-Helper",
+      "observed": true,
+      "passed": true
+    },
+    {
+      "all_rule_ids": [
+        "FLOW001",
+        "PY001"
+      ],
+      "diagnostics": 0,
+      "error_messages": [],
+      "errors": 0,
+      "expected": true,
+      "focus": "FLOW001",
+      "group": "control",
+      "id": "B03",
+      "label": "Offizieller MCP-Toolparameter",
+      "observed": true,
+      "passed": true
+    },
+    {
+      "all_rule_ids": [],
+      "diagnostics": 0,
+      "error_messages": [],
+      "errors": 0,
+      "expected": false,
+      "focus": "FLOW003",
+      "group": "control",
+      "id": "B04",
+      "label": "Parametrisiertes SQL: Daten bleiben Daten",
+      "observed": false,
+      "passed": true
+    },
+    {
+      "all_rule_ids": [
+        "FLOW003"
+      ],
+      "diagnostics": 0,
+      "error_messages": [],
+      "errors": 0,
+      "expected": true,
+      "focus": "FLOW003",
+      "group": "control",
+      "id": "B05",
+      "label": "Zusammengebautes SQL",
+      "observed": true,
+      "passed": true
+    },
+    {
+      "all_rule_ids": [
+        "PY001"
+      ],
+      "diagnostics": 0,
+      "error_messages": [],
+      "errors": 0,
+      "expected": true,
+      "focus": "FLOW001",
+      "group": "gap",
+      "id": "G01",
+      "label": "LangChain-Tool mit beliebigem Parameternamen",
+      "observed": false,
+      "passed": false
+    },
+    {
+      "all_rule_ids": [
+        "PY001"
+      ],
+      "diagnostics": 0,
+      "error_messages": [],
+      "errors": 0,
+      "expected": true,
+      "focus": "FLOW001",
+      "group": "gap",
+      "id": "G02",
+      "label": "Pydantic-AI tool_plain als Vertrauensgrenze",
+      "observed": false,
+      "passed": false
+    },
+    {
+      "all_rule_ids": [
+        "FLOW003",
+        "SHELL001"
+      ],
+      "diagnostics": 0,
+      "error_messages": [],
+      "errors": 0,
+      "expected": true,
+      "focus": "FLOW002",
+      "group": "gap",
+      "id": "G03",
+      "label": "Instanzmethode führt Shell-Helper aus",
+      "observed": false,
+      "passed": false
+    },
+    {
+      "all_rule_ids": [
+        "FLOW002"
+      ],
+      "diagnostics": 0,
+      "error_messages": [],
+      "errors": 0,
+      "expected": false,
+      "focus": "FLOW002",
+      "group": "gap",
+      "id": "G04",
+      "label": "Festes echo: Datenargument ist keine Shell-Injection",
+      "observed": true,
+      "passed": false
+    },
+    {
+      "all_rule_ids": [
+        "FLOW005"
+      ],
+      "diagnostics": 0,
+      "error_messages": [],
+      "errors": 0,
+      "expected": false,
+      "focus": "FLOW005",
+      "group": "gap",
+      "id": "G05",
+      "label": "Geschlossene, harmlose Funktionsauswahl",
+      "observed": true,
+      "passed": false
+    },
+    {
+      "all_rule_ids": [],
+      "diagnostics": 0,
+      "error_messages": [],
+      "errors": 0,
+      "expected": true,
+      "focus": "diagnostic",
+      "group": "gap",
+      "id": "G06",
+      "label": "Syntaxfehler benötigt Analyse-Diagnose",
+      "observed": false,
+      "passed": false
+    },
+    {
+      "all_rule_ids": [
+        "PY001"
+      ],
+      "diagnostics": 0,
+      "error_messages": [],
+      "errors": 0,
+      "expected": true,
+      "focus": "FLOW001",
+      "group": "gap",
+      "id": "G07",
+      "label": "Schreibzugriff auf Dictionary-Feld erhält Taint",
+      "observed": false,
+      "passed": false
+    },
+    {
+      "all_rule_ids": [
+        "FLOW003"
+      ],
+      "diagnostics": 0,
+      "error_messages": [],
+      "errors": 0,
+      "expected": false,
+      "focus": "FLOW003",
+      "group": "gap",
+      "id": "G08",
+      "label": "Benigne execute-Methode ist kein SQL-Sink",
+      "observed": true,
+      "passed": false
+    },
+    {
+      "all_rule_ids": [],
+      "diagnostics": 0,
+      "error_messages": [],
+      "errors": 0,
+      "expected": true,
+      "focus": "MCP001",
+      "group": "gap",
+      "id": "G09",
+      "label": "Absoluter Shell-Pfad in MCP-Konfiguration",
+      "observed": false,
+      "passed": false
+    },
+    {
+      "all_rule_ids": [],
+      "diagnostics": 0,
+      "error_messages": [],
+      "errors": 0,
+      "expected": true,
+      "focus": "MCP001",
+      "group": "gap",
+      "id": "G10",
+      "label": "VS-Code-Konfiguration mit servers-Container",
+      "observed": false,
+      "passed": false
+    },
+    {
+      "all_rule_ids": [
+        "PY001"
+      ],
+      "diagnostics": 0,
+      "error_messages": [],
+      "errors": 0,
+      "expected": false,
+      "focus": "FLOW001",
+      "group": "control",
+      "id": "C01",
+      "label": "LangChain-Laufzeitkontext ist kein Modellargument",
+      "observed": false,
+      "passed": true
+    },
+    {
+      "all_rule_ids": [
+        "PY001"
+      ],
+      "diagnostics": 0,
+      "error_messages": [],
+      "errors": 0,
+      "expected": false,
+      "focus": "FLOW001",
+      "group": "control",
+      "id": "C02",
+      "label": "Pydantic RunContext ist kein Modellargument",
+      "observed": false,
+      "passed": true
+    },
+    {
+      "all_rule_ids": [
+        "PY001"
+      ],
+      "diagnostics": 0,
+      "error_messages": [],
+      "errors": 0,
+      "expected": false,
+      "focus": "FLOW001",
+      "group": "control",
+      "id": "C03",
+      "label": "Unabhängiges Dictionary-Feld bleibt getrennt",
+      "observed": false,
+      "passed": true
+    }
+  ],
+  "machine": "x86_64",
+  "note": "Targeted future acceptance cases, not an unbiased accuracy benchmark. Only the focus signal is evaluated. Other structural findings are retained as evidence.",
+  "platform": "Linux",
+  "python": "3.12.14",
+  "reference_commit": "c761627ad224a6f540d7ae6f06d2c076f426a6a6",
+  "scanner_version": "0.3.0rc1",
+  "schema_version": 1,
+  "summary": {
+    "cases": 18,
+    "gaps": 10,
+    "matched": 8
+  },
+  "recorded_at": "2026-10-23",
+  "scanner_revision": "c761627ad224a6f540d7ae6f06d2c076f426a6a6",
+  "scope": "Original main scanner files; focused research harness added separately. No competitor execution."
+}
