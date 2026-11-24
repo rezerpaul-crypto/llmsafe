@@ -4,11 +4,11 @@ Landingpage für **Prop Firm OS**, die lokale Desktop-App für Futures-Prop-Trad
 (Repo `jamach136-collab/prop-firm-os-react`, Stand Version 0.1.0).
 
 Statische Seite ohne Framework und ohne Abhängigkeiten. Eine Datei reicht zum Ausliefern:
-`dist/prop-firm-os.html` (rund 530 KB, Schriften und Grafiken sind eingebettet).
+`standalone/prop-firm-os.html` (rund 530 KB, Schriften und Grafiken sind eingebettet).
 
 ## Ansehen
 
-- **Eine Datei:** `dist/prop-firm-os.html` im Browser öffnen oder auf einen beliebigen Webspace legen.
+- **Eine Datei:** `standalone/prop-firm-os.html` im Browser öffnen oder auf einen beliebigen Webspace legen.
 - **Entwicklung:** `cd website && python3 -m http.server 8080`, dann http://localhost:8080 öffnen.
 
 ## Bearbeiten
@@ -21,7 +21,7 @@ Statische Seite ohne Framework und ohne Abhängigkeiten. Eine Datei reicht zum A
 | Grafiken (Chrom, Berge, Figur) | `scripts/build-art.mjs`, deterministisch | `node scripts/build-art.mjs`, dann HTML bauen |
 | Verhalten | `assets/js/main.js` | `node scripts/build-html.mjs` |
 
-`npm run build` im Ordner `website` führt beide Skripte aus. `index.html` und `dist/` sind generiert und eingecheckt.
+`npm run build` im Ordner `website` führt beide Skripte aus. `index.html` und `standalone/` sind generiert und eingecheckt.
 
 Die dunklen Farbwerte stehen in `base.css` zweimal (Systemthema und Umschalter). Der Build bricht ab, wenn die beiden Blöcke voneinander abweichen.
 

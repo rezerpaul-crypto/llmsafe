@@ -6,7 +6,7 @@
  *
  * Outputs
  *   index.html                 multi-file page for development and hosting (links assets/…)
- *   dist/prop-firm-os.html     one self-contained file: CSS, JS, fonts and artwork inlined
+ *   standalone/prop-firm-os.html     one self-contained file: CSS, JS, fonts and artwork inlined
  *   --artifact <path>          optional: the same page without <html>/<head>/<body>, for hosts that wrap it
  *
  * src/index.template.html lists the body partials with  <!--@include name.html-->
@@ -116,8 +116,8 @@ const artifact = `<title>${title}</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 ${core}`;
 
-mkdirSync(join(root, 'dist'), { recursive: true });
-writeFileSync(join(root, 'dist', 'prop-firm-os.html'), standalone);
+mkdirSync(join(root, 'standalone'), { recursive: true });
+writeFileSync(join(root, 'standalone', 'prop-firm-os.html'), standalone);
 
 /* the wrapped variant is only written on request:  --artifact <path> */
 const flag = process.argv.indexOf('--artifact');
@@ -125,5 +125,5 @@ const artifactPath = flag > -1 ? process.argv[flag + 1] : null;
 if (artifactPath) writeFileSync(artifactPath, artifact);
 
 const kb = (s) => `${(Buffer.byteLength(s) / 1024).toFixed(0)} KB`;
-console.log(`index.html ${kb(multi)} · dist/prop-firm-os.html ${kb(standalone)}${artifactPath ? ` · ${artifactPath} ${kb(artifact)}` : ''}`);
+console.log(`index.html ${kb(multi)} · standalone/prop-firm-os.html ${kb(standalone)}${artifactPath ? ` · ${artifactPath} ${kb(artifact)}` : ''}`);
 if (warnings.length) console.log('WARNINGS\n  ' + warnings.join('\n  '));
