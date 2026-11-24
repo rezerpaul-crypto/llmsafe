@@ -1,179 +1,231 @@
 <section class="showcase" id="showcase" aria-labelledby="showcase-title">
   <img class="showcase__peak showcase__peak--l" src="assets/img/peak-left.svg" alt="" aria-hidden="true" width="640" height="760" loading="lazy" decoding="async">
   <img class="showcase__peak showcase__peak--r" src="assets/img/peak-right.svg" alt="" aria-hidden="true" width="640" height="760" loading="lazy" decoding="async">
-  <div class="showcase__fog" aria-hidden="true"></div>
 
   <div class="container showcase__head">
-    <h2 class="display-3" id="showcase-title" data-reveal>One journal for the whole session.</h2>
-    <p class="lead rise">Pick a part to see it in the app.</p>
-    <div class="seg rise" role="group" aria-label="App style">
-      <button type="button" data-skin="classic" aria-pressed="true">Classic</button>
-      <button type="button" data-skin="custom" aria-pressed="false">Custom</button>
+    <h2 class="display-3" id="showcase-title" data-reveal>One desk for every account.</h2>
+    <p class="lead rise">Pick a workspace to see it in the app.</p>
+    <div class="seg rise" role="group" aria-label="App look">
+      <button type="button" data-skin="classic" aria-pressed="false">Classic</button>
+      <button type="button" data-skin="custom" aria-pressed="true">Custom</button>
     </div>
   </div>
 
   <div class="container showcase__stage">
-    <div class="chips" role="tablist" aria-label="Parts of the app" aria-orientation="vertical">
-      <button class="ctab ctab--l1" role="tab" id="tab-dashboard" data-tab="dashboard" data-title="Dashboard" aria-selected="true" aria-controls="panel-dashboard"><span class="tile tile--xs"><svg class="icon" aria-hidden="true"><use href="#g-dash"/></svg></span>Dashboard</button>
-      <button class="ctab ctab--l2" role="tab" id="tab-journal" data-tab="journal" data-title="Journal" aria-selected="false" tabindex="-1" aria-controls="panel-journal"><span class="tile tile--xs"><svg class="icon" aria-hidden="true"><use href="#g-journal"/></svg></span>Journal</button>
-      <button class="ctab ctab--l3" role="tab" id="tab-analytics" data-tab="analytics" data-title="Analytics" aria-selected="false" tabindex="-1" aria-controls="panel-analytics"><span class="tile tile--xs"><svg class="icon" aria-hidden="true"><use href="#g-analytics"/></svg></span>Analytics</button>
-      <button class="ctab ctab--r1" role="tab" id="tab-propdesk" data-tab="propdesk" data-title="Prop desk" aria-selected="false" tabindex="-1" aria-controls="panel-propdesk"><span class="tile tile--xs"><svg class="icon" aria-hidden="true"><use href="#g-brief"/></svg></span>Prop desk</button>
-      <button class="ctab ctab--r2" role="tab" id="tab-study" data-tab="study" data-title="Study" aria-selected="false" tabindex="-1" aria-controls="panel-study"><span class="tile tile--xs"><svg class="icon" aria-hidden="true"><use href="#g-study"/></svg></span>Study</button>
-      <button class="ctab ctab--r3" role="tab" id="tab-coach" data-tab="coach" data-title="Coach" aria-selected="false" tabindex="-1" aria-controls="panel-coach"><span class="tile tile--xs"><svg class="icon" aria-hidden="true"><use href="#g-coach"/></svg></span>Coach</button>
-    </div>
+    <div class="showcase__inner">
+      <div class="chips" role="tablist" aria-label="Workspaces" aria-orientation="vertical">
+        <button class="ctab" data-side="l" role="tab" id="tab-home" data-tab="home" data-title="Homepage" aria-selected="true" aria-controls="panel-home"><span class="tile tile--xs"><svg class="icon" aria-hidden="true"><use href="#g-home"/></svg></span>Homepage</button>
+        <button class="ctab" data-side="l" role="tab" id="tab-dashboard" data-tab="dashboard" data-title="Dashboard" aria-selected="false" tabindex="-1" aria-controls="panel-dashboard"><span class="tile tile--xs"><svg class="icon" aria-hidden="true"><use href="#g-dash"/></svg></span>Dashboard</button>
+        <button class="ctab" data-side="l" role="tab" id="tab-journal" data-tab="journal" data-title="Journal" aria-selected="false" tabindex="-1" aria-controls="panel-journal"><span class="tile tile--xs"><svg class="icon" aria-hidden="true"><use href="#g-journal"/></svg></span>Journal</button>
+        <button class="ctab" data-side="l" role="tab" id="tab-accounts" data-tab="accounts" data-title="Accounts" aria-selected="false" tabindex="-1" aria-controls="panel-accounts"><span class="tile tile--xs"><svg class="icon" aria-hidden="true"><use href="#g-accounts"/></svg></span>Accounts</button>
+        <button class="ctab" data-side="r" role="tab" id="tab-notebook" data-tab="notebook" data-title="Notebook" aria-selected="false" tabindex="-1" aria-controls="panel-notebook"><span class="tile tile--xs"><svg class="icon" aria-hidden="true"><use href="#g-notebook"/></svg></span>Notebook</button>
+        <button class="ctab" data-side="r" role="tab" id="tab-analytics" data-tab="analytics" data-title="Analytics" aria-selected="false" tabindex="-1" aria-controls="panel-analytics"><span class="tile tile--xs"><svg class="icon" aria-hidden="true"><use href="#g-analytics"/></svg></span>Analytics</button>
+        <button class="ctab" data-side="r" role="tab" id="tab-coach" data-tab="coach" data-title="Coach" aria-selected="false" tabindex="-1" aria-controls="panel-coach"><span class="tile tile--xs"><svg class="icon" aria-hidden="true"><use href="#g-coach"/></svg></span>Coach</button>
+        <button class="ctab" data-side="r" role="tab" id="tab-risk" data-tab="risk" data-title="Risk &amp; Finance" aria-selected="false" tabindex="-1" aria-controls="panel-risk"><span class="tile tile--xs"><svg class="icon" aria-hidden="true"><use href="#g-risk"/></svg></span>Risk &amp; Finance</button>
+      </div>
 
-    <div class="win" data-skin="classic" data-view="dashboard">
-      <div class="win__bar"><span class="win__dots" aria-hidden="true"><i></i><i></i><i></i></span><span class="win__title" id="win-title">Dashboard</span></div>
-      <div class="win__body">
-        <div class="mk">
-          <div class="mk-top" aria-hidden="true">
-            <span class="mk-menu"><b data-m="dashboard" class="on">Dashboard</b><i data-m="journal">Journal</i><i>Showcase</i><i>Strategy</i><i data-m="study">Study</i><strong>LiquidJournal</strong><i data-m="analytics">Analytics</i><i data-m="propdesk">Propfirm</i><i data-m="coach">AI</i><i>Links</i><i>Community</i></span>
-            <span class="mk-user">Welcome <u></u></span>
-          </div>
-          <div class="mk-pane" data-pane="dashboard" role="img" aria-label="Preview of the LiquidJournal dashboard with total P&amp;L, performance cards, equity curve and Liquid Score">
-<!--@include mocks/dash.html-->
-          </div>
-          <div class="mk-pane" data-pane="journal" hidden role="img" aria-label="Preview of a journal entry: an MNQ long graded A+ with chart, emotions and notes">
+      <div class="win" data-skin="custom">
+        <div class="win__bar"><span class="win__dots" aria-hidden="true"><i></i><i></i><i></i></span><span class="win__title" id="win-title">Homepage</span></div>
+        <div class="win__body">
+          <div class="mk">
+<!--@include mocks/topbar.html-->
+            <div class="mk-pane" data-pane="home" role="img" aria-label="Preview of the homepage: today's P&amp;L of plus 760 dollars with a rising curve, a daily quote and the economic calendar">
+<!--@include mocks/home.html-->
+            </div>
+            <div class="mk-pane" data-pane="dashboard" hidden role="img" aria-label="Preview of the dashboard: an account picker grouped by prop firm, net P&amp;L, win rate and a performance curve">
+<!--@include mocks/dashboard.html-->
+            </div>
+            <div class="mk-pane" data-pane="journal" hidden role="img" aria-label="Preview of the journal: four logged trades with account, market, setup, grade, result and notes">
 <!--@include mocks/journal.html-->
-          </div>
-          <div class="mk-pane" data-pane="analytics" hidden role="img" aria-label="Preview of analytics: net P&amp;L, win rate by setup, best time of day and market split">
+            </div>
+            <div class="mk-pane" data-pane="accounts" hidden role="img" aria-label="Preview of the account list: three accounts with size and status">
+<!--@include mocks/accounts.html-->
+            </div>
+            <div class="mk-pane" data-pane="notebook" hidden role="img" aria-label="Preview of the notebook with a daily plan and a weekly review tab">
+<!--@include mocks/notebook.html-->
+            </div>
+            <div class="mk-pane" data-pane="analytics" hidden role="img" aria-label="Preview of analytics: net P&amp;L, win rate, a performance curve and results by setup">
 <!--@include mocks/analytics.html-->
-          </div>
-          <div class="mk-pane" data-pane="propdesk" hidden role="img" aria-label="Preview of the prop desk with several prop firm accounts, drawdown room and a copier stack">
-<!--@include mocks/prop.html-->
-          </div>
-          <div class="mk-pane" data-pane="study" hidden role="img" aria-label="Preview of the study room: a video with timestamped notes">
-<!--@include mocks/study.html-->
-          </div>
-          <div class="mk-pane" data-pane="coach" hidden role="img" aria-label="Preview of the coach chat answering with the trader's own trades">
+            </div>
+            <div class="mk-pane" data-pane="coach" hidden role="img" aria-label="Preview of the coach: today's session in numbers and a short written recap">
 <!--@include mocks/coach.html-->
+            </div>
+            <div class="mk-pane" data-pane="risk" hidden role="img" aria-label="Preview of risk and finance: daily loss room for three accounts and evaluation target progress">
+<!--@include mocks/risk.html-->
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <div class="desc">
-      <section class="dcard" role="tabpanel" id="panel-dashboard" data-panel="dashboard" aria-labelledby="tab-dashboard" tabindex="0">
-        <div class="dcard__l">
-          <h3>Dashboard</h3>
-          <p class="dcard__sub">Where <span class="hl">the day starts</span>.</p>
-          <dl class="dcard__stats">
-            <div><dt>Total P&amp;L</dt><dd>+$16,005</dd><dd class="small">47 wins, 37 losses</dd></div>
-            <div><dt>Liquid Score</dt><dd>89</dd><dd><span class="meter" style="--v:89"></span></dd><dd class="small">Weakest spoke: win rate 76</dd></div>
-          </dl>
-        </div>
-        <div class="dcard__r">
-          <ul>
-            <li><span class="hl">Total P&amp;L</span>, and the seven days that moved it</li>
-            <li><span class="hl">The Liquid Score</span>: win rate, profit factor, average R, consistency, discipline</li>
-            <li>A calendar where <span class="hl">every day is a bar</span>, not a coloured tile</li>
-            <li>This week day by day, and the <span class="hl">news still to come</span></li>
-          </ul>
-          <a class="link" href="#signup">Sign up to try it</a>
-        </div>
-      </section>
+      <div class="desc">
+        <section class="dcard" role="tabpanel" id="panel-home" data-panel="home" aria-labelledby="tab-home" tabindex="0">
+          <div class="dcard__l">
+            <p class="kicker">Account performance</p>
+            <h3>Homepage</h3>
+            <p class="dcard__sub">Today's P&amp;L, <span class="hl">before anything else</span>.</p>
+            <dl class="dcard__stats">
+              <div><dt>Today's P&amp;L</dt><dd>+$760.00</dd><dd class="small">4 logged trades</dd></div>
+              <div><dt class="plain">Week, month and all-time totals sit right under the curve.</dt></div>
+            </dl>
+          </div>
+          <div class="dcard__r">
+            <ul>
+              <li><span class="hl">Today's net result</span>, with the cumulative curve behind it</li>
+              <li>One button to log a trade from the first screen</li>
+              <li><span class="hl">This week's economic releases</span>, filtered to your markets</li>
+              <li>A daily quote from Epictetus, Marcus Aurelius or Aristotle</li>
+            </ul>
+            <a class="link" href="#get">Early access</a>
+          </div>
+        </section>
 
-      <section class="dcard" role="tabpanel" id="panel-journal" data-panel="journal" aria-labelledby="tab-journal" tabindex="0" hidden>
-        <div class="dcard__l">
-          <h3>Journal</h3>
-          <p class="dcard__sub">Every trade, on the tape <span class="hl">it actually happened on</span>.</p>
-          <dl class="dcard__stats">
-            <div><dt>MNQ long, A+</dt><dd>+$1,200</dd><dd class="small">1.67R · Killzone Sweep, held 1h 7m</dd></div>
-            <div><dt>How it felt</dt><dd class="tags"><span class="chip">patient</span><span class="chip">focused</span><span class="chip">confident</span><span class="chip">disciplined</span></dd></div>
-          </dl>
-        </div>
-        <div class="dcard__r">
-          <p class="dcard__cap">Logged with the trade</p>
-          <ul>
-            <li>Grade, setup, confluences and <span class="hl">the emotions you logged</span></li>
-            <li>Real exchange candles with your <span class="hl">entry, exit, stop and target</span> drawn on</li>
-            <li>Drawing tools that stay saved to the trade</li>
-            <li>The daily entry before and after the bell, and the weekly reflection</li>
-            <li>Any trade as a card or a video, on a background you pick.</li>
-          </ul>
-          <a class="link" href="#signup">Sign up to try it</a>
-        </div>
-      </section>
+        <section class="dcard" role="tabpanel" id="panel-dashboard" data-panel="dashboard" aria-labelledby="tab-dashboard" tabindex="0" hidden>
+          <div class="dcard__l">
+            <p class="kicker">Account overview</p>
+            <h3>Dashboard</h3>
+            <p class="dcard__sub">Choose which accounts <span class="hl">the numbers count</span>.</p>
+            <dl class="dcard__stats">
+              <div><dt>Net P&amp;L</dt><dd>+$760.00</dd><dd class="small">3 of 3 accounts selected</dd></div>
+              <div><dt>Win rate</dt><dd>75%</dd><dd class="small">Break-even trades are left out</dd></div>
+            </dl>
+          </div>
+          <div class="dcard__r">
+            <ul>
+              <li>Select every account, <span class="hl">one prop firm</span> or single accounts</li>
+              <li>Net P&amp;L, trades, win rate and break-evens for that selection</li>
+              <li><span class="hl">Evaluation tracker</span>: profit so far against the target</li>
+              <li>The ten most recent trades from the accounts you picked</li>
+            </ul>
+            <a class="link" href="#get">Early access</a>
+          </div>
+        </section>
 
-      <section class="dcard" role="tabpanel" id="panel-analytics" data-panel="analytics" aria-labelledby="tab-analytics" tabindex="0" hidden>
-        <div class="dcard__l">
-          <h3>Analytics</h3>
-          <p class="dcard__sub">The same trades, <span class="hl">asked harder questions</span>.</p>
-          <dl class="dcard__stats">
-            <div><dt>Overview</dt><dd>+$16,005</dd><dd class="small">Win rate 56.0%, profit factor 2.07</dd></div>
-            <div><dt class="plain">Which setups pay and which cost you, ranked from your own trades.</dt></div>
-          </dl>
-        </div>
-        <div class="dcard__r">
-          <ul>
-            <li><span class="hl">Win rate by setup</span>, and by the strategy you actually wrote down</li>
-            <li>Best time of day and best day of the week, on your own history</li>
-            <li>What you trade, by market and by symbol</li>
-            <li><span class="hl">Fourteen pattern detectors</span>, with an AI read underneath them</li>
-          </ul>
-          <a class="link" href="#signup">Sign up to try it</a>
-        </div>
-      </section>
+        <section class="dcard" role="tabpanel" id="panel-journal" data-panel="journal" aria-labelledby="tab-journal" tabindex="0" hidden>
+          <div class="dcard__l">
+            <p class="kicker">Your trading record</p>
+            <h3>Journal</h3>
+            <p class="dcard__sub">Every logged trade, <span class="hl">by account and outcome</span>.</p>
+            <dl class="dcard__stats">
+              <div><dt>NQ long, grade A</dt><dd>+$425.00</dd><dd class="small">Opening breakout · Patient</dd></div>
+              <div><dt>Mindset on every trade</dt><dd class="tags"><span class="chip">Focused</span><span class="chip">Patient</span><span class="chip">Confident</span><span class="chip">Hesitant</span><span class="chip">Frustrated</span><span class="chip">Overconfident</span></dd></div>
+            </dl>
+          </div>
+          <div class="dcard__r">
+            <ul>
+              <li>Market, direction, <span class="hl">setup, grade and mindset</span> on each entry</li>
+              <li>Search by market, firm or note</li>
+              <li>Filter by account and by outcome: win, break even or loss</li>
+              <li>A note for what happened and what you learned</li>
+            </ul>
+            <a class="link" href="#get">Early access</a>
+          </div>
+        </section>
 
-      <section class="dcard" role="tabpanel" id="panel-propdesk" data-panel="propdesk" aria-labelledby="tab-propdesk" tabindex="0" hidden>
-        <div class="dcard__l">
-          <h3>Prop firm</h3>
-          <p class="dcard__sub">Every account, <span class="hl">on one desk</span>.</p>
-          <dl class="dcard__stats">
-            <div><dt>Add an account</dt><dd>Apex 50K</dd><dd class="small">Pick the firm and the plan. Its rules come with it.</dd></div>
-            <div><dt class="plain">Copier stacks too: the leader, its copies, each one’s next payout.</dt></div>
-          </dl>
-        </div>
-        <div class="dcard__r">
-          <ul>
-            <li><span class="hl">Futures and CFD firms</span>: evals and funded accounts, with the room left on each</li>
-            <li>Blown, start, passed: one line, and exactly where you sit on it</li>
-            <li>Payouts logged, and a certificate for the pass</li>
-            <li><span class="hl">One payout across twenty accounts</span> in a single press</li>
-          </ul>
-          <p class="dcard__more"><b>More on the desk</b> Picking your firm, its plans as cards, logging a whole stack, paying it out, certificates and copier stacks. <a class="link" href="#signup">See more</a></p>
-          <a class="link" href="#signup">Sign up to try it</a>
-        </div>
-      </section>
+        <section class="dcard" role="tabpanel" id="panel-accounts" data-panel="accounts" aria-labelledby="tab-accounts" tabindex="0" hidden>
+          <div class="dcard__l">
+            <p class="kicker">Account center</p>
+            <h3>Accounts</h3>
+            <p class="dcard__sub">Every prop account, <span class="hl">in one list</span>.</p>
+            <dl class="dcard__stats">
+              <div><dt>Accounts</dt><dd>3</dd><dd class="small">1 evaluation, 1 funded, 1 paused</dd></div>
+              <div><dt class="plain">Sizes from $25,000 to $150,000, or type your own.</dt></div>
+            </dl>
+          </div>
+          <div class="dcard__r">
+            <ul>
+              <li>Firm, account name, size and <span class="hl">status</span></li>
+              <li>Profit so far and profit target for each evaluation</li>
+              <li>A <span class="hl">daily loss limit</span> per account, or 0 to switch monitoring off</li>
+              <li>Search, filter by status, sort by firm or size</li>
+            </ul>
+            <a class="link" href="#get">Early access</a>
+          </div>
+        </section>
 
-      <section class="dcard" role="tabpanel" id="panel-study" data-panel="study" aria-labelledby="tab-study" tabindex="0" hidden>
-        <div class="dcard__l">
-          <h3>Study Room</h3>
-          <p class="dcard__sub">Trade alone, and <span class="hl">YouTube becomes your mentor</span>.</p>
-          <dl class="dcard__stats">
-            <div><dt>Price action</dt><dd>4 <span class="unit">notes</span></dd><dd class="small">Each line keeps its moment in the video</dd></div>
-            <div><dt class="plain">Study earns levels: time, video and words all count.</dt></div>
-          </dl>
-        </div>
-        <div class="dcard__r">
-          <ul>
-            <li>Paste a YouTube link and <span class="hl">watch it inside Liquid</span> while you write</li>
-            <li>Every line keeps its moment in the video. Tap the time to go back to it</li>
-            <li>A folder for each course, so notes stop living in Notion or a notebook</li>
-            <li>On Apex, the <span class="hl">Study Assistant</span> pulls out the lessons worth keeping</li>
-          </ul>
-          <a class="link" href="#signup">Sign up to try it</a>
-        </div>
-      </section>
+        <section class="dcard" role="tabpanel" id="panel-notebook" data-panel="notebook" aria-labelledby="tab-notebook" tabindex="0" hidden>
+          <div class="dcard__l">
+            <p class="kicker">Study room</p>
+            <h3>Notebook</h3>
+            <p class="dcard__sub">Plan the session. <span class="hl">Review the week.</span></p>
+            <dl class="dcard__stats">
+              <div><dt>Daily plan</dt><dd class="small">What is your setup? Where is your invalidation? What would make you stop trading today?</dd></div>
+              <div><dt class="plain">Both pages save as you type, on your device.</dt></div>
+            </dl>
+          </div>
+          <div class="dcard__r">
+            <ul>
+              <li>A <span class="hl">daily plan</span> with three questions to answer before the open</li>
+              <li>A <span class="hl">weekly review</span> for what worked and what you will change</li>
+              <li>Autosave, with a character count in the corner</li>
+              <li>Today's date or the current week shown at the top</li>
+            </ul>
+            <a class="link" href="#get">Early access</a>
+          </div>
+        </section>
 
-      <section class="dcard" role="tabpanel" id="panel-coach" data-panel="coach" aria-labelledby="tab-coach" tabindex="0" hidden>
-        <div class="dcard__l">
-          <h3>Coach <span class="badge badge--apex">On Apex</span></h3>
-          <p class="dcard__sub">Your coach has <span class="hl">read every trade you logged</span>.</p>
-          <dl class="dcard__stats">
-            <div><dt class="plain">Prop firm mode: the best plan for you, and how close a payout is.</dt></div>
-          </dl>
-        </div>
-        <div class="dcard__r">
-          <ul>
-            <li>Ask about your trading and it answers with <span class="hl">your own trades, dates and figures</span></li>
-            <li>Four modes: Coach, CoWork, Prop firm and Study</li>
-            <li>Max thinks it through, Lite answers fast</li>
-            <li>It does not miss a pattern, so you do not miss a trade.</li>
-          </ul>
-          <a class="link" href="#signup">Sign up to try it</a>
-        </div>
-      </section>
+        <section class="dcard" role="tabpanel" id="panel-analytics" data-panel="analytics" aria-labelledby="tab-analytics" tabindex="0" hidden>
+          <div class="dcard__l">
+            <p class="kicker">Performance review</p>
+            <h3>Analytics</h3>
+            <p class="dcard__sub">The same trades, <span class="hl">over 7, 30 or 90 days</span>.</p>
+            <dl class="dcard__stats">
+              <div><dt>Net P&amp;L, last 30 days</dt><dd>+$760.00</dd><dd class="small">Win rate 75% over 4 trades</dd></div>
+              <div><dt class="plain">Which setups pay, ranked by net P&amp;L.</dt></div>
+            </dl>
+          </div>
+          <div class="dcard__r">
+            <ul>
+              <li>A <span class="hl">performance curve</span> of daily cumulative P&amp;L</li>
+              <li>Wins, break-evens and losses, counted separately</li>
+              <li><span class="hl">Edge by setup</span>: trades, win rate and net P&amp;L for each one</li>
+              <li>Trades without a setup are grouped as Unclassified</li>
+            </ul>
+            <a class="link" href="#get">Early access</a>
+          </div>
+        </section>
+
+        <section class="dcard" role="tabpanel" id="panel-coach" data-panel="coach" aria-labelledby="tab-coach" tabindex="0" hidden>
+          <div class="dcard__l">
+            <p class="kicker">Session review</p>
+            <h3>Coach</h3>
+            <p class="dcard__sub">A recap <span class="hl">from your own journal</span>.</p>
+            <dl class="dcard__stats">
+              <div><dt>Today</dt><dd>4 trades</dd><dd class="small">3 wins, 0 break even, 1 loss</dd></div>
+              <div><dt class="plain">No trades are sent to an AI service.</dt></div>
+            </dl>
+          </div>
+          <div class="dcard__r">
+            <ul>
+              <li><span class="hl">Session at a glance</span>: trades, wins, break-evens, losses and net</li>
+              <li>A short written recap of how today's trades closed</li>
+              <li>Your eight most recent entries with their notes</li>
+              <li>One click to the notebook</li>
+            </ul>
+            <a class="link" href="#get">Early access</a>
+          </div>
+        </section>
+
+        <section class="dcard" role="tabpanel" id="panel-risk" data-panel="risk" aria-labelledby="tab-risk" tabindex="0" hidden>
+          <div class="dcard__l">
+            <p class="kicker">Account safety</p>
+            <h3>Risk &amp; Finance</h3>
+            <p class="dcard__sub">Daily loss room, <span class="hl">for every account</span>.</p>
+            <dl class="dcard__stats">
+              <div><dt>Main evaluation</dt><dd>$1,480.00</dd><dd class="small">remaining · $480.00 today · $1,000.00 limit</dd></div>
+              <div><dt class="plain">Three accounts checked. Status: all clear.</dt></div>
+            </dl>
+          </div>
+          <div class="dcard__r">
+            <ul>
+              <li><span class="hl">Risk monitor</span>: today's net against each daily loss limit</li>
+              <li>A warning at 75% of the limit used, an alert when it is reached</li>
+              <li><span class="hl">Target progress</span> for every evaluation</li>
+              <li>Based on the net results you log</li>
+            </ul>
+            <a class="link" href="#risk-demo">Try the risk monitor</a>
+          </div>
+        </section>
+      </div>
     </div>
   </div>
 </section>

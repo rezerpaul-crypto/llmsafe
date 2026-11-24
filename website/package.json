@@ -1,8 +1,8 @@
 {
-  "name": "liquidjournal-landing",
-  "version": "0.1.0",
+  "name": "prop-firm-os-site",
+  "version": "0.2.0",
   "private": true,
-  "description": "Static landing page rebuild: HTML partials plus procedural SVG art. No dependencies, no framework.",
+  "description": "Landing page for Prop Firm OS: HTML partials, procedural SVG art, no dependencies.",
   "scripts": {
     "art": "node scripts/build-art.mjs",
     "html": "node scripts/build-html.mjs",

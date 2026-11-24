@@ -1,0 +1,34 @@
+<section class="section local" id="local" aria-labelledby="local-title">
+  <div class="container local__grid">
+    <div class="local__copy">
+      <h2 class="display-3" id="local-title" data-reveal>Your trading record stays <span class="sel">in the room.</span></h2>
+      <p class="lead rise">Prop Firm OS is a desktop app. Accounts, trades and notes are kept on your computer and nowhere else.</p>
+      <span class="pill rise"><svg class="icon" aria-hidden="true"><use href="#g-lock"/></svg>Saved on this Mac</span>
+      <p class="local__note rise"><span class="tagblue">Good to know</span>There is no cloud copy. Back up your computer the way you already do.</p>
+      <p class="fine rise">The app sends one request out: this week's calendar from Forex Factory. Risk checks, totals and recaps are worked out on your device.</p>
+      <a class="btn btn--black btn--arrow rise" href="#get">Early access <span class="btn__go"><svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></span></a>
+    </div>
+
+    <div class="local__stage" role="img" aria-label="The account list in the app window. A small card reads: network activity, one calendar request, zero trades uploaded, zero accounts uploaded.">
+      <div class="devwin" aria-hidden="true">
+        <div class="devwin__bar"><i></i><i></i><i></i></div>
+        <div class="devwin__body">
+          <div class="mk">
+<!--@include mocks/topbar-static.html-->
+            <div class="mk-pane">
+<!--@include mocks/accounts.html-->
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="netcard" aria-hidden="true">
+        <p class="kicker">Network activity</p>
+        <dl>
+          <div><dt>Calendar requests</dt><dd>1</dd></div>
+          <div><dt>Trades uploaded</dt><dd>0</dd></div>
+          <div><dt>Accounts uploaded</dt><dd>0</dd></div>
+        </dl>
+      </div>
+    </div>
+  </div>
+</section>

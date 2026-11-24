@@ -1,0 +1,105 @@
+<section class="sec-lead sec-lead--tight container" id="statuses-lead" aria-labelledby="statuses-lead-title">
+  <h2 class="display-3" id="statuses-lead-title" data-reveal>Every account has a <span class="sel">status.</span></h2>
+</section>
+
+<section class="statuses" id="statuses" aria-labelledby="statuses-title">
+  <div class="container statuses__head">
+    <h3 class="statuses__title" id="statuses-title">Accounts</h3>
+    <p class="lead rise">Evaluation, funded or paused. Each one is tracked for what matters at that stage.</p>
+  </div>
+
+  <div class="plans-outer">
+    <div class="plans-wrap">
+      <div class="plans">
+
+        <article class="plan plan--light rise" aria-labelledby="plan-evaluation">
+          <header><h4 id="plan-evaluation">Evaluation</h4><span class="status status--evaluation">Target ahead</span></header>
+          <p class="plan__for">For accounts still working toward a profit target.</p>
+          <p class="plan__price"><span class="plan__fig">61%</span><span class="plan__per">of target</span></p>
+          <p class="plan__note">$1,840.00 of $3,000.00 on the demo account</p>
+          <div class="plan__list">
+            <ul class="feat">
+              <li class="is-main"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Profit so far against the profit target</li>
+              <li class="is-main"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Percent of target reached</li>
+              <li class="is-main"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Dollars still to go</li>
+              <li class="is-main"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Daily loss room on every logged trade</li>
+              <li class="is-sub"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Shown in the evaluation tracker on the dashboard</li>
+              <li class="is-sub"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Listed under Target progress in Risk &amp; Finance</li>
+            </ul>
+          </div>
+          <a class="btn btn--black btn--block" href="#showcase" data-open-tab="dashboard">See the dashboard</a>
+        </article>
+
+        <article class="plan plan--blue rise" style="--d:.08s" aria-labelledby="plan-funded">
+          <header><h4 id="plan-funded">Funded</h4><span class="status status--funded">Live rules</span></header>
+          <p class="plan__for">For accounts that passed and now have to be protected.</p>
+          <p class="plan__price"><span class="plan__fig">$1,780.00</span><span class="plan__per">room today</span></p>
+          <p class="plan__note">$280.00 today · $1,500.00 limit on the demo account</p>
+          <div class="plan__list">
+            <ul class="feat">
+              <li class="is-main"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Daily loss room, updated with every logged trade</li>
+              <li class="is-main"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>A warning at 75% of the limit used</li>
+              <li class="is-main"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>“Limit reached”, in plain words</li>
+              <li class="is-main"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Counted in dashboard and analytics totals</li>
+              <li class="is-sub"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Pick it alone or with other accounts in the dashboard</li>
+              <li class="is-sub"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Risk checks use the results you log</li>
+            </ul>
+          </div>
+          <a class="btn btn--white btn--block" href="#showcase" data-open-tab="risk">See the risk monitor</a>
+        </article>
+
+        <article class="plan plan--deep rise" style="--d:.16s" aria-labelledby="plan-paused">
+          <header><h4 id="plan-paused">Paused</h4><span class="status status--paused">On hold</span></header>
+          <p class="plan__for">For accounts you are not trading right now.</p>
+          <p class="plan__price"><span class="plan__fig">$750.00</span><span class="plan__per">limit on file</span></p>
+          <p class="plan__note">Practice account, $50,000, in the demo data</p>
+          <div class="plan__list">
+            <ul class="feat">
+              <li class="is-main"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Stays in your list with its size and limit</li>
+              <li class="is-main"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Its trades stay in the journal</li>
+              <li class="is-main"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Leave it out of the dashboard with one click</li>
+              <li class="is-main"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Switch it back when you trade it again</li>
+              <li class="is-sub"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Counted under Paused in the account summary</li>
+              <li class="is-sub"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Filter the account list by status</li>
+            </ul>
+          </div>
+          <a class="btn btn--white btn--block" href="#showcase" data-open-tab="accounts">See the account list</a>
+        </article>
+
+      </div>
+
+      <div class="riskdemo rise" id="risk-demo" data-state="safe">
+        <div class="riskdemo__copy">
+          <p class="kicker">Daily loss limits</p>
+          <h3>Try the risk monitor</h3>
+          <p>Pick a limit, move today's result and watch the room on the account. It is the same rule the app applies.</p>
+        </div>
+        <div class="riskdemo__panel">
+          <div class="riskdemo__controls">
+            <div class="field">
+              <span class="field__label" id="rd-limit-label">Daily loss limit</span>
+              <div class="seg seg--sm" role="group" aria-labelledby="rd-limit-label">
+                <button type="button" id="rd-limit-750" data-limit="750" aria-pressed="false">$750</button>
+                <button type="button" id="rd-limit-1000" data-limit="1000" aria-pressed="true">$1,000</button>
+                <button type="button" id="rd-limit-1500" data-limit="1500" aria-pressed="false">$1,500</button>
+              </div>
+            </div>
+            <div class="field field--grow">
+              <label class="field__label" for="rd-net">Today's net on this account <output id="rd-net-out" for="rd-net">-$250.00</output></label>
+              <input class="range" type="range" id="rd-net" min="-1500" max="500" step="10" value="-250">
+            </div>
+          </div>
+          <div class="riskrow">
+            <span class="riskrow__dot"></span>
+            <div><b>Sample account · 50K evaluation</b><small id="rd-line">-$250.00 today · $1,000.00 limit</small></div>
+            <strong id="rd-remaining">$750.00 remaining</strong>
+          </div>
+          <div>
+            <div class="riskbar"><i id="rd-bar" style="width:25%"></i><u></u></div>
+            <p class="riskdemo__state"><span class="riskpill" id="rd-pill">ALL CLEAR</span><span id="rd-explain">25% of the daily limit used.</span></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

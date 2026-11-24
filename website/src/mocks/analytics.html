@@ -1,34 +1,23 @@
-<div class="mk-analytics">
-  <nav class="mk-subtabs"><b>Overview</b><i>Setups</i><i>Time</i><i>Markets</i><i>Patterns</i></nav>
-  <div class="mk-kpis">
-    <div><small>Net P&amp;L</small><b>+$16,005</b></div>
-    <div><small>Win rate</small><b>56.0%</b></div>
-    <div><small>Profit factor</small><b>2.07</b></div>
-    <div><small>Avg R</small><b>1.36</b></div>
-    <div><small>Trades</small><b>84</b></div>
+<div class="mk-page">
+  <header class="mk-head"><div><p class="mk-kick">PERFORMANCE REVIEW</p><p class="mk-h1">Analytics</p><p class="mk-sub">See how your logged results develop over time.</p></div><span class="mk-fields"><i>Last 30 days ▾</i></span></header>
+  <div class="mk-tiles"><div><small>NET P&amp;L</small><b class="gain">+$760.00</b></div><div><small>TRADES</small><b>4</b></div><div><small>WIN RATE</small><b>75%</b></div><div><small>BREAK EVEN</small><b>0</b></div></div>
+  <div class="mk-split">
+    <section class="mk-card">
+      <div class="mk-cardhead"><div><p class="mk-kick">DAILY NET RESULTS</p><p class="mk-h3">Performance curve</p></div><span class="mk-chip">30 DAYS</span></div>
+      <svg class="mk-curve mk-curve--sm" viewBox="0 0 600 128" preserveAspectRatio="none"><path d="M8 118H572L592 14V118Z" fill="#52d99a" fill-opacity=".14"/><path d="M8 118H572L592 14" stroke="#5f7be0" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>
+    </section>
+    <section class="mk-card">
+      <div class="mk-cardhead"><div><p class="mk-kick">EDGE BY SETUP</p><p class="mk-h3">Which setups pay</p></div></div>
+      <div class="mk-table mk-table--setup">
+        <p class="mk-th"><span>SETUP</span><span>TRADES</span><span>WIN RATE</span><span>NET P&amp;L</span></p>
+        <p class="mk-tr"><span><b>Opening breakout</b></span><span>2</span><span>100%</span><span class="gain">+$705.00</span></p>
+        <p class="mk-tr"><span><b>Trend continuation</b></span><span>1</span><span>100%</span><span class="gain">+$215.00</span></p>
+        <p class="mk-tr"><span><b>Failed auction</b></span><span>1</span><span>0%</span><span class="lossv">-$160.00</span></p>
+      </div>
+    </section>
   </div>
-  <div class="mk-grid2">
-    <div class="mk-card"><header><span>Win rate by setup</span></header>
-      <span class="mk-hb"><b>Manipulation</b><s><i style="--v:77%"></i></s><em>77%</em></span>
-      <span class="mk-hb"><b>Breakout</b><s><i style="--v:61%"></i></s><em>61%</em></span>
-      <span class="mk-hb"><b>Reversal</b><s><i style="--v:48%"></i></s><em>48%</em></span>
-      <span class="mk-hb"><b>News fade</b><s><i style="--v:33%"></i></s><em>33%</em></span>
-    </div>
-    <div class="mk-card"><header><span>Best time of day</span><em>NY time</em></header>
-      <div class="mk-heat"><i style="--a:.15"></i><i style="--a:.3"></i><i style="--a:.6"></i><i style="--a:1"></i><i style="--a:.85"></i><i style="--a:.5"></i><i style="--a:.25"></i><i style="--a:.1"></i><i style="--a:.2"></i><i style="--a:.35"></i><i style="--a:.55"></i><i style="--a:.3"></i></div>
-      <footer class="mk-axis"><span>6am</span><span>9am</span><span>12pm</span><span>3pm</span></footer>
-      <header class="mk-mt"><span>Best day</span><em>Tuesday</em></header>
-      <div class="mk-days"><i style="--v:40%"></i><i style="--v:92%"></i><i style="--v:55%"></i><i style="--v:30%"></i><i style="--v:14%" class="l"></i></div>
-    </div>
-    <div class="mk-card"><header><span>By market</span></header>
-      <div class="mk-donutrow"><svg viewBox="0 0 40 40" class="mk-donut"><circle cx="20" cy="20" r="14" fill="none" stroke="#e5e7ec" stroke-width="7"/><circle cx="20" cy="20" r="14" fill="none" stroke="#0b0b0c" stroke-width="7" stroke-dasharray="52 88" transform="rotate(-90 20 20)"/><circle cx="20" cy="20" r="14" fill="none" stroke="#1f4fe3" stroke-width="7" stroke-dasharray="22 118" stroke-dashoffset="-52" transform="rotate(-90 20 20)"/></svg>
-      <ul><li><u></u>MNQ <b>59%</b></li><li><u class="b"></u>ES <b>25%</b></li><li><u class="g"></u>Other <b>16%</b></li></ul></div>
-    </div>
-    <div class="mk-card"><header><span>Pattern detectors</span><em>14</em></header>
-      <p class="mk-pat"><u></u>Breaks the plan on Fridays</p>
-      <p class="mk-pat"><u class="g"></u>Best after a sweep of Asia low</p>
-      <p class="mk-pat"><u></u>Sizes up after a loss</p>
-      <p class="mk-ai"><svg class="icon" aria-hidden="true"><use href="#g-coach"/></svg>AI read: your edge is patience.</p>
-    </div>
-  </div>
+  <section class="mk-card">
+    <div class="mk-cardhead"><div><p class="mk-kick">TRADE OUTCOMES</p><p class="mk-h3">Wins, break evens and losses</p></div></div>
+    <div class="mk-stats4"><div><b>3</b><small>Wins (≥ $1)</small></div><div><b>0</b><small>Break even ($0 to &lt; $1)</small></div><div><b>1</b><small>Losses (&lt; $0)</small></div><div><b>75%</b><small>Win rate</small></div></div>
+  </section>
 </div>

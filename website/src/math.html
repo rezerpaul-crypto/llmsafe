@@ -1,0 +1,83 @@
+<section class="sec-lead container" aria-labelledby="math-lead-title">
+  <h2 class="display-3" id="math-lead-title" data-reveal>Every number has a <span class="sel">rule.</span></h2>
+</section>
+
+<section class="panel math" id="math" aria-labelledby="math-title">
+  <div class="math__inner">
+    <div class="math__head">
+      <h3 class="h2" id="math-title" data-reveal>How the app counts.</h3>
+      <div class="math__aside rise">
+        <p class="math__ask">No black box. These are the rules behind the figures in Prop Firm OS, in plain words.</p>
+        <p class="fine">Taken from the logic of the current build.</p>
+        <button class="btn btn--frost btn--sm" type="button" data-math-toggle aria-expanded="false" aria-controls="math-list">Show all 12 rules</button>
+      </div>
+    </div>
+
+    <div class="mathlist" id="math-list">
+      <article class="rule">
+        <div class="rule__top"><p class="kicker">Win</p><span class="rule__where">Journal</span></div>
+        <p class="rule__formula">net <span>≥ $1</span></p>
+        <p>A trade counts as a win when it closes one dollar or more in profit.</p>
+      </article>
+      <article class="rule">
+        <div class="rule__top"><p class="kicker">Daily loss room</p><span class="rule__where">Risk &amp; Finance</span></div>
+        <p class="rule__formula">limit <span>+</span> today's net</p>
+        <p>Worked out per account from the trades you logged today. It never shows less than zero.</p>
+      </article>
+      <article class="rule">
+        <div class="rule__top"><p class="kicker">Win rate</p><span class="rule__where">Dashboard, Analytics</span></div>
+        <p class="rule__formula">wins <span>÷</span> (wins + losses)</p>
+        <p>Break-even trades are left out, so scratching a trade does not move your win rate in either direction.</p>
+      </article>
+      <article class="rule">
+        <div class="rule__top"><p class="kicker">Break even</p><span class="rule__where">Journal</span></div>
+        <p class="rule__formula">$0 <span>≤</span> net <span>&lt;</span> $1</p>
+        <p>Listed on its own. It is neither a win nor a loss.</p>
+      </article>
+      <article class="rule">
+        <div class="rule__top"><p class="kicker">Near limit</p><span class="rule__where">Risk &amp; Finance</span></div>
+        <p class="rule__formula"><span>75%</span> of the limit used</p>
+        <p>The risk monitor flags an account once today's loss reaches three quarters of its daily limit.</p>
+      </article>
+      <article class="rule">
+        <div class="rule__top"><p class="kicker">Evaluation progress</p><span class="rule__where">Dashboard</span></div>
+        <p class="rule__formula">profit so far <span>÷</span> target</p>
+        <p>Shown as a percentage, capped at 100%, next to the dollars still to go.</p>
+      </article>
+      <article class="rule">
+        <div class="rule__top"><p class="kicker">Loss</p><span class="rule__where">Journal</span></div>
+        <p class="rule__formula">net <span>&lt; $0</span></p>
+        <p>Anything below zero.</p>
+      </article>
+      <article class="rule">
+        <div class="rule__top"><p class="kicker">Limit reached</p><span class="rule__where">Risk &amp; Finance</span></div>
+        <p class="rule__formula">today's loss <span>≥</span> limit</p>
+        <p>The account shows “Limit reached” instead of a remaining amount. A limit of 0 switches the check off.</p>
+      </article>
+      <article class="rule">
+        <div class="rule__top"><p class="kicker">Edge by setup</p><span class="rule__where">Analytics</span></div>
+        <p class="rule__formula">net P&amp;L <span>per</span> setup</p>
+        <p>Setups are ranked by net result in the range you pick. Trades without a setup are grouped as Unclassified.</p>
+      </article>
+      <article class="rule">
+        <div class="rule__top"><p class="kicker">Week and month</p><span class="rule__where">Homepage</span></div>
+        <p class="rule__formula">Monday <span>·</span> the 1st</p>
+        <p>The week total starts on Monday, the month total on the first day of the month.</p>
+      </article>
+      <article class="rule">
+        <div class="rule__top"><p class="kicker">Calendar times</p><span class="rule__where">Homepage</span></div>
+        <p class="rule__formula">your <span>local</span> time</p>
+        <p>Release times come from the Forex Factory export and are shown in your timezone. Holidays are hidden.</p>
+      </article>
+      <article class="rule">
+        <div class="rule__top"><p class="kicker">Recap</p><span class="rule__where">Coach</span></div>
+        <p class="rule__formula">written <span>on your device</span></p>
+        <p>The coach compares the day's wins and losses and writes one or two plain sentences. No trades are sent to an AI service.</p>
+      </article>
+    </div>
+
+    <div class="math__foot">
+      <button class="btn btn--frost" type="button" data-math-toggle aria-expanded="false" aria-controls="math-list">Show all 12 rules</button>
+    </div>
+  </div>
+</section>

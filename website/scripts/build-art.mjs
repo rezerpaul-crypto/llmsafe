@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
- * Procedural artwork for the LiquidJournal landing page.
+ * Procedural artwork for the Prop Firm OS landing page.
  *
  * Everything the page shows as "photography" (glossy chrome ribbons, snow
- * peaks, the penguin scene) is generated here as plain SVG using filter
+ * peaks, the summit scene) is generated here as plain SVG using filter
  * lighting, so the repo ships no raster assets, no third-party imagery and the
  * whole art set weighs a few dozen kilobytes. Re-run after tweaking:
  *
@@ -228,7 +228,7 @@ write(
   }),
 );
 
-/* ---------- 3. penguin scene layers ---------- */
+/* ---------- 3. summit scene layers ---------- */
 write(
   'scene-sky.svg',
   `
@@ -323,23 +323,29 @@ write(
 );
 
 write(
-  'scene-penguin.svg',
+  'scene-walker.svg',
   `
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 100" role="img" aria-label="A penguin walking away across the snow">
-  <defs><linearGradient id="pb" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#1b2433"/><stop offset="1" stop-color="#05070b"/></linearGradient></defs>
-  <ellipse cx="30" cy="94" rx="16" ry="3.6" fill="#0a1a3a" opacity="0.28"/>
-  <path d="M30 6c-8 0-12 7-12 16 0 6 1 9-3 16-4 8-5 20-2 33 1 6 4 10 8 12h18c4-2 7-6 8-12 3-13 2-25-2-33-4-7-3-10-3-16 0-9-4-16-12-16z" fill="url(#pb)"/>
-  <path d="M13 44c-5 10-6 22-4 30 1 3 4 3 6 0 2-8 3-20 2-28z" fill="#0b0f16"/>
-  <path d="M47 44c5 10 6 22 4 30-1 3-4 3-6 0-2-8-3-20-2-28z" fill="#0b0f16"/>
-  <path d="M30 34c7 0 10 10 10 25 0 13-3 24-10 24s-10-11-10-24c0-15 3-25 10-25z" fill="#e8eef7" opacity="0.92"/>
-  <circle cx="30" cy="16" r="1.3" fill="#fff" opacity="0.7"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 100" role="img" aria-label="A hiker walking toward the summit">
+  <defs>
+    <linearGradient id="wj" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#232c3b"/><stop offset="1" stop-color="#0b0f16"/></linearGradient>
+    <linearGradient id="wp" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4f7df2"/><stop offset="1" stop-color="#1440b8"/></linearGradient>
+  </defs>
+  <ellipse cx="30" cy="95" rx="15" ry="3.4" fill="#0a1a3a" opacity="0.28"/>
+  <path d="M52 30 53.5 93" stroke="#39445a" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M22 60 19.5 90c-.2 2.2 1 3.2 3.4 3.2h3.4c1.6 0 2.4-.8 2.6-2.4L30 70l1.6 20.8c.2 1.6 1 2.4 2.6 2.4h3.4c2.4 0 3.6-1 3.4-3.2L38 60z" fill="#0d121a"/>
+  <path d="M16.5 34c-3 6-4.6 13-4.4 20 .1 2.6 3.6 2.8 4.2.2l3-13zM43.500 34c3 6 4.600 13 4.400 20-.1 2.600-3.600 2.800-4.200.2l-3-13z" fill="#161d29"/>
+  <path d="M30 24c-8 0-13 4-13.500 11L15 60c5 3 25 3 30 0l-1.500-25C43 28 38 24 30 24z" fill="url(#wj)"/>
+  <rect x="20.500" y="29" width="19" height="25" rx="6.500" fill="url(#wp)"/>
+  <path d="M24 37h12M24 42.500h12" stroke="#fff" stroke-opacity="0.35" stroke-width="1.300" stroke-linecap="round"/>
+  <circle cx="30" cy="14.500" r="8.200" fill="#121821"/>
+  <path d="M22.300 12.500c1.400-4.600 4.300-6.900 7.700-6.900s6.300 2.300 7.700 6.900c-2.300-1.600-4.900-2.400-7.700-2.400s-5.400.8-7.700 2.400z" fill="#2059e7"/>
 </svg>`,
 );
 
 write(
   'scene-trail.svg',
   (() => {
-    // Alternating footprints in perspective: big at the viewer, tiny at the penguin.
+    // Alternating footprints in perspective: big at the viewer, tiny at the hiker.
     const prints = [];
     const N = 22;
     for (let i = 0; i < N; i++) {

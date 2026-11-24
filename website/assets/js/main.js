@@ -1,11 +1,14 @@
 /* ==========================================================================
-   LiquidJournal landing page — behaviour
-   Plain script (no modules / no build) so index.html also works from file://.
-   Every feature activates only when its markup exists, and the page stays
-   fully readable without any of it.
+   Prop Firm OS landing page — behaviour
+   One plain script (no modules, no build step). Every feature activates only
+   when its markup exists, and the page is fully readable without any of it.
    ========================================================================== */
 (function () {
   'use strict';
+
+  /* Put the download address here once there is a public build. While it is empty,
+     the last section says that the app is in early access instead of offering a button. */
+  var GET_URL = '';
 
   var doc = document;
   var root = doc.documentElement;
@@ -14,8 +17,11 @@
   var clamp = function (v, a, b) { return Math.min(b === undefined ? 1 : b, Math.max(a === undefined ? 0 : a, v)); };
   var smooth = function (t) { return t * t * (3 - 2 * t); };
   var mqReduce = window.matchMedia('(prefers-reduced-motion: reduce)');
-  var reduced = function () { return mqReduce.matches; };
+  var mqDark = window.matchMedia('(prefers-color-scheme: dark)');
   var hasIO = 'IntersectionObserver' in window;
+  /* Scroll-driven effects are skipped when motion is reduced, and when the page is laid
+     out at its full height (some embeds do that): then nothing ever scrolls inside it. */
+  var calm = function () { return mqReduce.matches || window.innerHeight > 2600; };
 
   /* ---------- toast ---------- */
   var toastEl = $('#toast');
@@ -25,21 +31,31 @@
     toastEl.textContent = msg;
     toastEl.classList.add('is-on');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(function () { toastEl.classList.remove('is-on'); }, 2400);
+    toastTimer = setTimeout(function () { toastEl.classList.remove('is-on'); }, 2600);
   }
 
   /* ---------- theme ---------- */
   var themeBtn = $('#theme-toggle');
-  function setTheme(t, persist) {
-    root.dataset.theme = t;
-    if (themeBtn) {
-      themeBtn.setAttribute('aria-pressed', String(t === 'dark'));
-      themeBtn.setAttribute('aria-label', t === 'dark' ? 'Switch to light theme' : 'Switch to dark theme');
-    }
-    if (persist) { try { localStorage.setItem('lj-theme', t); } catch (e) { /* storage blocked */ } }
+  function currentTheme() {
+    var t = root.dataset.theme;
+    return t === 'dark' || t === 'light' ? t : (mqDark.matches ? 'dark' : 'light');
   }
-  setTheme(root.dataset.theme === 'dark' ? 'dark' : 'light', false);
-  if (themeBtn) themeBtn.addEventListener('click', function () { setTheme(root.dataset.theme === 'dark' ? 'light' : 'dark', true); });
+  function syncThemeButton() {
+    if (!themeBtn) return;
+    var dark = currentTheme() === 'dark';
+    themeBtn.setAttribute('aria-pressed', String(dark));
+    themeBtn.setAttribute('aria-label', dark ? 'Switch to light theme' : 'Switch to dark theme');
+  }
+  if (themeBtn) {
+    themeBtn.addEventListener('click', function () {
+      var next = currentTheme() === 'dark' ? 'light' : 'dark';
+      root.dataset.theme = next;
+      try { localStorage.setItem('pfos-theme', next); } catch (e) { /* choice lasts for this visit */ }
+      syncThemeButton();
+    });
+    if (mqDark.addEventListener) mqDark.addEventListener('change', syncThemeButton);
+    syncThemeButton();
+  }
 
   /* ---------- nav: stuck state, drawer, scroll-spy ---------- */
   var nav = $('#nav');
@@ -58,35 +74,33 @@
     });
     drawer.addEventListener('click', function (e) { if (e.target.closest('a')) closeDrawer(); });
     doc.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeDrawer(); });
-    window.addEventListener('resize', function () { if (window.innerWidth > 980) closeDrawer(); });
+    window.addEventListener('resize', function () { if (window.innerWidth > 1080) closeDrawer(); });
   }
 
   var spyLinks = $$('[data-spy]');
-  var spyMap = {};
-  spyLinks.forEach(function (a) { spyMap[a.dataset.spy] = a; });
-  function setSpy(id) {
-    spyLinks.forEach(function (a) {
-      if (a.dataset.spy === id) a.setAttribute('aria-current', 'true'); else a.removeAttribute('aria-current');
-    });
-  }
-  /* ordered so the *last* section whose top has passed the probe line wins */
-  var spyOrder = ['story', 'showcase', 'community', 'reviews', 'pricing', 'affiliate'];
-  var spyEnds = { story: 'scene', showcase: 'proof', community: 'reviews', reviews: 'compare', pricing: 'links', affiliate: 'dock' };
+  /* each nav item owns the page from its section down to the start of the next one */
+  var spyEnds = { showcase: 'briefing', briefing: 'math', math: 'compare-lead', compare: 'statuses-lead', statuses: 'local', local: 'prompts' };
   function updateSpy() {
+    if (!spyLinks.length) return;
     var probe = window.innerHeight * 0.38;
     var current = null;
-    spyOrder.forEach(function (id) {
+    spyLinks.forEach(function (a) {
+      var id = a.dataset.spy;
       var el = doc.getElementById(id);
       if (!el) return;
-      var r = el.getBoundingClientRect();
       var endEl = doc.getElementById(spyEnds[id]);
-      var endTop = endEl ? endEl.getBoundingClientRect().top : r.bottom;
-      if (r.top <= probe && endTop > probe) current = id;
+      var top = el.getBoundingClientRect().top;
+      var end = endEl ? endEl.getBoundingClientRect().top : el.getBoundingClientRect().bottom;
+      if (top <= probe && end > probe) current = id;
     });
-    setSpy(current);
+    spyLinks.forEach(function (a) {
+      if (a.dataset.spy === current) a.setAttribute('aria-current', 'true'); else a.removeAttribute('aria-current');
+    });
   }
 
-  /* ---------- word-by-word blur reveal (scrubbed by scroll) ---------- */
+  /* ---------- headline reveal ----------
+     Headings are sharp at rest. Only those below the fold are scrubbed, word by word,
+     while they travel up through the viewport; once sharp they stay sharp. */
   var reveals = [];
   function splitWords(el) {
     var full = el.textContent.replace(/\s+/g, ' ').trim();
@@ -121,69 +135,77 @@
     return words;
   }
   function initReveal() {
+    if (!hasIO || calm()) return;
     $$('[data-reveal]').forEach(function (el) {
-      var words = splitWords(el);
-      reveals.push({ el: el, words: words, sels: $$('.sel', el), last: -1, near: !hasIO });
+      if (el.getBoundingClientRect().top < window.innerHeight) return; /* already on screen: leave it complete */
+      reveals.push({ el: el, words: splitWords(el), near: false, done: false, last: -1 });
     });
-    if (hasIO) {
-      var io = new IntersectionObserver(function (entries) {
-        entries.forEach(function (en) {
-          var item = reveals.filter(function (r) { return r.el === en.target; })[0];
-          if (item) item.near = en.isIntersecting;
-        });
-        onScroll(); /* an element can become 'near' without any scroll event */
-      }, { rootMargin: '25% 0px 25% 0px' });
-      reveals.forEach(function (r) { io.observe(r.el); });
-    }
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        var item = reveals.filter(function (r) { return r.el === en.target; })[0];
+        if (!item || item.done) return;
+        item.near = en.isIntersecting;
+        if (en.isIntersecting) item.el.classList.add('is-live'); /* still below the fold, so the switch is unseen */
+      });
+      onScroll();
+    }, { rootMargin: '0px 0px 30% 0px' });
+    reveals.forEach(function (r) { io.observe(r.el); });
   }
   function updateReveals() {
     var vh = window.innerHeight;
     var start = vh * 0.93, end = vh * 0.45, K = 4;
     reveals.forEach(function (r) {
-      if (!r.near) return;
-      var p = reduced() ? 1 : clamp((start - r.el.getBoundingClientRect().top) / (start - end));
+      if (r.done || !r.near) return;
+      var p = clamp((start - r.el.getBoundingClientRect().top) / (start - end));
       if (Math.abs(p - r.last) < 0.004) return;
       r.last = p;
       var n = r.words.length;
-      for (var i = 0; i < n; i++) {
-        r.words[i].style.setProperty('--w', clamp((p * (n + K) - i) / K).toFixed(3));
+      for (var i = 0; i < n; i++) r.words[i].style.setProperty('--w', clamp((p * (n + K) - i) / K).toFixed(3));
+      if (p >= 1) {
+        r.done = true;
+        r.el.classList.add('is-done');
+        for (var j = 0; j < n; j++) r.words[j].style.removeProperty('--w');
       }
-      var on = p > 0.92;
-      for (var j = 0; j < r.sels.length; j++) r.sels[j].classList.toggle('is-on', on);
     });
   }
 
-  /* ---------- fade-up blocks ---------- */
+  /* ---------- blocks fade up once, when they first scroll into view ---------- */
   function initRise() {
-    var els = $$('.rise');
-    if (!hasIO || reduced()) { els.forEach(function (e) { e.classList.add('is-in'); }); return; }
+    if (!hasIO || calm()) return;
     var io = new IntersectionObserver(function (entries) {
-      entries.forEach(function (en) { if (en.isIntersecting) { en.target.classList.add('is-in'); io.unobserve(en.target); } });
-    }, { rootMargin: '0px 0px -8% 0px' });
-    els.forEach(function (e) { io.observe(e); });
+      entries.forEach(function (en) {
+        if (!en.isIntersecting) return;
+        en.target.classList.add('rise-in');
+        io.unobserve(en.target);
+      });
+    });
+    $$('.rise').forEach(function (el) {
+      if (el.getBoundingClientRect().top < window.innerHeight) return; /* visible at load: no entrance */
+      io.observe(el);
+    });
   }
 
   /* ---------- hero headline rotator ---------- */
   function initRotator() {
     var h = $('[data-rotator]');
-    if (!h) return;
+    if (!h || mqReduce.matches) return;
     var vs = $$('.hero__variant', h);
-    if (vs.length < 2 || reduced()) return;
-    var i = 0, swaps = 0, timer, hovering = false;
-    function step() {
+    if (vs.length < 2) return;
+    var i = 0, swaps = 0, hovering = false;
+    var timer = setInterval(function () {
       if (hovering || doc.hidden) return;
       vs[i].classList.remove('is-active'); vs[i].setAttribute('aria-hidden', 'true');
       i = (i + 1) % vs.length;
       vs[i].classList.add('is-active'); vs[i].removeAttribute('aria-hidden');
       if (++swaps >= 6) clearInterval(timer); /* settles after a few loops: no endless motion */
-    }
-    timer = setInterval(step, 5200);
+    }, 5200);
     h.addEventListener('pointerenter', function () { hovering = true; });
     h.addEventListener('pointerleave', function () { hovering = false; });
   }
 
   /* ---------- marquees ---------- */
   function initMarquees() {
+    if (mqReduce.matches) return; /* reduced motion: plain scrollable rows, no duplicates */
     $$('[data-marquee]').forEach(function (m) {
       var track = $('.carousel__track, .logos__track', m);
       if (!track) return;
@@ -193,18 +215,18 @@
       while (track.scrollWidth < window.innerWidth * 1.3 && guard++ < 6) {
         items.forEach(function (it) { var c = it.cloneNode(true); c.setAttribute('aria-hidden', 'true'); track.appendChild(c); });
       }
-      var half = Array.prototype.slice.call(track.children);
-      half.forEach(function (it) { var c = it.cloneNode(true); c.setAttribute('aria-hidden', 'true'); c.removeAttribute('id'); track.appendChild(c); });
+      Array.prototype.slice.call(track.children).forEach(function (it) {
+        var c = it.cloneNode(true); c.setAttribute('aria-hidden', 'true'); track.appendChild(c);
+      });
       var speed = parseFloat(m.dataset.speed) || 40; /* px per second */
       track.style.setProperty('--dur', (track.scrollWidth / 2 / speed).toFixed(1) + 's');
-      $$('a, button', track).forEach(function (el, idx, all) { if (idx >= all.length / 2) el.tabIndex = -1; });
     });
     var pause = $('#logos-pause');
     if (pause) {
       pause.addEventListener('click', function () {
         var on = pause.getAttribute('aria-pressed') !== 'true';
         pause.setAttribute('aria-pressed', String(on));
-        pause.setAttribute('aria-label', on ? 'Play scrolling logos' : 'Pause scrolling logos');
+        pause.setAttribute('aria-label', on ? 'Play the scrolling rows' : 'Pause the scrolling rows');
         var use = pause.querySelector('use');
         if (use) use.setAttribute('href', on ? '#i-play' : '#i-pause');
         $$('.logos [data-marquee]').forEach(function (m) { m.classList.toggle('is-paused', on); });
@@ -212,27 +234,27 @@
     }
   }
 
-  /* ---------- penguin scene ---------- */
+  /* ---------- summit scene ---------- */
   var scene, sceneStage, sceneLines;
   function initScene() {
     scene = $('[data-scene]');
     if (!scene) return;
-    if (reduced()) { scene.classList.add('scene--static'); return; }
+    if (calm()) { scene.classList.add('scene--static'); return; }
     sceneStage = $('.scene__stage', scene);
     sceneLines = $$('.scene__line', scene);
   }
   function updateScene() {
-    if (!scene || scene.classList.contains('scene--static')) return;
+    if (!scene || !sceneStage) return;
     var r = scene.getBoundingClientRect();
-    var navH = nav ? nav.offsetHeight : 64;
     if (r.bottom < -200 || r.top > window.innerHeight + 200) return;
     var total = r.height - sceneStage.offsetHeight;
-    var p = clamp((navH - r.top) / total);
+    var stickyTop = parseFloat(getComputedStyle(sceneStage).top) || 0;
+    var p = clamp((stickyTop - r.top) / total);
     scene.style.setProperty('--p', p.toFixed(4));
-    var edges = [0, 0.25, 0.5, 0.75, 1];
+    var n = sceneLines.length;
     sceneLines.forEach(function (ln, k) {
-      var oIn = k === 0 ? 1 : smooth(clamp((p - (edges[k] - 0.035)) / 0.07));
-      var oOut = k === sceneLines.length - 1 ? 1 : 1 - smooth(clamp((p - (edges[k + 1] - 0.035)) / 0.07));
+      var oIn = k === 0 ? 1 : smooth(clamp((p - (k / n - 0.035)) / 0.07));
+      var oOut = k === n - 1 ? 1 : 1 - smooth(clamp((p - ((k + 1) / n - 0.035)) / 0.07));
       var o = oIn * oOut;
       ln.style.setProperty('--o', o.toFixed(3));
       ln.style.setProperty('--b', ((1 - o) * 16).toFixed(1) + 'px');
@@ -241,30 +263,8 @@
     });
   }
 
-  /* ---------- count-up numbers ---------- */
-  function initCounts() {
-    var els = $$('[data-count]');
-    if (!els.length) return;
-    function run(el) {
-      var target = parseFloat(el.dataset.count);
-      var t0 = null, dur = 1500;
-      function frame(t) {
-        if (t0 === null) t0 = t;
-        var k = clamp((t - t0) / dur);
-        var eased = k === 1 ? 1 : 1 - Math.pow(2, -10 * k);
-        el.textContent = Math.round(target * eased).toLocaleString('en-US');
-        if (k < 1) requestAnimationFrame(frame);
-      }
-      requestAnimationFrame(frame);
-    }
-    if (!hasIO || reduced()) return;
-    var io = new IntersectionObserver(function (entries) {
-      entries.forEach(function (en) { if (en.isIntersecting) { run(en.target); io.unobserve(en.target); } });
-    }, { threshold: 0.6 });
-    els.forEach(function (el) { el.textContent = '0'; io.observe(el); });
-  }
-
-  /* ---------- tabs (showcase) ---------- */
+  /* ---------- workspace tabs ---------- */
+  var selectTab = function () {};
   function initShowcase() {
     var sec = $('#showcase');
     if (!sec) return;
@@ -274,8 +274,9 @@
     var panes = $$('[data-pane]', sec);
     var title = $('#win-title', sec);
     var win = $('.win', sec);
-    function select(tab, focus) {
-      var id = tab.dataset.tab;
+    selectTab = function (id, focus) {
+      var tab = tabs.filter(function (t) { return t.dataset.tab === id; })[0];
+      if (!tab) return;
       tabs.forEach(function (t) {
         var on = t === tab;
         t.setAttribute('aria-selected', String(on));
@@ -285,26 +286,31 @@
       panes.forEach(function (p) { p.hidden = p.dataset.pane !== id; });
       if (title) title.textContent = tab.dataset.title || tab.textContent.trim();
       $$('.mk-menu [data-m]', sec).forEach(function (m) { m.classList.toggle('on', m.dataset.m === id); });
-      if (win) win.dataset.view = id;
       if (focus) tab.focus();
-    }
+      if (tab.scrollIntoView && tab.parentNode.scrollWidth > tab.parentNode.clientWidth) tab.scrollIntoView({ block: 'nearest', inline: 'center' });
+    };
     tabs.forEach(function (t, i) {
-      t.addEventListener('click', function () { select(t, false); });
+      t.addEventListener('click', function () { selectTab(t.dataset.tab, false); });
       t.addEventListener('keydown', function (e) {
         var n = tabs.length, j = -1;
         if (e.key === 'ArrowDown' || e.key === 'ArrowRight') j = (i + 1) % n;
         else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') j = (i - 1 + n) % n;
         else if (e.key === 'Home') j = 0;
         else if (e.key === 'End') j = n - 1;
-        if (j > -1) { e.preventDefault(); select(tabs[j], true); }
+        if (j > -1) { e.preventDefault(); selectTab(tabs[j].dataset.tab, true); }
       });
     });
-    var skin = $$('[data-skin]', sec);
-    skin.forEach(function (b) {
+    var skins = $$('[data-skin]', sec);
+    skins.forEach(function (b) {
       b.addEventListener('click', function () {
-        skin.forEach(function (o) { o.setAttribute('aria-pressed', String(o === b)); });
+        skins.forEach(function (o) { o.setAttribute('aria-pressed', String(o === b)); });
         if (win) win.dataset.skin = b.dataset.skin;
+        $$('.mk-look [data-look]', sec).forEach(function (l) { l.classList.toggle('on', l.dataset.look === b.dataset.skin); });
       });
+    });
+    /* links elsewhere on the page can open a specific workspace */
+    $$('[data-open-tab]').forEach(function (a) {
+      a.addEventListener('click', function () { selectTab(a.dataset.openTab, false); });
     });
   }
 
@@ -317,29 +323,24 @@
         var open = btn.getAttribute('aria-expanded') !== 'true';
         btn.setAttribute('aria-expanded', String(open));
         target.hidden = !open;
-        var host = btn.closest('[data-host]');
-        if (host) host.classList.toggle('is-open', open);
       });
     });
   }
 
-  /* ---------- reviews: show more ---------- */
-  function initReviews() {
-    var list = $('#review-list');
+  /* ---------- the math: show more ---------- */
+  function initMath() {
+    var list = $('#math-list');
     if (!list) return;
-    var btns = $$('[data-reviews-toggle]');
-    function set(open) {
-      list.classList.toggle('is-open', open);
-      btns.forEach(function (b) {
-        b.setAttribute('aria-expanded', String(open));
-        b.textContent = open ? 'Show less' : 'Show more';
-      });
-    }
+    var btns = $$('[data-math-toggle]');
     btns.forEach(function (b) {
       b.addEventListener('click', function () {
         var open = !list.classList.contains('is-open');
-        set(open);
-        if (!open) list.scrollIntoView({ block: 'start', behavior: reduced() ? 'auto' : 'smooth' });
+        list.classList.toggle('is-open', open);
+        btns.forEach(function (o) {
+          o.setAttribute('aria-expanded', String(open));
+          o.textContent = open ? 'Show fewer rules' : 'Show all 12 rules';
+        });
+        if (!open) list.scrollIntoView({ block: 'start', behavior: mqReduce.matches ? 'auto' : 'smooth' });
       });
     });
   }
@@ -350,111 +351,56 @@
     var table = $('#cmp');
     if (!btn || !table) return;
     var extra = $$('tr[data-extra]', table);
+    var total = $$('tbody tr', table).length;
     extra.forEach(function (r) { r.hidden = true; });
+    btn.hidden = false;
     btn.addEventListener('click', function () {
       var open = btn.getAttribute('aria-expanded') !== 'true';
       btn.setAttribute('aria-expanded', String(open));
       extra.forEach(function (r) { r.hidden = !open; });
-      btn.textContent = open ? 'Show fewer rows' : 'Show all ' + (extra.length + (table.rows.length - 1 - extra.length)) + ' rows';
+      btn.textContent = open ? 'Show fewer rows' : 'Show all ' + total + ' rows';
     });
   }
 
-  /* ---------- pricing ---------- */
-  var PRICES = {
-    usd: { sym: '$', dec: 2, prestige: [14.99, 24.99], apex: [35.99, 59.99] },
-    eur: { sym: '€', dec: 2, prestige: [13.99, 22.99], apex: [32.99, 54.99] },
-    jpy: { sym: '¥', dec: 0, prestige: [2300, 3800], apex: [5400, 8900] }
-  };
-  function money(cur, v) {
-    var c = PRICES[cur];
-    return c.dec ? c.sym + v.toFixed(2) : c.sym + Math.round(v).toLocaleString('en-US');
-  }
-  /* yearly billing is exactly 33% cheaper per month (kept honest next to the "Save 33%" badge) */
-  function annual(cur, v) {
-    return PRICES[cur].dec ? Math.round(v * 0.67 * 100) / 100 : Math.round((v * 0.67) / 10) * 10;
-  }
-  function initPricing() {
-    var sec = $('#pricing');
-    if (!sec) return;
-    var state = { cur: 'usd', yearly: false };
-    var curBtns = $$('[data-cur]', sec);
-    var sw = $('#billing-switch', sec);
-    function render(animate) {
-      ['prestige', 'apex'].forEach(function (plan) {
-        var base = PRICES[state.cur][plan];
-        var now = state.yearly ? annual(state.cur, base[0]) : base[0];
-        var was = state.yearly ? annual(state.cur, base[1]) : base[1];
-        $$('[data-price="' + plan + '"]', sec).forEach(function (el) {
-          var next = money(state.cur, el.dataset.kind === 'was' ? was : now);
-          if (el.textContent === next) return;
-          el.textContent = next;
-          if (animate && !reduced()) { el.classList.remove('is-swap'); void el.offsetWidth; el.classList.add('is-swap'); }
-        });
-        var note = $('[data-note="' + plan + '"]', sec);
-        if (note) {
-          note.textContent = state.yearly
-            ? '10 days free, then ' + money(state.cur, now * 12) + ' a year (' + money(state.cur, now) + '/mo). Cancel anytime.'
-            : '10 days free, then ' + money(state.cur, now) + ' a month. Cancel anytime.';
-        }
-      });
-      var zero = $('[data-price="free"]', sec);
-      if (zero) zero.textContent = money(state.cur, 0);
-      $$('[data-sale]').forEach(function (el) { /* these chips live in the mentor section, outside #pricing */
-        var pct = parseFloat(el.dataset.sale);
-        var apex = PRICES[state.cur].apex;
-        var monthly = pct === 40 ? apex[0] : Math.round(apex[1] * (1 - pct / 100) * 100) / 100;
-        el.textContent = money(state.cur, state.yearly ? annual(state.cur, monthly) : monthly);
-      });
+  /* ---------- risk monitor demo: the same rule the app applies ---------- */
+  function initRisk() {
+    var box = $('#risk-demo');
+    if (!box) return;
+    var range = $('#rd-net', box);
+    var limitBtns = $$('[data-limit]', box);
+    var money = function (v) { return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(v); };
+    var limit = 1000;
+    function render() {
+      var net = Number(range.value);
+      var state = net <= -limit ? 'breached' : net <= -limit * 0.75 ? 'warning' : 'safe';
+      var remaining = Math.max(0, limit + net);
+      var used = clamp(-net / limit);
+      box.dataset.state = state;
+      $('#rd-net-out', box).textContent = (net > 0 ? '+' : '') + money(net);
+      $('#rd-line', box).textContent = money(net) + ' today · ' + money(limit) + ' limit';
+      $('#rd-remaining', box).textContent = state === 'breached' ? 'Limit reached' : money(remaining) + ' remaining';
+      $('#rd-bar', box).style.width = (used * 100).toFixed(1) + '%';
+      $('#rd-pill', box).textContent = state === 'breached' ? '1 ALERT' : state === 'warning' ? '1 NEAR LIMIT' : 'ALL CLEAR';
+      $('#rd-explain', box).textContent = net >= 0
+        ? 'No loss today. The room is the limit plus what you made.'
+        : Math.round(used * 100) + '% of the daily limit used.' + (state === 'warning' ? ' The warning starts at 75%.' : '');
+      range.setAttribute('aria-valuetext', money(net) + ' today, ' + (state === 'breached' ? 'limit reached' : money(remaining) + ' remaining'));
     }
-    curBtns.forEach(function (b) {
+    range.addEventListener('input', render);
+    limitBtns.forEach(function (b) {
       b.addEventListener('click', function () {
-        state.cur = b.dataset.cur;
-        curBtns.forEach(function (o) { o.setAttribute('aria-pressed', String(o === b)); });
-        render(true);
+        limit = Number(b.dataset.limit);
+        limitBtns.forEach(function (o) { o.setAttribute('aria-pressed', String(o === b)); });
+        render();
       });
     });
-    if (sw) {
-      sw.addEventListener('click', function () {
-        state.yearly = sw.getAttribute('aria-checked') !== 'true';
-        sw.setAttribute('aria-checked', String(state.yearly));
-        $$('[data-bill]', sec).forEach(function (l) { l.classList.toggle('is-on', (l.dataset.bill === 'yearly') === state.yearly); });
-        render(true);
-      });
-    }
-    /* collapsible feature lists */
-    $$('.feat', sec).forEach(function (ul) {
-      var extra = $$('li.is-extra', ul);
-      var btn = ul.parentNode.querySelector('.more');
-      if (!btn || !extra.length) return;
-      var label = '+' + extra.length + ' more';
-      btn.firstChild.nodeValue = label + ' ';
-      extra.forEach(function (li) { li.hidden = true; });
-      btn.addEventListener('click', function () {
-        var open = btn.getAttribute('aria-expanded') !== 'true';
-        btn.setAttribute('aria-expanded', String(open));
-        extra.forEach(function (li) { li.hidden = !open; });
-        btn.firstChild.nodeValue = (open ? 'Show less' : label) + ' ';
-      });
-    });
-    render(false);
-  }
-
-  /* ---------- copy promo code ---------- */
-  function initCopy() {
-    $$('[data-copy]').forEach(function (b) {
-      b.addEventListener('click', function () {
-        var code = b.dataset.copy;
-        var done = function () { toast('Code ' + code + ' copied'); };
-        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(code).then(done, function () { toast('Code: ' + code); });
-        else toast('Code: ' + code);
-      });
-    });
+    render();
   }
 
   /* ---------- dock magnification ---------- */
   function initDock() {
     var dock = $('.dock');
-    if (!dock || reduced()) return;
+    if (!dock || mqReduce.matches) return;
     var icons = $$('.dock__icon', dock);
     dock.addEventListener('pointermove', function (e) {
       icons.forEach(function (ic) {
@@ -467,17 +413,21 @@
     dock.addEventListener('pointerleave', function () { icons.forEach(function (ic) { ic.style.transform = ''; }); });
   }
 
-  /* ---------- dead demo links ---------- */
+  /* ---------- download button, once GET_URL is set ---------- */
+  function initGet() {
+    var btn = $('#get-button');
+    if (!GET_URL || !btn) return;
+    btn.href = GET_URL;
+    btn.hidden = false;
+    ['#get-note', '#get-tour'].forEach(function (s) { var el = $(s); if (el) el.hidden = true; });
+  }
+
+  /* ---------- safety net: an in-page link without a target says so instead of doing nothing ---------- */
   doc.addEventListener('click', function (e) {
     var a = e.target.closest && e.target.closest('a[href^="#"]');
     if (!a) return;
     var id = a.getAttribute('href').slice(1);
-    if (id && !doc.getElementById(id)) {
-      e.preventDefault();
-      toast('Demo build: this link is not wired up yet');
-    } else if (id === '' ) {
-      e.preventDefault();
-    }
+    if (id && !doc.getElementById(id)) { e.preventDefault(); toast('This link is not set up yet'); }
   });
 
   /* ---------- scroll loop ---------- */
@@ -500,18 +450,16 @@
     initRotator();
     initMarquees();
     initScene();
-    initCounts();
     initShowcase();
     initDisclosures();
-    initReviews();
+    initMath();
     initCompare();
-    initPricing();
-    initCopy();
+    initRisk();
     initDock();
+    initGet();
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', onScroll);
-    mqReduce.addEventListener && mqReduce.addEventListener('change', function () { reveals.forEach(function (r) { r.last = -1; }); onScroll(); });
     /* fonts change line breaks, so re-measure once they are in */
     if (doc.fonts && doc.fonts.ready) doc.fonts.ready.then(onScroll);
   }
