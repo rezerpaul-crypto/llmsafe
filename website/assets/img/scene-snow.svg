@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMax slice" role="img" aria-label="">
+  <defs>
+    <linearGradient id="field" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eef5fc"/><stop offset="0.4" stop-color="#c7d8ee"/><stop offset="1" stop-color="#4f7fca"/></linearGradient>
+    <filter id="drift" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.0022 0.045" numOctaves="3" seed="12" result="n"/>
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  1.7 0 0 0 -0.35" result="bump"/>
+      <feDiffuseLighting in="bump" surfaceScale="3.2" diffuseConstant="1.25" lighting-color="#f7fbff" result="lit0"><feDistantLight azimuth="270" elevation="44"/></feDiffuseLighting>
+      <feComponentTransfer in="lit0" result="lit"><feFuncR type="linear" slope="0.36" intercept="0.68"/><feFuncG type="linear" slope="0.36" intercept="0.7"/><feFuncB type="linear" slope="0.3" intercept="0.78"/></feComponentTransfer>
+      <feBlend in="SourceGraphic" in2="lit" mode="multiply" result="m"/>
+      <feComposite in="m" in2="SourceGraphic" operator="in"/>
+    </filter>
+    <linearGradient id="horizon" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eaf2fb" stop-opacity="0"/><stop offset="0.5" stop-color="#eaf2fb" stop-opacity="0.9"/><stop offset="1" stop-color="#eaf2fb" stop-opacity="0"/></linearGradient>
+  </defs>
+  <path d="M-20 478 C 400 462 1200 462 1620 478 L1620 910 L-20 910Z" fill="url(#field)" filter="url(#drift)"/>
+  <rect y="440" width="1600" height="90" fill="url(#horizon)"/>
+</svg>

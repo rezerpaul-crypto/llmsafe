@@ -1,0 +1,43 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LiquidJournal — the free trading journal that reads your trades back</title>
+<meta name="description" content="A free trading journal. Auto-sync every trade, track your prop accounts and see why you win or lose.">
+<meta name="theme-color" content="#ffffff">
+<meta name="color-scheme" content="light dark">
+<meta property="og:type" content="website">
+<meta property="og:title" content="LiquidJournal — Stop being the liquidity">
+<meta property="og:description" content="A free trading journal. Auto-sync every trade, track your prop accounts and see why you win or lose.">
+<link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="assets/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/img/chrome-right.svg" as="image" type="image/svg+xml">
+<link rel="stylesheet" href="assets/css/base.css">
+<link rel="stylesheet" href="assets/css/hero.css">
+<link rel="stylesheet" href="assets/css/features.css">
+<link rel="stylesheet" href="assets/css/mocks.css">
+<link rel="stylesheet" href="assets/css/commerce.css">
+<script>
+  /* before first paint: remember theme, flag that scripting is available */
+  (function () {
+    var d = document.documentElement;
+    d.classList.add('js');
+    var t = null;
+    try { t = localStorage.getItem('lj-theme'); } catch (e) { /* storage blocked */ }
+    if (t !== 'dark' && t !== 'light') t = window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    d.dataset.theme = t;
+  })();
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "LiquidJournal",
+  "applicationCategory": "FinanceApplication",
+  "operatingSystem": "Web",
+  "description": "A free trading journal. Auto-sync every trade, track your prop accounts and see why you win or lose.",
+  "offers": [
+    { "@type": "Offer", "name": "Essential", "price": "0", "priceCurrency": "USD" },
+    { "@type": "Offer", "name": "Prestige", "price": "14.99", "priceCurrency": "USD" },
+    { "@type": "Offer", "name": "Apex", "price": "35.99", "priceCurrency": "USD" }
+  ]
+}
+</script>

@@ -1,0 +1,15 @@
+{
+  "name": "liquidjournal-landing",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Static landing page rebuild: HTML partials plus procedural SVG art. No dependencies, no framework.",
+  "scripts": {
+    "art": "node scripts/build-art.mjs",
+    "html": "node scripts/build-html.mjs",
+    "build": "node scripts/build-art.mjs && node scripts/build-html.mjs",
+    "serve": "python3 -m http.server 8080"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

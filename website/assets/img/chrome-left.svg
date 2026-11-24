@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 1000" width="560" height="1000" role="img" aria-label="">
+  <defs>
+    <filter id="cl" filterUnits="userSpaceOnUse" x="-300" y="-300" width="1160" height="1700" color-interpolation-filters="sRGB">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="14" result="soft"/>
+      <feColorMatrix in="soft" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 26 -11" result="goo"/>
+      <feGaussianBlur in="goo" stdDeviation="16" result="height"/>
+      <feFlood flood-color="#050507" result="ink"/>
+      <feComposite in="ink" in2="goo" operator="in" result="body"/>
+      <feDiffuseLighting in="height" surfaceScale="18" diffuseConstant="0.36" lighting-color="#2c3446" result="sheen">
+        <feDistantLight azimuth="40" elevation="38"/>
+      </feDiffuseLighting>
+      <feComposite in="sheen" in2="goo" operator="in" result="sheenIn"/>
+      <feSpecularLighting in="height" surfaceScale="16" specularConstant="2.2" specularExponent="46" lighting-color="#ffffff" result="spec">
+        <feDistantLight azimuth="228" elevation="48"/>
+      </feSpecularLighting>
+      <feComposite in="spec" in2="goo" operator="in" result="specIn"/>
+      <feSpecularLighting in="height" surfaceScale="12" specularConstant="1.1" specularExponent="30" lighting-color="#b9c6e6" result="rim">
+        <feDistantLight azimuth="30" elevation="22"/>
+      </feSpecularLighting>
+      <feComposite in="rim" in2="goo" operator="in" result="rimIn"/>
+      <feGaussianBlur in="goo" stdDeviation="34" result="shadowBlur"/>
+      <feOffset in="shadowBlur" dy="26" result="shadowOff"/>
+      <feFlood flood-color="#0a1226" flood-opacity="0.22"/>
+      <feComposite in2="shadowOff" operator="in" result="shadow"/>
+      <feBlend in="sheenIn" in2="body" mode="screen" result="b1"/>
+      <feBlend in="rimIn" in2="b1" mode="screen" result="b2"/>
+      <feBlend in="specIn" in2="b2" mode="screen" result="b3"/>
+      <feMerge><feMergeNode in="shadow"/><feMergeNode in="b3"/></feMerge>
+    </filter>
+  </defs>
+  <g filter="url(#cl)">
+    <path d="M-120 130 C 90 70 250 150 215 285 C 178 425 20 410 -80 520" stroke="#000" stroke-width="118" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <path d="M-90 560 C 60 600 150 690 90 790" stroke="#000" stroke-width="86" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  </g>
+</svg>

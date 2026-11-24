@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" role="img" aria-label="">
+  <defs>
+    <linearGradient id="band" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eaf2fb" stop-opacity="0"/><stop offset="0.55" stop-color="#eaf2fb" stop-opacity="0.95"/><stop offset="1" stop-color="#eaf2fb" stop-opacity="0"/></linearGradient>
+    <filter id="mist" x="-10%" y="-80%" width="120%" height="260%"><feTurbulence type="fractalNoise" baseFrequency="0.0035 0.025" numOctaves="4" seed="4" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="90" xChannelSelector="R" yChannelSelector="G"/><feGaussianBlur stdDeviation="14"/></filter>
+  </defs>
+  <g filter="url(#mist)">
+    <rect x="-100" y="380" width="1800" height="150" fill="url(#band)"/>
+    <rect x="-100" y="440" width="1800" height="110" fill="url(#band)"/>
+    <rect x="-100" y="300" width="1800" height="120" fill="url(#band)" opacity="0.5"/>
+  </g>
+</svg>

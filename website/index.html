@@ -1,0 +1,1320 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LiquidJournal — the free trading journal that reads your trades back</title>
+<meta name="description" content="A free trading journal. Auto-sync every trade, track your prop accounts and see why you win or lose.">
+<meta name="theme-color" content="#ffffff">
+<meta name="color-scheme" content="light dark">
+<meta property="og:type" content="website">
+<meta property="og:title" content="LiquidJournal — Stop being the liquidity">
+<meta property="og:description" content="A free trading journal. Auto-sync every trade, track your prop accounts and see why you win or lose.">
+<link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="assets/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/img/chrome-right.svg" as="image" type="image/svg+xml">
+<link rel="stylesheet" href="assets/css/base.css">
+<link rel="stylesheet" href="assets/css/hero.css">
+<link rel="stylesheet" href="assets/css/features.css">
+<link rel="stylesheet" href="assets/css/mocks.css">
+<link rel="stylesheet" href="assets/css/commerce.css">
+<script>
+  /* before first paint: remember theme, flag that scripting is available */
+  (function () {
+    var d = document.documentElement;
+    d.classList.add('js');
+    var t = null;
+    try { t = localStorage.getItem('lj-theme'); } catch (e) { /* storage blocked */ }
+    if (t !== 'dark' && t !== 'light') t = window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    d.dataset.theme = t;
+  })();
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "LiquidJournal",
+  "applicationCategory": "FinanceApplication",
+  "operatingSystem": "Web",
+  "description": "A free trading journal. Auto-sync every trade, track your prop accounts and see why you win or lose.",
+  "offers": [
+    { "@type": "Offer", "name": "Essential", "price": "0", "priceCurrency": "USD" },
+    { "@type": "Offer", "name": "Prestige", "price": "14.99", "priceCurrency": "USD" },
+    { "@type": "Offer", "name": "Apex", "price": "35.99", "priceCurrency": "USD" }
+  ]
+}
+</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <!-- brand mark: a ring with an off-centre hole -->
+    <symbol id="logo" viewBox="0 0 32 32"><g transform="rotate(-18 16 16)"><path fill="currentColor" fill-rule="evenodd" d="M3 17.5a13 11.2 0 1 0 26 0a13 11.2 0 1 0-26 0zM11.4 15.2a7.6 5 0 1 0 15.2 0a7.6 5 0 1 0-15.2 0z"/></g></symbol>
+
+    <!-- UI glyphs -->
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h13m0 0-5.5-5.5M18 12l-5.5 5.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.6 4.2 4.1L19 7.3" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z"/></symbol>
+    <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 2.8 2.8 6 6.5.7-4.9 4.4 1.4 6.4L12 17l-5.8 3.3 1.4-6.4L2.7 9.5l6.5-.7z"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9 7 7M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.2A8.2 8.2 0 0 1 9.8 4 8.5 8.5 0 1 0 20 14.2z"/></symbol>
+    <symbol id="i-gift" viewBox="0 0 24 24"><path d="M3.5 8.5h17v4h-17zM5 12.5h14V21H5zM12 8.5V21M12 8.5C9 8.5 7.2 7.4 7.2 6a2.2 2.2 0 0 1 3.9-1.3zm0 0c3 0 4.8-1.1 4.8-2.5a2.2 2.2 0 0 0-3.9-1.3z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" transform="translate(0 1.5)"/></symbol>
+    <symbol id="i-verified" viewBox="0 0 24 24"><path fill="currentColor" d="m12 1.8 2.5 1.7 3-.1 1.2 2.7 2.6 1.5-.5 3L22 12l-1.6 2.2.5 3-2.6 1.5-1.2 2.7-3-.1L12 22.2l-2.5-1.7-3 .1-1.2-2.7-2.6-1.5.5-3L2 12l1.6-2.2-.5-3 2.6-1.5 1.2-2.7 3 .1z"/><path d="m8 12.2 2.8 2.8L16.2 9.6" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-calendar" viewBox="0 0 24 24"><path d="M5 5.5h14a1.5 1.5 0 0 1 1.5 1.5v12A1.5 1.5 0 0 1 19 20.5H5A1.5 1.5 0 0 1 3.5 19V7A1.5 1.5 0 0 1 5 5.5zM3.5 10h17M8 3.5v4M16 3.5v4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 4.5 6v5.4c0 4.4 3 8.2 7.5 9.6 4.5-1.4 7.5-5.2 7.5-9.6V6z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="m8.8 12 2.3 2.3 4.2-4.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+
+    <!-- tile glyphs (solid white on glossy black) -->
+    <symbol id="g-journal" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zm3 5v1.6h2V8H8zm4 0v1.6h5V8h-5zm-4 3.2v1.6h2v-1.6H8zm4 0v1.6h5v-1.6h-5zm-4 3.2V16h2v-1.6H8zm4 0V16h5v-1.6h-5z"/></symbol>
+    <symbol id="g-chart" viewBox="0 0 24 24"><path d="M7 3.5v3H5v8h2v3.5h2v-3.5h2v-8H9v-3H7zm8 3v2h-2v7h2V19h2v-3.5h2v-7h-2v-2h-2z"/></symbol>
+    <symbol id="g-share" viewBox="0 0 24 24"><path d="m12 2.8 4.6 4.6-1.5 1.5-2.1-2.1V15h-2V6.8L8.9 8.9 7.4 7.4zM5 13h2v5h10v-5h2v7H5z"/></symbol>
+    <symbol id="g-analytics" viewBox="0 0 24 24"><path d="M4 20V10.5h4V20zm6 0V4h4v16zm6 0v-7h4v7z"/></symbol>
+    <symbol id="g-brief" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M9 4h6a2 2 0 0 1 2 2v1h2.5A1.5 1.5 0 0 1 21 8.5v10a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5v-10A1.5 1.5 0 0 1 4.5 7H7V6a2 2 0 0 1 2-2zm0 2v1h6V6zm-4 6.5v1.2h14v-1.2z"/></symbol>
+    <symbol id="g-study" viewBox="0 0 24 24"><path d="M12 4 1.5 9 12 14l8-3.8V16h2V9zM5.5 13v3.6c0 1.7 2.9 3.2 6.5 3.2s6.5-1.5 6.5-3.2V13L12 16z"/></symbol>
+    <symbol id="g-dash" viewBox="0 0 24 24"><path d="M4 4h7v7H4zm9 0h7v5h-7zM4 13h7v7H4zm9-2h7v9h-7z"/></symbol>
+    <symbol id="g-coach" viewBox="0 0 24 24"><path d="M12 2.5c.7 4.6 2.9 6.8 7.5 7.5-4.6.7-6.8 2.9-7.5 7.5-.7-4.6-2.9-6.8-7.5-7.5 4.6-.7 6.8-2.9 7.5-7.5zm6 12c.4 2.3 1.2 3.1 3.5 3.5-2.3.4-3.1 1.2-3.5 3.5-.4-2.3-1.2-3.1-3.5-3.5 2.3-.4 3.1-1.2 3.5-3.5z"/></symbol>
+    <symbol id="g-feed" viewBox="0 0 24 24"><path d="M4 5h2.4v2.4H4zm4.6.2H20v2H8.6zM4 10.8h2.4v2.4H4zm4.6.2H20v2H8.6zM4 16.6h2.4V19H4zm4.6.2H20v2H8.6z"/></symbol>
+    <symbol id="g-user" viewBox="0 0 24 24"><path d="M12 3.5a4.2 4.2 0 1 1 0 8.4 4.2 4.2 0 0 1 0-8.4zM4.5 20c.4-3.9 3.4-6.2 7.5-6.2s7.1 2.3 7.5 6.2z"/></symbol>
+    <symbol id="g-chat" viewBox="0 0 24 24"><path d="M3 5.5A2.5 2.5 0 0 1 5.5 3h8A2.5 2.5 0 0 1 16 5.5V9h2.5A2.5 2.5 0 0 1 21 11.5v6a2.5 2.5 0 0 1-2.5 2.5H17l-3 2.5V20h-2.5A2.5 2.5 0 0 1 9 17.5V15H8l-3 2.5V15A2.5 2.5 0 0 1 3 12.5z"/></symbol>
+    <symbol id="g-live" viewBox="0 0 24 24"><path d="M12 10.2a1.8 1.8 0 1 1 0 3.6 1.8 1.8 0 0 1 0-3.6zM8.3 8.3l1.2 1.4a3.7 3.7 0 0 0 0 4.6l-1.2 1.4a5.7 5.7 0 0 1 0-7.4zm7.4 0a5.7 5.7 0 0 1 0 7.4l-1.2-1.4a3.7 3.7 0 0 0 0-4.6zM5.4 5.6l1.2 1.4a7.7 7.7 0 0 0 0 10l-1.2 1.4a9.7 9.7 0 0 1 0-12.8zm13.2 0a9.7 9.7 0 0 1 0 12.8L17.4 17a7.7 7.7 0 0 0 0-10z"/></symbol>
+    <symbol id="g-bubble" viewBox="0 0 24 24"><path d="M6.5 5h11A3.5 3.5 0 0 1 21 8.5v6A3.5 3.5 0 0 1 17.5 18H11l-4.5 3v-3A3.5 3.5 0 0 1 3 14.5v-6A3.5 3.5 0 0 1 6.5 5zM8 11a1.2 1.2 0 1 0 0 .01zm4 0a1.2 1.2 0 1 0 0 .01zm4 0a1.2 1.2 0 1 0 0 .01z" fill-rule="evenodd"/></symbol>
+    <symbol id="g-camera" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M8 3h8a5 5 0 0 1 5 5v8a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5V8a5 5 0 0 1 5-5zm4 5.2a3.8 3.8 0 1 0 0 7.6 3.8 3.8 0 0 0 0-7.6zm0 1.8a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm4.9-3.4a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/></symbol>
+    <symbol id="g-note" viewBox="0 0 24 24"><path d="M15 3v10.2A3.7 3.7 0 1 0 17 16.5V7.6c1 .9 2.2 1.4 3.5 1.4V6.8c-1.9 0-3.3-1.3-3.5-3.8z"/></symbol>
+    <symbol id="g-x" viewBox="0 0 24 24"><path d="M3.5 3.5h4.6l4.4 6 5.2-6h2.2l-6.4 7.4 7 9.6h-4.6l-4.7-6.4-5.5 6.4H3.5l6.7-7.8z"/></symbol>
+  </defs>
+</svg>
+<header class="nav" id="nav">
+  <div class="nav__bar">
+    <a class="brand" href="#top" aria-label="LiquidJournal, back to top">
+      <svg class="logo" aria-hidden="true"><use href="#logo"/></svg>LiquidJournal
+    </a>
+    <nav class="nav__links" aria-label="Primary">
+      <a href="#showcase" data-spy="showcase">Features</a>
+      <a href="#community" data-spy="community">Community</a>
+      <a href="#reviews" data-spy="reviews">Reviews</a>
+      <span class="nav__mark" aria-hidden="true"><svg class="logo"><use href="#logo"/></svg></span>
+      <a href="#pricing" data-spy="pricing">Pricing</a>
+      <a href="#story" data-spy="story">About</a>
+      <a href="#affiliate" data-spy="affiliate">Affiliates</a>
+    </nav>
+    <div class="nav__right">
+      <button class="toggle" type="button" id="theme-toggle" aria-label="Dark theme" aria-pressed="false">
+        <svg class="icon sun" aria-hidden="true"><use href="#i-sun"/></svg>
+        <svg class="icon moon" aria-hidden="true"><use href="#i-moon"/></svg>
+      </button>
+      <a class="nav__login" href="#login">Log in</a>
+      <a class="btn btn--black btn--sm" href="#signup">Sign up</a>
+      <button class="nav__burger" type="button" id="burger" aria-expanded="false" aria-controls="drawer" aria-label="Menu"><span></span></button>
+    </div>
+  </div>
+</header>
+<div class="drawer" id="drawer">
+  <a href="#showcase">Features</a>
+  <a href="#community">Community</a>
+  <a href="#reviews">Reviews</a>
+  <a href="#pricing">Pricing</a>
+  <a href="#story">About</a>
+  <a href="#affiliate">Affiliates</a>
+  <a class="btn btn--frost" href="#login">Log in</a>
+  <a class="btn btn--black" href="#signup">Sign up free</a>
+</div>
+<main id="main">
+<section class="hero" id="top" aria-labelledby="hero-title">
+  <div class="hero__art" aria-hidden="true">
+    <img class="hero__blob hero__blob--l" src="assets/img/chrome-left.svg" alt="" width="560" height="1000" fetchpriority="high" decoding="async">
+    <img class="hero__blob hero__blob--r" src="assets/img/chrome-right.svg" alt="" width="640" height="1100" fetchpriority="high" decoding="async">
+    <div class="hero__dots"></div>
+  </div>
+
+  <div class="container hero__inner">
+    <h1 class="hero__title" id="hero-title" data-rotator>
+      <span class="hero__variant is-active">
+        <span class="hero__l1"><span class="q q--o" aria-hidden="true">&quot;</span><span class="sel sel--sans is-on">Learn</span></span>
+        <span class="hero__l2">from your past<span class="q q--c" aria-hidden="true">&quot;</span></span>
+      </span>
+      <span class="hero__variant" aria-hidden="true">
+        <span class="hero__l1"><span class="q q--o">&quot;</span><span class="sel sel--sans is-on">Stop</span></span>
+        <span class="hero__l2">being the liquidity<span class="q q--c">&quot;</span></span>
+      </span>
+    </h1>
+
+    <p class="hero__sub lead">A <span class="uline">FREE trading journal</span>. Auto-sync every trade, track your prop accounts and see why you win or lose.</p>
+
+    <div class="hero__cta">
+      <a class="btn btn--black" href="#signup">Sign up free <span class="btn__go"><svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></span></a>
+      <a class="btn btn--frost" href="#showcase">See it work</a>
+    </div>
+
+    <ul class="hero__stats" aria-label="LiquidJournal in numbers">
+      <li><b data-count="6794">6,794</b><span>traders</span></li>
+      <li><b>4.9 <span class="star" aria-hidden="true">★</span></b><span>average rating</span></li>
+      <li><b data-count="23988">23,988</b><span>trades logged</span></li>
+    </ul>
+    <p class="hero__note fine">Some reviewers received perks from LiquidJournal.</p>
+
+    <div class="hero__cards">
+      <article class="mini mini--a">
+        <h2>Your best setup</h2>
+        <p>Manipulation, 77% won over 30 trades</p>
+        <div class="mini__row">
+          <span class="chip">A+</span><b class="up">+$17,334</b>
+          <span class="tile"><svg class="icon" aria-hidden="true"><use href="#g-journal"/></svg></span>
+          <span class="tile"><svg class="icon" aria-hidden="true"><use href="#g-chart"/></svg></span>
+          <span class="tile"><svg class="icon" aria-hidden="true"><use href="#g-share"/></svg></span>
+        </div>
+      </article>
+      <article class="mini mini--b">
+        <h2>Your costliest habit</h2>
+        <p>Breaking your plan, 6% won over 17 trades</p>
+        <div class="mini__row">
+          <span class="chip">-$5,393</span>
+          <span class="tile"><svg class="icon" aria-hidden="true"><use href="#g-analytics"/></svg></span>
+          <span class="tile"><svg class="icon" aria-hidden="true"><use href="#g-brief"/></svg></span>
+          <span class="tile"><svg class="icon" aria-hidden="true"><use href="#g-study"/></svg></span>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+<section class="section connect" id="connect" aria-labelledby="connect-title">
+  <div class="container connect__head">
+    <h2 class="h2" id="connect-title" data-reveal>Connect once. Your trades come in by themselves.</h2>
+    <div class="connect__aside rise">
+      <p class="lead">Tradovate, Replica Copier, TradeLocker, TopstepX and MetaTrader 5 sync today. Each connection is free.</p>
+      <span class="pill"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Free on every plan</span>
+    </div>
+  </div>
+
+  <div class="carousel" data-marquee data-speed="46" role="group" aria-label="Supported connections">
+    <ul class="carousel__track">
+      <li class="ccard">
+        <span class="ctile ctile--blue" aria-hidden="true">T</span>
+        <div class="ccard__body"><b>Tradovate</b><span class="sync"><i></i>Syncing now · Free</span><small>Auto-journals every trade</small></div>
+      </li>
+      <li class="ccard">
+        <span class="ccard__tag"><svg class="logo" aria-hidden="true"><use href="#logo"/></svg><span aria-hidden="true">×</span><i aria-hidden="true">R</i>Partner</span>
+        <span class="ctile ctile--silver" aria-hidden="true">R</span>
+        <div class="ccard__body"><b>Replica Copier</b><span class="sync"><i></i>Syncing now · Free</span><small>Auto-journals every copied trade</small></div>
+      </li>
+      <li class="ccard">
+        <span class="ctile ctile--black" aria-hidden="true">TL</span>
+        <div class="ccard__body"><b>TradeLocker</b><span class="sync"><i></i>Syncing now · Free</span><small>Auto-journals every trade</small></div>
+      </li>
+      <li class="ccard">
+        <span class="ctile ctile--white" aria-hidden="true">X</span>
+        <div class="ccard__body"><b>TopstepX</b><span class="sync"><i></i>Syncing now · Free</span><small>Auto-journals every trade</small></div>
+      </li>
+      <li class="ccard">
+        <span class="ccard__new">New</span>
+        <span class="ctile ctile--green" aria-hidden="true">M5</span>
+        <div class="ccard__body"><b>MetaTrader 5</b><span class="sync"><i></i>Syncing now · Free</span><small>Auto-journals every trade</small></div>
+      </li>
+    </ul>
+  </div>
+
+  <div class="container connect__foot">
+    <p class="soon"><span>Coming soon</span><span class="soon__tile" aria-hidden="true">R</span><b>Rithmic</b></p>
+    <p class="fine">More partners on the way. Make something traders use? <a class="link" href="mailto:hello@example.com?subject=Partnership">Write to us.</a></p>
+  </div>
+</section>
+<section class="section story" id="story" aria-labelledby="story-title">
+  <img class="story__peak" src="assets/img/peak-left.svg" alt="" aria-hidden="true" width="640" height="760" loading="lazy" decoding="async">
+  <div class="container story__grid">
+    <figure class="qcard rise">
+      <div class="qcard__inner">
+        <figcaption class="qcard__who">
+          <span class="av" aria-hidden="true">K</span>
+          <span><b>Kai (sample)</b><small>Discord</small></span>
+        </figcaption>
+        <blockquote>
+          <p>The cleanest journal I have tried. Every trade shows up on its own, the stats are easy to read and I actually enjoy writing the day up now.</p>
+        </blockquote>
+        <p class="qcard__fine fine">Sample review. Some reviewers are founding members and received perks from LiquidJournal.</p>
+      </div>
+    </figure>
+
+    <div class="story__copy">
+      <h2 class="display-2" id="story-title" data-reveal>You can't do what <span class="sel">bores</span> you.</h2>
+      <div class="story__text">
+        <p class="rise">If writing up a trade feels like <span class="hl">homework</span>, you stop doing it.</p>
+        <p class="rise" style="--d:.08s">A week of skipped entries later, <span class="hl">the same mistake</span> comes back, and you can't say why.</p>
+        <p class="rise muted" style="--d:.16s">A journal you never open can't teach you anything.</p>
+        <p class="rise strong" style="--d:.24s">So we made Liquid the journal you want to open after the bell.</p>
+      </div>
+    </div>
+  </div>
+</section>
+<section class="scene" id="scene" aria-labelledby="scene-title" data-scene>
+  <div class="scene__stage">
+    <div class="scene__layer scene__sky"><img src="assets/img/scene-sky.svg" alt="" width="1600" height="900" loading="lazy" decoding="async"></div>
+    <div class="scene__layer scene__range"><img src="assets/img/scene-range.svg" alt="" width="1600" height="900" loading="lazy" decoding="async"></div>
+    <div class="scene__layer scene__peak"><img src="assets/img/scene-peak.svg" alt="" width="1600" height="900" loading="lazy" decoding="async"></div>
+    <div class="scene__layer scene__fog"><img src="assets/img/scene-fog.svg" alt="" width="1600" height="900" loading="lazy" decoding="async"></div>
+    <div class="scene__layer scene__snow"><img src="assets/img/scene-snow.svg" alt="" width="1600" height="900" loading="lazy" decoding="async"></div>
+    <img class="scene__trail" src="assets/img/scene-trail.svg" alt="" width="200" height="600" loading="lazy" decoding="async">
+    <img class="scene__penguin" src="assets/img/scene-penguin.svg" alt="A penguin walking away across the snow" width="60" height="100" loading="lazy" decoding="async">
+
+    <div class="scene__lines">
+      <h2 class="scene__line" id="scene-title">The market was never the opponent.</h2>
+      <p class="scene__line">You are the one who moves the stop.</p>
+      <p class="scene__line">Wait for your setup. Flat is a position too.</p>
+      <p class="scene__line">Auto-sync every trade. Liquid finds the pattern you keep repeating.</p>
+    </div>
+    <div class="scene__fade scene__fade--t" aria-hidden="true"></div>
+    <div class="scene__fade scene__fade--b" aria-hidden="true"></div>
+  </div>
+</section>
+
+<section class="outro" aria-label="Trading is you versus you">
+  <p class="lead outro__text" data-reveal data-tone="lead">You are. The early entry. The moved stop. The size you took because you were angry. Trading always was you versus you. Use Liquid, and understand yourself.</p>
+</section>
+<section class="panel mentor" id="mentor" aria-labelledby="mentor-title">
+  <div class="mentor__inner">
+    <h2 class="display-3" id="mentor-title" data-reveal>You already paid for the lesson.</h2>
+    <p class="mentor__sub rise">Every red trade. Every moved stop. Every revenge entry. All tuition.</p>
+
+    <div class="mentor__grid">
+      <div class="tcard rise">
+        <h3>Two ways to fix the same problem</h3>
+        <table class="vs-table">
+          <thead>
+            <tr><th scope="col"><span class="sr-only">Question</span></th><th scope="col">The mentor</th><th scope="col" class="is-liquid">Liquid</th></tr>
+          </thead>
+          <tbody>
+            <tr><th scope="row">Hours it is awake</th><td>Their working hours</td><td class="is-liquid">All of them</td></tr>
+            <tr><th scope="row">Trades it remembers</th><td>The ones you bring up</td><td class="is-liquid">Every trade you log</td></tr>
+            <tr><th scope="row">Waits for</th><td>Your next session</td><td class="is-liquid">Nothing</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <article class="mcard mcard--mentor rise" data-host style="--d:.08s">
+        <header>
+          <h3>The mentor</h3>
+          <button class="plus" type="button" aria-expanded="false" aria-controls="m-more" data-toggle="m-more" aria-label="What the money actually buys"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></button>
+        </header>
+        <p class="mcard__price">$100 <span>to</span> $7,000<span>/mo</span></p>
+        <p class="mcard__for">for one person’s attention</p>
+        <div class="mcard__more" id="m-more" hidden>
+          <h4>What the money actually buys</h4>
+          <p>A good mentor is worth paying for. They watch you trade, name the entry you should not have taken, and hold you to rules you wrote yourself. What they cannot do is carry every trade you have ever placed in their head.</p>
+        </div>
+        <h4 class="mcard__cap">What a person gives you</h4>
+        <ul class="mcard__list">
+          <li>Real guidance. Real accountability.</li>
+          <li>Live feedback while you trade.</li>
+          <li>One strategy. One brain. Forgets your trades by Monday.</li>
+        </ul>
+      </article>
+
+      <span class="vs" aria-hidden="true">vs</span>
+
+      <article class="mcard mcard--liquid rise" data-host style="--d:.16s">
+        <header>
+          <h3>Liquid</h3>
+          <button class="plus plus--blue" type="button" aria-expanded="false" aria-controls="l-more" data-toggle="l-more" aria-label="What the journal actually is"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></button>
+        </header>
+        <p class="mcard__price"><span class="blue">Free.</span> <span class="grey">The coach is</span> $35.99<span>/mo on Apex</span></p>
+        <p class="mcard__for">the journal is free forever, always</p>
+        <div class="mcard__more" id="l-more" hidden>
+          <h4>What the journal actually is</h4>
+          <p>Liquid is not a replacement for that. It is the part no person can be: awake at 3am, reading every trade you have ever logged, and naming the pattern before you repeat it again.</p>
+        </div>
+        <div class="mcard__keep"><span>What you keep</span><span class="chip">Apex</span><b>3 / 3</b></div>
+        <ul class="keep">
+          <li><span class="tile tile--sm"><svg class="icon" aria-hidden="true"><use href="#g-journal"/></svg></span>Reads every trade you have ever taken.</li>
+          <li><span class="tile tile--sm"><svg class="icon" aria-hidden="true"><use href="#g-analytics"/></svg></span>Remembers all of it. Forgets none of it.</li>
+          <li><span class="tile tile--sm"><svg class="icon" aria-hidden="true"><use href="#g-coach"/></svg></span>The coach is already inside, and it never sleeps.</li>
+        </ul>
+      </article>
+    </div>
+
+    <div class="sale rise">
+      <span class="sale__label">Apex with a sale</span>
+      <span class="sale__chip"><b>40% off</b><strong data-sale="40">$35.99</strong><small>/mo</small></span>
+      <span class="sale__chip"><b>50% off</b><strong data-sale="50">$30.00</strong><small>/mo</small></span>
+      <span class="sale__chip"><b>60% off</b><strong data-sale="60">$24.00</strong><small>/mo</small></span>
+    </div>
+    <p class="mentor__fine fine">Logging and keeping every trade is free forever. The coach that reads them back is Apex, $35.99 a month with code LIQUID40. Mentorship prices are the real market range for trading coaches and rooms.</p>
+  </div>
+</section>
+
+<p class="reads" data-reveal><strong>Liquid</strong> reads it back. Trade by trade, until the pattern has nowhere to hide.</p>
+<section class="showcase" id="showcase" aria-labelledby="showcase-title">
+  <img class="showcase__peak showcase__peak--l" src="assets/img/peak-left.svg" alt="" aria-hidden="true" width="640" height="760" loading="lazy" decoding="async">
+  <img class="showcase__peak showcase__peak--r" src="assets/img/peak-right.svg" alt="" aria-hidden="true" width="640" height="760" loading="lazy" decoding="async">
+  <div class="showcase__fog" aria-hidden="true"></div>
+
+  <div class="container showcase__head">
+    <h2 class="display-3" id="showcase-title" data-reveal>One journal for the whole session.</h2>
+    <p class="lead rise">Pick a part to see it in the app.</p>
+    <div class="seg rise" role="group" aria-label="App style">
+      <button type="button" data-skin="classic" aria-pressed="true">Classic</button>
+      <button type="button" data-skin="custom" aria-pressed="false">Custom</button>
+    </div>
+  </div>
+
+  <div class="container showcase__stage">
+    <div class="chips" role="tablist" aria-label="Parts of the app" aria-orientation="vertical">
+      <button class="ctab ctab--l1" role="tab" id="tab-dashboard" data-tab="dashboard" data-title="Dashboard" aria-selected="true" aria-controls="panel-dashboard"><span class="tile tile--xs"><svg class="icon" aria-hidden="true"><use href="#g-dash"/></svg></span>Dashboard</button>
+      <button class="ctab ctab--l2" role="tab" id="tab-journal" data-tab="journal" data-title="Journal" aria-selected="false" tabindex="-1" aria-controls="panel-journal"><span class="tile tile--xs"><svg class="icon" aria-hidden="true"><use href="#g-journal"/></svg></span>Journal</button>
+      <button class="ctab ctab--l3" role="tab" id="tab-analytics" data-tab="analytics" data-title="Analytics" aria-selected="false" tabindex="-1" aria-controls="panel-analytics"><span class="tile tile--xs"><svg class="icon" aria-hidden="true"><use href="#g-analytics"/></svg></span>Analytics</button>
+      <button class="ctab ctab--r1" role="tab" id="tab-propdesk" data-tab="propdesk" data-title="Prop desk" aria-selected="false" tabindex="-1" aria-controls="panel-propdesk"><span class="tile tile--xs"><svg class="icon" aria-hidden="true"><use href="#g-brief"/></svg></span>Prop desk</button>
+      <button class="ctab ctab--r2" role="tab" id="tab-study" data-tab="study" data-title="Study" aria-selected="false" tabindex="-1" aria-controls="panel-study"><span class="tile tile--xs"><svg class="icon" aria-hidden="true"><use href="#g-study"/></svg></span>Study</button>
+      <button class="ctab ctab--r3" role="tab" id="tab-coach" data-tab="coach" data-title="Coach" aria-selected="false" tabindex="-1" aria-controls="panel-coach"><span class="tile tile--xs"><svg class="icon" aria-hidden="true"><use href="#g-coach"/></svg></span>Coach</button>
+    </div>
+
+    <div class="win" data-skin="classic" data-view="dashboard">
+      <div class="win__bar"><span class="win__dots" aria-hidden="true"><i></i><i></i><i></i></span><span class="win__title" id="win-title">Dashboard</span></div>
+      <div class="win__body">
+        <div class="mk">
+          <div class="mk-top" aria-hidden="true">
+            <span class="mk-menu"><b data-m="dashboard" class="on">Dashboard</b><i data-m="journal">Journal</i><i>Showcase</i><i>Strategy</i><i data-m="study">Study</i><strong>LiquidJournal</strong><i data-m="analytics">Analytics</i><i data-m="propdesk">Propfirm</i><i data-m="coach">AI</i><i>Links</i><i>Community</i></span>
+            <span class="mk-user">Welcome <u></u></span>
+          </div>
+          <div class="mk-pane" data-pane="dashboard" role="img" aria-label="Preview of the LiquidJournal dashboard with total P&amp;L, performance cards, equity curve and Liquid Score">
+<div class="mk-dash">
+  <aside class="mk-side">
+    <p class="mk-cap">Desk</p>
+    <p class="mk-cap mk-cap--row">Accounts <span>22 · Open</span></p>
+    <div class="mk-acct"><p><u class="a"></u><b>TOPSTEP 50K</b><em>+$358</em></p><s><i style="--v:34%"></i></s><small>Trail · $1,552 left</small></div>
+    <div class="mk-acct"><p><u class="b"></u><b>APEX 50K</b><em>+$1,247</em></p><s><i style="--v:72%"></i></s><small>Consistency · 38% of limit</small></div>
+    <div class="mk-acct"><p><u class="c"></u><b>APEX 50K #1</b><em>+$13,500</em></p><s><i style="--v:100%"></i></s><small>Payout ready · draw $1,000</small></div>
+    <div class="mk-guard"><span>Guardrails</span><s class="mk-sw"></s></div>
+  </aside>
+
+  <section class="mk-main">
+    <div class="mk-banner">
+      <svg class="icon" aria-hidden="true"><use href="#logo"/></svg>
+      <p><b>Your September recap is ready</b><small>Best day, top setup, streaks. Played like a story.</small></p>
+      <span class="mk-play"><svg class="icon" aria-hidden="true"><use href="#i-play"/></svg>Play</span>
+    </div>
+    <p class="mk-cap mk-center">Total P&amp;L</p>
+    <p class="mk-total">+$11,575</p>
+    <p class="mk-pills"><span>↗ 8.8% in 7 days</span><span>47W / 37L</span><span class="blk">Open journal ↗</span></p>
+    <div class="mk-rowcap"><span class="mk-cap">Performance</span><span>Full analytics →</span></div>
+    <div class="mk-row3">
+      <div class="mk-card"><header><span>Avg win RR</span><em>PF 2.07</em></header><p class="mk-big">1.36R</p><s class="mk-slider"><i style="--v:56%"></i></s><footer><span>0</span><span>2</span><span>4</span></footer></div>
+      <div class="mk-card mk-card--ring"><svg viewBox="0 0 40 40" class="mk-ring"><circle cx="20" cy="20" r="15" fill="none" stroke="#e5e7ec" stroke-width="4"/><circle cx="20" cy="20" r="15" fill="none" stroke="#0b0b0c" stroke-width="4" stroke-dasharray="52.8 94.2" stroke-linecap="round" transform="rotate(-90 20 20)"/><text x="20" y="22.6" text-anchor="middle" font-size="8" font-weight="600" fill="#0b0b0c">56%</text></svg><div><span class="mk-bar"><i style="--v:56%"></i><b>47W</b></span><span class="mk-bar mk-bar--l"><i style="--v:44%"></i><b>37L</b></span></div></div>
+      <div class="mk-card"><header><span>Avg win / loss</span></header><span class="mk-bar"><i style="--v:100%"></i><b>$633</b></span><span class="mk-bar mk-bar--l"><i style="--v:62%"></i><b>$390</b></span></div>
+    </div>
+    <div class="mk-row3">
+      <div class="mk-card"><header><span>Cumulative P&amp;L</span><em>+$11,479</em></header><svg viewBox="0 0 120 50" class="mk-spark" preserveAspectRatio="none"><defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0b0b0c" stop-opacity=".16"/><stop offset="1" stop-color="#0b0b0c" stop-opacity="0"/></linearGradient></defs><path d="M0 44 L10 41 L20 43 L30 36 L40 38 L50 30 L60 32 L72 22 L84 25 L96 13 L108 9 L120 3 V50 H0Z" fill="url(#sg)"/><path d="M0 44 L10 41 L20 43 L30 36 L40 38 L50 30 L60 32 L72 22 L84 25 L96 13 L108 9 L120 3" fill="none" stroke="#0b0b0c" stroke-width="1.4" stroke-linejoin="round"/></svg></div>
+      <div class="mk-card"><header><span>This week</span><em>Oct 19 to today</em></header><p class="mk-big">+$915</p><div class="mk-week"><i style="--v:70%"></i><i style="--v:34%" class="l"></i><i style="--v:88%"></i><i style="--v:20%"></i><i style="--v:55%"></i><i></i><i></i></div></div>
+      <div class="mk-card"><header><span>Liquid score</span><em>30 days</em></header><p class="mk-big">81</p><svg viewBox="0 0 60 50" class="mk-radar"><polygon points="30,6 52,22 44,44 16,44 8,22" fill="none" stroke="#d6d9e0" stroke-width=".8"/><polygon points="30,14 46,24 40,40 20,40 14,25" fill="rgba(11,11,12,.12)" stroke="#0b0b0c" stroke-width="1"/></svg></div>
+    </div>
+  </section>
+
+  <aside class="mk-rail">
+    <p class="mk-cap mk-cap--row">The plan · NY AM <span>Edit</span></p>
+    <p class="mk-bias">Bias <u>Bullish</u></p>
+    <p class="mk-cap">Key levels</p><p class="mk-txt">4h FVG 25,912–25,940 · Draw 25,960</p>
+    <p class="mk-cap">Rule reminder</p><p class="mk-txt">Partials are allowed when the level rejects. Second trade only after a clean reset.</p>
+    <p class="mk-cap">Checklist</p>
+    <p class="mk-chk"><i></i>Have we cleared a high time frame?</p>
+    <p class="mk-chk"><i></i>Do we have an inverse in the upside?</p>
+    <p class="mk-chk"><i></i>Before: think, is this entry better?</p>
+    <p class="mk-cap mk-cap--row">Session <span>2W / 0L</span></p><p class="mk-sess">+$1,292.00</p>
+    <p class="mk-cap">Recent trades</p>
+    <p class="mk-tr"><u></u><b>MNQ</b><small>Manipulation</small><em>+$452.00</em></p>
+    <p class="mk-tr"><u></u><b>MNQ</b><small>Killzone sweep</small><em>+$840.00</em></p>
+    <p class="mk-tr"><u class="l"></u><b>MNQ</b><small>Early entry</small><em class="l">-$380.00</em></p>
+  </aside>
+</div>
+          </div>
+          <div class="mk-pane" data-pane="journal" hidden role="img" aria-label="Preview of a journal entry: an MNQ long graded A+ with chart, emotions and notes">
+<div class="mk-journal">
+  <aside class="mk-list">
+    <p class="mk-cap mk-cap--row">Today <span>3 trades</span></p>
+    <p class="mk-trade on"><u></u><span><b>MNQ long</b><small>Killzone Sweep · 1h 7m</small></span><em>+$1,200</em></p>
+    <p class="mk-trade"><u></u><span><b>MNQ long</b><small>Manipulation · 22m</small></span><em>+$452</em></p>
+    <p class="mk-trade"><u class="l"></u><span><b>MNQ short</b><small>Early entry · 4m</small></span><em class="l">-$380</em></p>
+    <p class="mk-cap mk-cap--row mk-gap">Yesterday <span>2 trades</span></p>
+    <p class="mk-trade"><u></u><span><b>ES long</b><small>Breakout · 38m</small></span><em>+$610</em></p>
+    <p class="mk-trade"><u class="l"></u><span><b>ES long</b><small>Plan broken · 9m</small></span><em class="l">-$240</em></p>
+  </aside>
+  <section class="mk-detail">
+    <header class="mk-dhead"><div class="mk-ttl">MNQ long <span class="mk-grade">A+</span></div><p><b>+$1,200</b><span>1.67R</span><span>Killzone Sweep, held 1h 7m</span></p></header>
+    <svg viewBox="0 0 200 84" class="mk-chart" preserveAspectRatio="none">
+      <g stroke="#e8eaef" stroke-width=".4"><path d="M0 14H200M0 34H200M0 54H200M0 74H200"/></g>
+      <g stroke-width=".7" stroke-linecap="round">
+        <path stroke="#0b0b0c" d="M10 50v14M10 54v8"/><path stroke="#0b0b0c" d="M20 46v16"/><path stroke="#c4c8d2" d="M30 44v18"/>
+        <path stroke="#0b0b0c" d="M40 52v14"/><path stroke="#c4c8d2" d="M50 48v12"/><path stroke="#0b0b0c" d="M60 44v14"/>
+        <path stroke="#c4c8d2" d="M70 40v14"/><path stroke="#0b0b0c" d="M80 46v12"/><path stroke="#0b0b0c" d="M90 36v14"/>
+        <path stroke="#c4c8d2" d="M100 32v14"/><path stroke="#0b0b0c" d="M110 26v14"/><path stroke="#0b0b0c" d="M120 22v13"/>
+        <path stroke="#c4c8d2" d="M130 20v12"/><path stroke="#0b0b0c" d="M140 16v13"/><path stroke="#0b0b0c" d="M150 12v12"/>
+        <path stroke="#c4c8d2" d="M160 14v11"/><path stroke="#0b0b0c" d="M170 10v12"/>
+      </g>
+      <g stroke-width=".35" stroke-dasharray="1.6 1.2"><path stroke="#1f4fe3" d="M40 56H190"/><path stroke="#e0383e" d="M40 68H190"/><path stroke="#12a150" d="M40 12H190"/></g>
+      <circle cx="40" cy="56" r="1.6" fill="#1f4fe3"/><circle cx="170" cy="14" r="1.6" fill="#12a150"/>
+      <g font-size="3.6" font-weight="600"><text x="192" y="57" fill="#1f4fe3">Entry</text><text x="192" y="69" fill="#e0383e">Stop</text><text x="192" y="13" fill="#12a150">Target</text></g>
+    </svg>
+    <div class="mk-feel"><span>How it felt</span><i>patient</i><i>focused</i><i>confident</i><i>disciplined</i></div>
+    <div class="mk-notes2"><p><b>Setup</b> Sweep of the Asia low, displacement up, entry on the retest.</p><p><b>Went well</b> Waited for the sweep. Stop where the idea was wrong.</p><p><b>Next time</b> Take the partial at 1R, as planned.</p></div>
+  </section>
+</div>
+          </div>
+          <div class="mk-pane" data-pane="analytics" hidden role="img" aria-label="Preview of analytics: net P&amp;L, win rate by setup, best time of day and market split">
+<div class="mk-analytics">
+  <nav class="mk-subtabs"><b>Overview</b><i>Setups</i><i>Time</i><i>Markets</i><i>Patterns</i></nav>
+  <div class="mk-kpis">
+    <div><small>Net P&amp;L</small><b>+$16,005</b></div>
+    <div><small>Win rate</small><b>56.0%</b></div>
+    <div><small>Profit factor</small><b>2.07</b></div>
+    <div><small>Avg R</small><b>1.36</b></div>
+    <div><small>Trades</small><b>84</b></div>
+  </div>
+  <div class="mk-grid2">
+    <div class="mk-card"><header><span>Win rate by setup</span></header>
+      <span class="mk-hb"><b>Manipulation</b><s><i style="--v:77%"></i></s><em>77%</em></span>
+      <span class="mk-hb"><b>Breakout</b><s><i style="--v:61%"></i></s><em>61%</em></span>
+      <span class="mk-hb"><b>Reversal</b><s><i style="--v:48%"></i></s><em>48%</em></span>
+      <span class="mk-hb"><b>News fade</b><s><i style="--v:33%"></i></s><em>33%</em></span>
+    </div>
+    <div class="mk-card"><header><span>Best time of day</span><em>NY time</em></header>
+      <div class="mk-heat"><i style="--a:.15"></i><i style="--a:.3"></i><i style="--a:.6"></i><i style="--a:1"></i><i style="--a:.85"></i><i style="--a:.5"></i><i style="--a:.25"></i><i style="--a:.1"></i><i style="--a:.2"></i><i style="--a:.35"></i><i style="--a:.55"></i><i style="--a:.3"></i></div>
+      <footer class="mk-axis"><span>6am</span><span>9am</span><span>12pm</span><span>3pm</span></footer>
+      <header class="mk-mt"><span>Best day</span><em>Tuesday</em></header>
+      <div class="mk-days"><i style="--v:40%"></i><i style="--v:92%"></i><i style="--v:55%"></i><i style="--v:30%"></i><i style="--v:14%" class="l"></i></div>
+    </div>
+    <div class="mk-card"><header><span>By market</span></header>
+      <div class="mk-donutrow"><svg viewBox="0 0 40 40" class="mk-donut"><circle cx="20" cy="20" r="14" fill="none" stroke="#e5e7ec" stroke-width="7"/><circle cx="20" cy="20" r="14" fill="none" stroke="#0b0b0c" stroke-width="7" stroke-dasharray="52 88" transform="rotate(-90 20 20)"/><circle cx="20" cy="20" r="14" fill="none" stroke="#1f4fe3" stroke-width="7" stroke-dasharray="22 118" stroke-dashoffset="-52" transform="rotate(-90 20 20)"/></svg>
+      <ul><li><u></u>MNQ <b>59%</b></li><li><u class="b"></u>ES <b>25%</b></li><li><u class="g"></u>Other <b>16%</b></li></ul></div>
+    </div>
+    <div class="mk-card"><header><span>Pattern detectors</span><em>14</em></header>
+      <p class="mk-pat"><u></u>Breaks the plan on Fridays</p>
+      <p class="mk-pat"><u class="g"></u>Best after a sweep of Asia low</p>
+      <p class="mk-pat"><u></u>Sizes up after a loss</p>
+      <p class="mk-ai"><svg class="icon" aria-hidden="true"><use href="#g-coach"/></svg>AI read: your edge is patience.</p>
+    </div>
+  </div>
+</div>
+          </div>
+          <div class="mk-pane" data-pane="propdesk" hidden role="img" aria-label="Preview of the prop desk with several prop firm accounts, drawdown room and a copier stack">
+<div class="mk-prop">
+  <header class="mk-prophead"><div><b>Prop desk</b><small>3 accounts · 1 payout ready</small></div><span class="mk-btn blk">+ Add an account</span></header>
+  <div class="mk-accts">
+    <div class="mk-acc"><p class="mk-accn"><u class="a">T</u><span><b>Topstep 50K</b><small>Trading Combine</small></span><i class="st">Eval</i></p>
+      <p class="mk-row2"><span>Profit target</span><b>$1,458 / $3,000</b></p><s class="mk-prog"><i style="--v:49%"></i></s>
+      <p class="mk-row2"><span>Room to drawdown</span><b>$1,552</b></p><s class="mk-prog mk-prog--l"><i style="--v:78%"></i></s>
+      <p class="mk-rules"><span><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Trailing drawdown</span><span><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>5 min. days</span></p></div>
+    <div class="mk-acc"><p class="mk-accn"><u class="b">A</u><span><b>Apex 50K</b><small>Funded</small></span><i class="st ok">Funded</i></p>
+      <p class="mk-row2"><span>Consistency</span><b>38% of 50%</b></p><s class="mk-prog"><i style="--v:76%"></i></s>
+      <p class="mk-row2"><span>Safety net</span><b>$2,600</b></p><s class="mk-prog mk-prog--l"><i style="--v:92%"></i></s>
+      <p class="mk-rules"><span><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Consistency rule</span><span><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>8 / 8 days</span></p></div>
+    <div class="mk-acc is-ready"><p class="mk-accn"><u class="c">A</u><span><b>Apex 50K #1</b><small>Funded</small></span><i class="st gold">Payout ready</i></p>
+      <p class="mk-row2"><span>Buffer</span><b>$13,500</b></p><s class="mk-prog"><i style="--v:100%"></i></s>
+      <p class="mk-row2"><span>You can withdraw</span><b>$1,000</b></p><s class="mk-prog"><i style="--v:100%"></i></s>
+      <span class="mk-btn blk mk-pay">Log payout</span></div>
+  </div>
+  <div class="mk-copier"><p class="mk-cap mk-cap--row">Copier stack <span>Leader + 4 copies · next payout in 3 days</span></p>
+    <p class="mk-crow"><b>Leader · Apex 50K</b><s><i style="--v:100%"></i></s><em>+$1,247</em></p>
+    <p class="mk-crow"><b>Copy 1 · Apex 50K #2</b><s><i style="--v:96%"></i></s><em>+$1,198</em></p>
+    <p class="mk-crow"><b>Copy 2 · Topstep 50K</b><s><i style="--v:84%"></i></s><em>+$1,044</em></p>
+  </div>
+</div>
+          </div>
+          <div class="mk-pane" data-pane="study" hidden role="img" aria-label="Preview of the study room: a video with timestamped notes">
+<div class="mk-study">
+  <aside class="mk-folders">
+    <p class="mk-cap">Study room</p>
+    <p class="mk-fold on">Price action <em>4</em></p>
+    <p class="mk-fold">Risk management <em>2</em></p>
+    <p class="mk-fold">Psychology <em>3</em></p>
+    <p class="mk-fold">Backtests <em>1</em></p>
+    <div class="mk-level"><span>Level 4</span><s><i style="--v:68%"></i></s><small>68% to level 5</small></div>
+  </aside>
+  <section class="mk-video">
+    <div class="mk-player"><span class="mk-bigplay"><svg class="icon" aria-hidden="true"><use href="#i-play"/></svg></span><s class="mk-scrub"><i style="--v:34%"></i></s></div>
+    <p class="mk-vt"><b>Liquidity sweeps, explained</b><small>Price action · 18:42</small></p>
+  </section>
+  <section class="mk-notes">
+    <div class="mk-ttl">Liquidity sweeps</div>
+    <p class="mk-line"><u>02:14</u>Equal highs are resting orders. Price is drawn to them first.</p>
+    <p class="mk-line"><u>05:40</u>A sweep alone is not a signal. Wait for the displacement back inside.</p>
+    <blockquote>Mark the level before the session, not during it.</blockquote>
+    <p class="mk-line"><u>09:03</u>Entry on the retest, stop beyond the sweep.</p>
+    <p class="mk-line"><u>12:31</u>Take partials at the next pool of liquidity.</p>
+    <p class="mk-ai"><svg class="icon" aria-hidden="true"><use href="#g-coach"/></svg>Assistant: 3 lessons worth keeping</p>
+  </section>
+</div>
+          </div>
+          <div class="mk-pane" data-pane="coach" hidden role="img" aria-label="Preview of the coach chat answering with the trader's own trades">
+<div class="mk-coach">
+  <aside class="mk-modes">
+    <p class="mk-cap">Mode</p>
+    <b class="on">Coach</b><i>CoWork</i><i>Prop firm</i><i>Study</i>
+    <p class="mk-cap mk-gap">Model</p>
+    <div class="mk-model"><span class="on">Max</span><span>Lite</span></div>
+  </aside>
+  <section class="mk-chat">
+    <p class="mk-msg me">Why do my Fridays keep going red?</p>
+    <div class="mk-msg ai">
+      <p>Across your last 12 Fridays you lost money on 9 of them, <b>-$2,340</b> in total. The pattern is consistent:</p>
+      <ul><li>You size up after the first stop, on 7 of those 9 days.</li><li>Your 11am entries break the plan 6 times out of 8.</li></ul>
+      <p class="mk-cites"><span>Oct 3 · MNQ −$412</span><span>Sep 26 · MNQ −$380</span><span>Sep 19 · ES −$290</span></p>
+      <p>Suggestion: cap Friday at two trades and stop after the first loss.</p>
+    </div>
+    <p class="mk-input"><span>Ask about your trading</span><u><svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></u></p>
+  </section>
+</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="desc">
+      <section class="dcard" role="tabpanel" id="panel-dashboard" data-panel="dashboard" aria-labelledby="tab-dashboard" tabindex="0">
+        <div class="dcard__l">
+          <h3>Dashboard</h3>
+          <p class="dcard__sub">Where <span class="hl">the day starts</span>.</p>
+          <dl class="dcard__stats">
+            <div><dt>Total P&amp;L</dt><dd>+$16,005</dd><dd class="small">47 wins, 37 losses</dd></div>
+            <div><dt>Liquid Score</dt><dd>89</dd><dd><span class="meter" style="--v:89"></span></dd><dd class="small">Weakest spoke: win rate 76</dd></div>
+          </dl>
+        </div>
+        <div class="dcard__r">
+          <ul>
+            <li><span class="hl">Total P&amp;L</span>, and the seven days that moved it</li>
+            <li><span class="hl">The Liquid Score</span>: win rate, profit factor, average R, consistency, discipline</li>
+            <li>A calendar where <span class="hl">every day is a bar</span>, not a coloured tile</li>
+            <li>This week day by day, and the <span class="hl">news still to come</span></li>
+          </ul>
+          <a class="link" href="#signup">Sign up to try it</a>
+        </div>
+      </section>
+
+      <section class="dcard" role="tabpanel" id="panel-journal" data-panel="journal" aria-labelledby="tab-journal" tabindex="0" hidden>
+        <div class="dcard__l">
+          <h3>Journal</h3>
+          <p class="dcard__sub">Every trade, on the tape <span class="hl">it actually happened on</span>.</p>
+          <dl class="dcard__stats">
+            <div><dt>MNQ long, A+</dt><dd>+$1,200</dd><dd class="small">1.67R · Killzone Sweep, held 1h 7m</dd></div>
+            <div><dt>How it felt</dt><dd class="tags"><span class="chip">patient</span><span class="chip">focused</span><span class="chip">confident</span><span class="chip">disciplined</span></dd></div>
+          </dl>
+        </div>
+        <div class="dcard__r">
+          <p class="dcard__cap">Logged with the trade</p>
+          <ul>
+            <li>Grade, setup, confluences and <span class="hl">the emotions you logged</span></li>
+            <li>Real exchange candles with your <span class="hl">entry, exit, stop and target</span> drawn on</li>
+            <li>Drawing tools that stay saved to the trade</li>
+            <li>The daily entry before and after the bell, and the weekly reflection</li>
+            <li>Any trade as a card or a video, on a background you pick.</li>
+          </ul>
+          <a class="link" href="#signup">Sign up to try it</a>
+        </div>
+      </section>
+
+      <section class="dcard" role="tabpanel" id="panel-analytics" data-panel="analytics" aria-labelledby="tab-analytics" tabindex="0" hidden>
+        <div class="dcard__l">
+          <h3>Analytics</h3>
+          <p class="dcard__sub">The same trades, <span class="hl">asked harder questions</span>.</p>
+          <dl class="dcard__stats">
+            <div><dt>Overview</dt><dd>+$16,005</dd><dd class="small">Win rate 56.0%, profit factor 2.07</dd></div>
+            <div><dt class="plain">Which setups pay and which cost you, ranked from your own trades.</dt></div>
+          </dl>
+        </div>
+        <div class="dcard__r">
+          <ul>
+            <li><span class="hl">Win rate by setup</span>, and by the strategy you actually wrote down</li>
+            <li>Best time of day and best day of the week, on your own history</li>
+            <li>What you trade, by market and by symbol</li>
+            <li><span class="hl">Fourteen pattern detectors</span>, with an AI read underneath them</li>
+          </ul>
+          <a class="link" href="#signup">Sign up to try it</a>
+        </div>
+      </section>
+
+      <section class="dcard" role="tabpanel" id="panel-propdesk" data-panel="propdesk" aria-labelledby="tab-propdesk" tabindex="0" hidden>
+        <div class="dcard__l">
+          <h3>Prop firm</h3>
+          <p class="dcard__sub">Every account, <span class="hl">on one desk</span>.</p>
+          <dl class="dcard__stats">
+            <div><dt>Add an account</dt><dd>Apex 50K</dd><dd class="small">Pick the firm and the plan. Its rules come with it.</dd></div>
+            <div><dt class="plain">Copier stacks too: the leader, its copies, each one’s next payout.</dt></div>
+          </dl>
+        </div>
+        <div class="dcard__r">
+          <ul>
+            <li><span class="hl">Futures and CFD firms</span>: evals and funded accounts, with the room left on each</li>
+            <li>Blown, start, passed: one line, and exactly where you sit on it</li>
+            <li>Payouts logged, and a certificate for the pass</li>
+            <li><span class="hl">One payout across twenty accounts</span> in a single press</li>
+          </ul>
+          <p class="dcard__more"><b>More on the desk</b> Picking your firm, its plans as cards, logging a whole stack, paying it out, certificates and copier stacks. <a class="link" href="#signup">See more</a></p>
+          <a class="link" href="#signup">Sign up to try it</a>
+        </div>
+      </section>
+
+      <section class="dcard" role="tabpanel" id="panel-study" data-panel="study" aria-labelledby="tab-study" tabindex="0" hidden>
+        <div class="dcard__l">
+          <h3>Study Room</h3>
+          <p class="dcard__sub">Trade alone, and <span class="hl">YouTube becomes your mentor</span>.</p>
+          <dl class="dcard__stats">
+            <div><dt>Price action</dt><dd>4 <span class="unit">notes</span></dd><dd class="small">Each line keeps its moment in the video</dd></div>
+            <div><dt class="plain">Study earns levels: time, video and words all count.</dt></div>
+          </dl>
+        </div>
+        <div class="dcard__r">
+          <ul>
+            <li>Paste a YouTube link and <span class="hl">watch it inside Liquid</span> while you write</li>
+            <li>Every line keeps its moment in the video. Tap the time to go back to it</li>
+            <li>A folder for each course, so notes stop living in Notion or a notebook</li>
+            <li>On Apex, the <span class="hl">Study Assistant</span> pulls out the lessons worth keeping</li>
+          </ul>
+          <a class="link" href="#signup">Sign up to try it</a>
+        </div>
+      </section>
+
+      <section class="dcard" role="tabpanel" id="panel-coach" data-panel="coach" aria-labelledby="tab-coach" tabindex="0" hidden>
+        <div class="dcard__l">
+          <h3>Coach <span class="badge badge--apex">On Apex</span></h3>
+          <p class="dcard__sub">Your coach has <span class="hl">read every trade you logged</span>.</p>
+          <dl class="dcard__stats">
+            <div><dt class="plain">Prop firm mode: the best plan for you, and how close a payout is.</dt></div>
+          </dl>
+        </div>
+        <div class="dcard__r">
+          <ul>
+            <li>Ask about your trading and it answers with <span class="hl">your own trades, dates and figures</span></li>
+            <li>Four modes: Coach, CoWork, Prop firm and Study</li>
+            <li>Max thinks it through, Lite answers fast</li>
+            <li>It does not miss a pattern, so you do not miss a trade.</li>
+          </ul>
+          <a class="link" href="#signup">Sign up to try it</a>
+        </div>
+      </section>
+    </div>
+  </div>
+</section>
+<section class="section proof" id="proof" aria-labelledby="proof-title">
+  <div class="container proof__stats">
+    <p class="proof__big rise"><span class="proof__num" data-count="6794">6,794</span><span class="proof__cap">traders on Liquid so far</span></p>
+    <div class="proof__small rise" style="--d:.1s">
+      <ul>
+        <li><b data-count="23988">23,988</b><span>trades logged</span></li>
+        <li><b>143</b><span>evaluations passed</span></li>
+        <li><b>4.9 <span aria-hidden="true">★</span></b><span>average of all ratings (50)</span></li>
+      </ul>
+      <p class="fine">Some reviewers received perks from LiquidJournal.</p>
+    </div>
+  </div>
+
+  <div class="container">
+    <h2 class="proof__label" id="proof-title">Tracks accounts at</h2>
+    <div class="logos">
+      <div class="logos__row">
+        <span class="logos__tag">Prop firms</span>
+        <div class="logos__marquee" data-marquee data-speed="55" role="group" aria-label="Supported prop firms">
+          <ul class="logos__track">
+          <li class="firm"><span class="firm__tag">Partner link</span><span class="firm__mark" style="--h:343" aria-hidden="true">AF</span><span class="firm__name">Alpha Funded</span></li>
+          <li class="firm"><span class="firm__tag">Partner link</span><span class="firm__mark" style="--h:188" aria-hidden="true">TR</span><span class="firm__name">TradeDay</span></li>
+          <li class="firm"><span class="firm__tag">Partner link</span><span class="firm__mark" style="--h:48" aria-hidden="true">ET</span><span class="firm__name">Elite Trader</span></li>
+          <li class="firm"><span class="firm__tag">Partner link</span><span class="firm__mark" style="--h:36" aria-hidden="true">MF</span><span class="firm__name">MFFU</span></li>
+          <li class="firm"><span class="firm__tag">Partner link</span><span class="firm__mark" style="--h:111" aria-hidden="true">FU</span><span class="firm__name">FundedNext</span></li>
+          <li class="firm"><span class="firm__tag" aria-hidden="true">&nbsp;</span><span class="firm__mark" style="--h:208" aria-hidden="true">TO</span><span class="firm__name">TopStep</span></li>
+          <li class="firm"><span class="firm__tag" aria-hidden="true">&nbsp;</span><span class="firm__mark" style="--h:72" aria-hidden="true">AP</span><span class="firm__name">Apex</span></li>
+          <li class="firm"><span class="firm__tag" aria-hidden="true">&nbsp;</span><span class="firm__mark" style="--h:83" aria-hidden="true">AF</span><span class="firm__name">Alpha Futures</span></li>
+          <li class="firm"><span class="firm__tag" aria-hidden="true">&nbsp;</span><span class="firm__mark" style="--h:313" aria-hidden="true">LT</span><span class="firm__name">Lucid Trading</span></li>
+          <li class="firm"><span class="firm__tag" aria-hidden="true">&nbsp;</span><span class="firm__mark" style="--h:35" aria-hidden="true">TR</span><span class="firm__name">Tradeify</span></li>
+          <li class="firm"><span class="firm__tag" aria-hidden="true">&nbsp;</span><span class="firm__mark" style="--h:250" aria-hidden="true">TP</span><span class="firm__name">Take Profit Trader</span></li>
+          <li class="firm"><span class="firm__tag" aria-hidden="true">&nbsp;</span><span class="firm__mark" style="--h:301" aria-hidden="true">FF</span><span class="firm__name">Funded Futures Family</span></li>
+          <li class="firm"><span class="firm__tag" aria-hidden="true">&nbsp;</span><span class="firm__mark" style="--h:281" aria-hidden="true">GF</span><span class="firm__name">GOAT Funded Futures</span></li>
+          <li class="firm"><span class="firm__tag" aria-hidden="true">&nbsp;</span><span class="firm__mark" style="--h:214" aria-hidden="true">TO</span><span class="firm__name">Top One Futures</span></li>
+          <li class="firm"><span class="firm__tag">Futures · CFD</span><span class="firm__mark" style="--h:121" aria-hidden="true">BG</span><span class="firm__name">Blue Guardian</span></li>
+          <li class="firm"><span class="firm__tag">Futures · CFD</span><span class="firm__mark" style="--h:165" aria-hidden="true">FT</span><span class="firm__name">FTMO</span></li>
+          <li class="firm"><span class="firm__tag">Futures · CFD</span><span class="firm__mark" style="--h:140" aria-hidden="true">UP</span><span class="firm__name">Upcomers</span></li>
+          <li class="firm"><span class="firm__tag">Futures · CFD</span><span class="firm__mark" style="--h:271" aria-hidden="true">NM</span><span class="firm__name">NYS Markets</span></li>
+          <li class="firm"><span class="firm__tag">CFD</span><span class="firm__mark" style="--h:134" aria-hidden="true">TH</span><span class="firm__name">The5ers</span></li>
+          <li class="firm"><span class="firm__tag">CFD</span><span class="firm__mark" style="--h:29" aria-hidden="true">FP</span><span class="firm__name">Funding Pips</span></li>
+          <li class="firm"><span class="firm__tag">CFD</span><span class="firm__mark" style="--h:38" aria-hidden="true">EM</span><span class="firm__name">E8 Markets</span></li>
+          <li class="firm"><span class="firm__tag">CFD</span><span class="firm__mark" style="--h:218" aria-hidden="true">AC</span><span class="firm__name">Alpha Capital Group</span></li>
+          <li class="firm"><span class="firm__tag">CFD</span><span class="firm__mark" style="--h:128" aria-hidden="true">GF</span><span class="firm__name">GOAT Funded CFD</span></li>
+          <li class="firm"><span class="firm__tag">CFD</span><span class="firm__mark" style="--h:344" aria-hidden="true">EE</span><span class="firm__name">Equity Edge</span></li>
+          <li class="firm"><span class="firm__tag">CFD</span><span class="firm__mark" style="--h:25" aria-hidden="true">FS</span><span class="firm__name">Funded Squad</span></li>
+          <li class="firm"><span class="firm__tag">CFD</span><span class="firm__mark" style="--h:245" aria-hidden="true">FU</span><span class="firm__name">FundedHive</span></li>
+          <li class="firm"><span class="firm__tag">CFD</span><span class="firm__mark" style="--h:288" aria-hidden="true">AQ</span><span class="firm__name">AquaFunded</span></li>
+          <li class="firm"><span class="firm__tag">CFD</span><span class="firm__mark" style="--h:61" aria-hidden="true">MA</span><span class="firm__name">Maven</span></li>
+          <li class="firm"><span class="firm__tag">CFD</span><span class="firm__mark" style="--h:240" aria-hidden="true">PC</span><span class="firm__name">PineX Capital</span></li>
+          <li class="firm"><span class="firm__tag">CFD</span><span class="firm__mark" style="--h:341" aria-hidden="true">LF</span><span class="firm__name">Legion Funding</span></li>
+          <li class="firm"><span class="firm__tag">CFD</span><span class="firm__mark" style="--h:294" aria-hidden="true">WC</span><span class="firm__name">Whales Capital Funding</span></li>
+          <li class="firm"><span class="firm__tag">Crypto</span><span class="firm__mark" style="--h:182" aria-hidden="true">BR</span><span class="firm__name">Breakout</span></li>
+          <li class="firm"><span class="firm__tag">Crypto</span><span class="firm__mark" style="--h:1" aria-hidden="true">PR</span><span class="firm__name">PROPR</span></li>
+          <li class="firm"><span class="firm__tag">Crypto</span><span class="firm__mark" style="--h:329" aria-hidden="true">MY</span><span class="firm__name">MyFundedPerps</span></li>
+          <li class="firm"><span class="firm__tag">Other</span><span class="firm__mark" style="--h:353" aria-hidden="true">VM</span><span class="firm__name">Vest Markets</span></li>
+          </ul>
+        </div>
+      </div>
+      <div class="logos__row">
+        <span class="logos__tag">Live accounts</span>
+        <div class="logos__marquee" data-marquee data-speed="48" role="group" aria-label="Supported brokers">
+          <ul class="logos__track logos__track--rev">
+          <li class="firm"><span class="firm__tag" aria-hidden="true">&nbsp;</span><span class="firm__mark" style="--h:325" aria-hidden="true">HE</span><span class="firm__name">HeroFX</span></li>
+          <li class="firm"><span class="firm__tag" aria-hidden="true">&nbsp;</span><span class="firm__mark" style="--h:4" aria-hidden="true">TR</span><span class="firm__name">Tradovate</span></li>
+          <li class="firm"><span class="firm__tag" aria-hidden="true">&nbsp;</span><span class="firm__mark" style="--h:267" aria-hidden="true">NI</span><span class="firm__name">NinjaTrader</span></li>
+          <li class="firm"><span class="firm__tag" aria-hidden="true">&nbsp;</span><span class="firm__mark" style="--h:1" aria-hidden="true">AF</span><span class="firm__name">AMP Futures</span></li>
+          <li class="firm"><span class="firm__tag" aria-hidden="true">&nbsp;</span><span class="firm__mark" style="--h:49" aria-hidden="true">IM</span><span class="firm__name">IC Markets</span></li>
+          <li class="firm"><span class="firm__tag" aria-hidden="true">&nbsp;</span><span class="firm__mark" style="--h:209" aria-hidden="true">PE</span><span class="firm__name">Pepperstone</span></li>
+          <li class="firm"><span class="firm__tag" aria-hidden="true">&nbsp;</span><span class="firm__mark" style="--h:184" aria-hidden="true">FM</span><span class="firm__name">Fusion Markets</span></li>
+          <li class="firm"><span class="firm__tag" aria-hidden="true">&nbsp;</span><span class="firm__mark" style="--h:344" aria-hidden="true">AF</span><span class="firm__name">Afterprime</span></li>
+          <li class="firm"><span class="firm__tag" aria-hidden="true">&nbsp;</span><span class="firm__mark" style="--h:214" aria-hidden="true">VA</span><span class="firm__name">Vantage</span></li>
+          <li class="firm"><span class="firm__tag" aria-hidden="true">&nbsp;</span><span class="firm__mark" style="--h:219" aria-hidden="true">EX</span><span class="firm__name">Exness</span></li>
+          <li class="firm"><span class="firm__tag" aria-hidden="true">&nbsp;</span><span class="firm__mark" style="--h:50" aria-hidden="true">XM</span><span class="firm__name">XM</span></li>
+          <li class="firm"><span class="firm__tag" aria-hidden="true">&nbsp;</span><span class="firm__mark" style="--h:270" aria-hidden="true">CC</span><span class="firm__name">Capital.com</span></li>
+          <li class="firm"><span class="firm__tag" aria-hidden="true">&nbsp;</span><span class="firm__mark" style="--h:307" aria-hidden="true">BM</span><span class="firm__name">BlackBull Markets</span></li>
+          <li class="firm"><span class="firm__tag" aria-hidden="true">&nbsp;</span><span class="firm__mark" style="--h:127" aria-hidden="true">IG</span><span class="firm__name">IG</span></li>
+          <li class="firm"><span class="firm__tag" aria-hidden="true">&nbsp;</span><span class="firm__mark" style="--h:98" aria-hidden="true">IB</span><span class="firm__name">Interactive Brokers</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="proof__foot">
+      <button class="pause" id="logos-pause" type="button" aria-pressed="false" aria-label="Pause scrolling logos"><svg class="icon" aria-hidden="true"><use href="#i-pause"/></svg></button>
+      <div>
+        <p class="proof__acct">1401 account types, every drawdown rule modelled.</p>
+        <p class="fine">Partner links: we may earn a commission, at no extra cost to you. Names are for identification only.</p>
+      </div>
+      <a class="btn btn--frost btn--sm" href="#pricing">See all</a>
+    </div>
+  </div>
+</section>
+<section class="section community" id="community" aria-labelledby="community-title">
+  <div class="container community__head">
+    <h2 class="display-3" id="community-title" data-reveal><span class="sr-only">X, Instagram and Discord </span><span class="inl" aria-hidden="true"><span class="tile tile--inl"><svg class="icon"><use href="#g-x"/></svg></span><span class="tile tile--inl"><svg class="icon"><use href="#g-camera"/></svg></span><span class="tile tile--inl"><svg class="icon"><use href="#g-bubble"/></svg></span></span> for traders. Inside your journal <span class="inl" aria-hidden="true"><span class="tile tile--inl"><svg class="icon"><use href="#logo"/></svg></span></span></h2>
+    <div class="community__cta rise">
+      <p class="lead">Free on every plan. Post your first trade from the journal.</p>
+      <a class="btn btn--black" href="#signup">Try it for yourself <span class="btn__go"><svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></span></a>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="vista">
+      <img class="vista__bg" src="assets/img/vista.svg" alt="" aria-hidden="true" width="1600" height="900" loading="lazy" decoding="async">
+      <div class="com-grid">
+
+        <article class="com rise">
+          <div class="com__shot" aria-hidden="true"><div class="cm cm--feed">
+            <div class="cm-side"><span class="cm-post">+ Post</span><i></i><i></i><i></i><i></i><i></i></div>
+            <div class="cm-main">
+              <p class="cm-h"><b>Home</b><span>Search tickers, tags or traders</span></p>
+              <div class="cm-stories"><u></u><u></u><u></u><u></u><u></u><u></u></div>
+              <div class="cm-compose"><i></i><span>Share a trade, a lesson, a theme…</span><em>Post</em></div>
+              <div class="cm-tweet"><i></i><div><b>Maya (sample)</b><span>Two red days in a row and I did not chase. Journal says that is my best habit this month.</span></div></div>
+            </div>
+            <div class="cm-prof"><div class="cm-ban"></div><b>Welcome</b><small>@sample_journal</small><span>31 following · 20 followers</span><em class="cm-live">LIVE</em></div>
+          </div></div>
+          <span class="tile tile--sm com__tile"><svg class="icon" aria-hidden="true"><use href="#g-feed"/></svg></span>
+          <p class="com__kicker">Like X</p>
+          <h3>A feed of real trades</h3>
+          <p class="com__text">Post a trade from your journal: its P&amp;L, R and chart come from the saved trade, so no one can fake them. Browse by topic, $ticker or #hashtag and follow the traders you learn from.</p>
+          <footer><span>Every trade from a journal</span><span class="who"><i class="av av--sm av--a"></i>Ren (sample)</span></footer>
+        </article>
+
+        <article class="com rise" style="--d:.08s">
+          <div class="com__shot" aria-hidden="true"><div class="cm cm--story">
+            <div class="cm-side"><span class="cm-post">+ Post</span><i></i><i></i><i></i><i></i><i></i></div>
+            <div class="cm-pcol">
+              <div class="cm-pfeed"><div class="cm-pavatar"></div><b>Kai (sample)</b><small>@kai_sample · 25m</small><div class="cm-trade"><small>MNQ · Long · Killzone Sweep</small><strong>+$720.00</strong><span>2R · 50K on micros</span></div></div>
+            </div>
+            <div class="cm-prof"><div class="cm-ban"></div><b>Welcome</b><small>@sample_journal</small><div class="cm-stats"><span><b>56%</b>win rate</span><span><b>$16,004</b>P&amp;L</span><span><b>+0.28R</b>avg R</span></div></div>
+          </div></div>
+          <span class="tile tile--sm com__tile"><svg class="icon" aria-hidden="true"><use href="#g-user"/></svg></span>
+          <p class="com__kicker">Like Instagram</p>
+          <h3>Stories and a profile of your own</h3>
+          <p class="com__text">Share your trading day as a story. Your profile shows the stats you choose from your journal, beside your posts, trades and strategies.</p>
+          <footer><span>Your stats, your stories</span><span class="who"><i class="av av--sm av--b"></i>Ava (sample)</span></footer>
+        </article>
+
+        <article class="com rise" style="--d:.04s">
+          <div class="com__shot" aria-hidden="true"><div class="cm cm--chat">
+            <div class="cm-side"><span class="cm-post">+ Post</span><i></i><i></i><i></i><i></i><i></i></div>
+            <div class="cm-thread">
+              <p class="cm-b l">Saw your Killzone Sweep post. Do you wait for the 5 minute close?</p>
+              <p class="cm-b r">Every time. No close, no trade.</p>
+              <p class="cm-b l">That is the part I keep skipping.</p>
+              <p class="cm-b l">Copied the strategy. Changing the stop rule to fit my account.</p>
+              <p class="cm-b r">Good. Make it yours, then journal it for two weeks.</p>
+            </div>
+            <div class="cm-inbox"><b>Messages</b><p><i></i><span><u>Maya (sample)</u>See you in the crew</span></p><p><i></i><span><u>Kai (sample)</u>How do you stop…</span></p><p><i></i><span><u>Lena (sample)</u>Thanks for the…</span></p></div>
+          </div></div>
+          <span class="tile tile--sm com__tile"><svg class="icon" aria-hidden="true"><use href="#g-chat"/></svg></span>
+          <p class="com__kicker">Like Discord</p>
+          <h3>Crews, messages and notifications</h3>
+          <p class="com__text">Join a crew, wear its tag beside your name and talk in its own chat. Message any trader, and find your likes, replies, follows and invites in one place.</p>
+          <footer><span>Find your crew</span><span class="who"><i class="av av--sm av--c"></i>Maya (sample)</span></footer>
+        </article>
+
+        <article class="com rise" style="--d:.12s">
+          <div class="com__shot" aria-hidden="true"><div class="cm cm--live">
+            <div class="cm-side"><span class="cm-post">+ Post</span><i></i><i></i><i></i><i></i><i></i></div>
+            <div class="cm-room">
+              <p class="cm-bar"><em>LIVE</em> NY open: MNQ on the 50K micros acc… <small>1.2k listening</small></p>
+              <div class="cm-cloud"><i style="--x:8%;--y:38%;--s:2.6em"></i><i style="--x:18%;--y:62%;--s:2.2em"></i><i style="--x:30%;--y:20%;--s:2em"></i><i style="--x:70%;--y:18%;--s:2.4em"></i><i style="--x:80%;--y:50%;--s:2.8em"></i><i style="--x:62%;--y:72%;--s:2.1em"></i><i style="--x:38%;--y:76%;--s:2.3em"></i><span class="cm-core"><svg class="icon" aria-hidden="true"><use href="#logo"/></svg></span></div>
+            </div>
+            <div class="cm-chatcol"><b>Chat</b><p><u></u>Alex R. the 9:30 sweep again</p><p><u></u>Mina T. what timeframe for the FVG?</p><p><u></u>Tomas F. holding for the second leg</p><p><u></u>Sara M. can you show the stop placement?</p></div>
+          </div></div>
+          <span class="tile tile--sm com__tile"><svg class="icon" aria-hidden="true"><use href="#g-live"/></svg></span>
+          <p class="com__kicker">Live</p>
+          <h3>LIQUID goes live</h3>
+          <p class="com__text">Market opens, live trading and updates. Listen in, chat, react or raise your hand without leaving your journal.</p>
+          <footer><span>Live trading, live updates</span><span class="who"><i class="av av--sm av--d"></i>Jonas (sample)</span></footer>
+        </article>
+
+      </div>
+    </div>
+    <p class="community__fine fine">Sample traders and posts. Your own background on Prestige and Apex.<br>Coming to the App Store and Google Play.</p>
+  </div>
+</section>
+<section class="reviews-lead" aria-labelledby="reviews-title">
+  <h2 class="display-3" id="reviews-title" data-reveal>Don't take our <span class="sel">word</span> for it.</h2>
+</section>
+
+<section class="panel reviews" id="reviews" aria-labelledby="reviews-sub">
+  <div class="reviews__inner">
+    <div class="reviews__head">
+      <h3 class="h2" id="reviews-sub" data-reveal>Reviews from our Discord and journal.</h3>
+      <div class="reviews__aside rise">
+        <p class="reviews__ask">Used Liquid? <a class="link link--blue" href="#discord">Join our Discord</a> and leave yours in #reviews.</p>
+        <p class="fine">Some reviewers are founding members and received perks from LiquidJournal.</p>
+        <button class="btn btn--frost btn--sm" type="button" data-reviews-toggle aria-expanded="false" aria-controls="review-list">Show more</button>
+      </div>
+    </div>
+
+    <div class="rlist" id="review-list">
+      <article class="rev">
+        <header><span class="av av--md" aria-hidden="true">A</span><div class="rev__who"><b>Ava (sample) <svg class="icon verified" aria-label="Verified"><use href="#i-verified"/></svg></b><span class="rev__meta"><span class="badge badge--prestige">Prestige</span><span class="stars" role="img" aria-label="5 out of 5 stars">★★★★★</span></span></div><span class="rev__src">Journal</span></header>
+        <p>I used to skip the write-up on red days, which is exactly when I needed it. Now the trades arrive on their own, so all I add is why I took them. After a month the pattern was obvious: I was breaking my own size rule every Friday afternoon. Seeing it written back to me with dates made it impossible to argue with. I did not expect a journal to change how I trade, but this one did.</p>
+      </article>
+      <article class="rev">
+        <header><span class="av av--md av--b" aria-hidden="true">M</span><div class="rev__who"><b>Marcus (sample)</b></div><span class="rev__src">Discord</span></header>
+        <p>Cleanest journal I have tried. The prop account tracker already knows each firm's drawdown rules, which saved me from a careless trade during an evaluation last week. The person behind it answers questions quickly and ships fixes fast.</p>
+      </article>
+      <article class="rev">
+        <header><span class="av av--md av--c" aria-hidden="true">L</span><div class="rev__who"><b>Lena (sample)</b></div><span class="rev__src">Discord</span></header>
+        <p>I traded for months without a real review process. A short plan before the session and a short note after it, that is all it took to start seeing what I keep repeating. The free plan covers everything I needed to start.</p>
+      </article>
+      <article class="rev">
+        <header><span class="av av--md" aria-hidden="true">J</span><div class="rev__who"><b>Jonas (sample)</b><span class="rev__meta"><span class="badge badge--essential">Essential</span><span class="stars" role="img" aria-label="5 out of 5 stars">★★★★★</span></span></div><span class="rev__src">Journal</span></header>
+        <p>Logging is quick, the layout is calm and I actually open it after the session now.</p>
+      </article>
+      <article class="rev">
+        <header><span class="av av--md av--d" aria-hidden="true">P</span><div class="rev__who"><b>Priya (sample)</b></div><span class="rev__src">Discord</span></header>
+        <p>The coach found a loss streak I had written off as bad luck. It was three revenge entries in a row after one stop. Uncomfortable, but exactly what I needed to see. Support is fast too, and the community is helpful without being noisy.</p>
+      </article>
+      <article class="rev">
+        <header><span class="av av--md av--a" aria-hidden="true">T</span><div class="rev__who"><b>Tom (sample)</b></div><span class="rev__src">X</span></header>
+        <p>Auto-sync from my broker means I never fall behind on entries. That alone makes it better than my old spreadsheet.</p>
+      </article>
+      <article class="rev">
+        <header><span class="av av--md av--b" aria-hidden="true">S</span><div class="rev__who"><b>Sofia (sample)</b><span class="rev__meta"><span class="badge badge--apex">Apex</span><span class="stars" role="img" aria-label="5 out of 5 stars">★★★★★</span></span></div><span class="rev__src">Journal</span></header>
+        <p>I made a deal with a friend to review my trades every Sunday. This gives us one place to look and numbers we can both trust.</p>
+      </article>
+      <article class="rev">
+        <header><span class="av av--md av--c" aria-hidden="true">K</span><div class="rev__who"><b>Kenji (sample)</b></div><span class="rev__src">Discord</span></header>
+        <p>The share cards are a nice touch. Posting a trade as a clean card takes seconds and looks better than a screenshot.</p>
+      </article>
+      <article class="rev">
+        <header><span class="av av--md" aria-hidden="true">D</span><div class="rev__who"><b>Dana (sample)</b><span class="rev__meta"><span class="badge badge--essential">Essential</span><span class="stars" role="img" aria-label="5 out of 5 stars">★★★★★</span></span></div><span class="rev__src">Journal</span></header>
+        <p>Even the free version has everything I need in one app. I stopped juggling two journals.</p>
+      </article>
+      <article class="rev">
+        <header><span class="av av--md av--d" aria-hidden="true">O</span><div class="rev__who"><b>Omar (sample)</b></div><span class="rev__src">Discord</span></header>
+        <p>After I breached my first evaluation I could finally see why: oversized lots, early entries, trades outside my plan. Having it all as numbers took the emotion out of it. Day four of journaling and I already trade smaller and wait longer.</p>
+      </article>
+      <article class="rev">
+        <header><span class="av av--md av--b" aria-hidden="true">R</span><div class="rev__who"><b>Rin (sample)</b><span class="rev__meta"><span class="badge badge--prestige">Prestige</span><span class="stars" role="img" aria-label="5 out of 5 stars">★★★★★</span></span></div><span class="rev__src">Journal</span></header>
+        <p>The weekly reflection plus the score gives me one clear thing to work on next week.</p>
+      </article>
+      <article class="rev">
+        <header><span class="av av--md av--a" aria-hidden="true">E</span><div class="rev__who"><b>Eli (sample)</b></div><span class="rev__src">X</span></header>
+        <p>Best journal I have used. Simple, fast and honest about my numbers.</p>
+      </article>
+    </div>
+
+    <div class="reviews__foot">
+      <button class="btn btn--frost" type="button" data-reviews-toggle aria-expanded="false" aria-controls="review-list">Show more</button>
+      <p class="fine">Sample reviews. Replace with real, consented testimonials before launch.</p>
+    </div>
+  </div>
+</section>
+<section class="compare-lead" aria-labelledby="compare-lead-title">
+  <h2 class="display-3" id="compare-lead-title" data-reveal>Still comparing? <span class="sel">So did we.</span></h2>
+</section>
+
+<section class="panel compare" id="compare" aria-labelledby="compare-title">
+  <div class="compare__inner">
+    <div class="compare__copy">
+      <h3 class="h2" id="compare-title" data-reveal>Every other journal sees a losing trade. Liquid sees why you took it.</h3>
+      <p class="rise">Compare every price with each company's own pricing page, not a review site. The journal itself is free here, and stays free.</p>
+      <a class="btn btn--black rise" href="#signup">Sign up <span class="btn__go"><svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></span></a>
+    </div>
+
+    <div class="compare__table">
+      <div class="cmp-scroll" tabindex="0" role="region" aria-label="Comparison table, scrolls sideways on small screens">
+        <div class="cmp-wrap">
+          <div class="cmp-hl" aria-hidden="true"></div>
+          <table class="cmp" id="cmp">
+            <caption class="sr-only">Liquid compared with four other trading journals</caption>
+            <thead>
+              <tr><td></td><th scope="col">Journal A</th><th scope="col">Journal B</th><th scope="col">Journal C</th><th scope="col">Journal D</th><th scope="col" class="is-liquid">Liquid</th></tr>
+            </thead>
+            <tbody>
+              <tr><th scope="row">Free Tradovate sync, no limit</th><td><span class="no" role="img" aria-label="No">✕</span></td><td><span class="no" role="img" aria-label="No">✕</span></td><td><span class="no" role="img" aria-label="No">✕</span></td><td>30 orders a month</td><td class="is-liquid"><span class="y"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Yes</span></td></tr>
+              <tr><th scope="row">Free plan, forever</th><td><span class="no" role="img" aria-label="No">✕</span></td><td><span class="no" role="img" aria-label="No">✕</span></td><td><span class="no" role="img" aria-label="No">✕</span></td><td>Limited</td><td class="is-liquid"><span class="y"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Yes</span></td></tr>
+              <tr><th scope="row">Base price</th><td>$29.95/mo</td><td>$197/16mo</td><td>$35/mo</td><td>Free / $19.95/mo</td><td class="is-liquid"><span class="y"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Free / $14.99/mo</span><small>with code LIQUID40 (list $24.99)</small></td></tr>
+              <tr><th scope="row">AI coach</th><td>Yes</td><td><span class="na">–</span><span class="sr-only">not found</span></td><td>Yes</td><td>Pro plan</td><td class="is-liquid"><span class="y"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Reads your whole journal</span><span class="badge badge--apex">Apex</span></td></tr>
+              <tr><th scope="row">AI cites your real trades</th><td>Partly</td><td><span class="na">–</span><span class="sr-only">not found</span></td><td>Yes</td><td><span class="na">–</span><span class="sr-only">not found</span></td><td class="is-liquid"><span class="y"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Key claims linked</span><span class="badge badge--apex">Apex</span></td></tr>
+              <tr><th scope="row">Prop consistency and payout rules</th><td>Limited</td><td><span class="na">–</span><span class="sr-only">not found</span></td><td>Consistency</td><td><span class="na">–</span><span class="sr-only">not found</span></td><td class="is-liquid"><span class="y"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Each firm's own</span></td></tr>
+              <tr><th scope="row">Trades from your copy trader, journaled once</th><td><span class="na">–</span><span class="sr-only">not found</span></td><td><span class="na">–</span><span class="sr-only">not found</span></td><td><span class="na">–</span><span class="sr-only">not found</span></td><td><span class="na">–</span><span class="sr-only">not found</span></td><td class="is-liquid"><span class="y"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Yes</span><span class="badge badge--prestige">Prestige</span></td></tr>
+
+              <tr data-extra><th scope="row">AI-written insights</th><td>Yes</td><td>Limited</td><td>Yes</td><td>Pro plan</td><td class="is-liquid"><span class="y"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Yes</span><span class="badge badge--apex">Apex</span></td></tr>
+              <tr data-extra><th scope="row">Prop-firm tracker</th><td><span class="no" role="img" aria-label="No">✕</span></td><td>Limited</td><td><span class="no" role="img" aria-label="No">✕</span></td><td>Limited</td><td class="is-liquid"><span class="y"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Yes</span></td></tr>
+              <tr data-extra><th scope="row">Daily pre / post journal</th><td><span class="yes" role="img" aria-label="Yes">✓</span></td><td>Daily reviews</td><td><span class="yes" role="img" aria-label="Yes">✓</span></td><td><span class="yes" role="img" aria-label="Yes">✓</span></td><td class="is-liquid"><span class="y"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Yes</span></td></tr>
+              <tr data-extra><th scope="row">Weekly reflection</th><td><span class="na">–</span><span class="sr-only">not found</span></td><td><span class="yes" role="img" aria-label="Yes">✓</span></td><td><span class="yes" role="img" aria-label="Yes">✓</span></td><td><span class="na">–</span><span class="sr-only">not found</span></td><td class="is-liquid"><span class="y"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Yes</span><span class="badge badge--prestige">Prestige</span></td></tr>
+              <tr data-extra><th scope="row">Discipline score</th><td>Plan adherence %</td><td>Tiltmeter</td><td>Zella-style score</td><td><span class="na">–</span><span class="sr-only">not found</span></td><td class="is-liquid"><span class="y"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>A+ to F, AI score on Apex</span></td></tr>
+              <tr data-extra><th scope="row">Trade cards with video</th><td>Share links</td><td>In-app only</td><td>Share links</td><td>Sharing</td><td class="is-liquid"><span class="y"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Cards and video</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="compare__foot">
+        <button class="btn btn--frost btn--sm" id="cmp-toggle" type="button" aria-expanded="false" aria-controls="cmp">Show all 13 rows</button>
+        <p class="fine">Placeholder data: the other columns are anonymised sample values. Verify them against each company's own site before publishing. “–” means not found on their site, not that they lack it. A Liquid cell names the plan it needs (Apex from $35.99/mo with code LIQUID40); no name means the free plan.</p>
+      </div>
+    </div>
+  </div>
+</section>
+<section class="pricing-lead" aria-labelledby="pricing-lead-title">
+  <h2 class="display-3" id="pricing-lead-title" data-reveal>Cheaper than your last <span class="sel">lesson.</span></h2>
+</section>
+
+<section class="pricing" id="pricing" aria-labelledby="pricing-title">
+  <div class="container pricing__head">
+    <h3 class="pricing__title" id="pricing-title">Pricing</h3>
+    <div class="pricing__controls rise">
+      <div class="seg" role="group" aria-label="Currency">
+        <button type="button" data-cur="usd" aria-pressed="true">$ USD</button>
+        <button type="button" data-cur="eur" aria-pressed="false">€ EUR</button>
+        <button type="button" data-cur="jpy" aria-pressed="false">¥ JPY</button>
+      </div>
+      <div class="billing">
+        <span data-bill="monthly" class="is-on">Monthly</span>
+        <button class="switch" id="billing-switch" type="button" role="switch" aria-checked="false" aria-label="Bill yearly"><i></i></button>
+        <span data-bill="yearly">Annual</span>
+        <span class="save">Save 33%</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="plans-wrap">
+    <div class="plans">
+
+      <article class="plan plan--essential rise" aria-labelledby="plan-essential">
+        <header><h4 id="plan-essential">Essential</h4></header>
+        <p class="plan__for">For new traders, paper traders, one account.</p>
+        <p class="plan__price"><span class="plan__fig" data-price="free">$0.00</span><span class="plan__per">/ month</span></p>
+        <p class="plan__note">Free forever, no card needed</p>
+        <div class="plan__list">
+          <ul class="feat">
+            <li class="is-main"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Unlimited trades, every field and chip</li>
+            <li class="is-main"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Daily journal: one entry a day</li>
+            <li class="is-main"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Dashboard: P&amp;L, win rate, equity curve</li>
+            <li class="is-main"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>PropFirm tracker: 1 prop account</li>
+            <li class="is-main"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Share any trade as a card or video</li>
+            <li class="is-sub"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Grades, tags and exit reasons</li>
+            <li class="is-sub"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Paper trading, as its own journal</li>
+            <li class="is-sub is-extra"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Trades sorted by session: Asia, London, New York or your own</li>
+            <li class="is-sub is-extra"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Liquid Scale: a 0-100 score on every trade</li>
+            <li class="is-sub is-extra"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>1 chart screenshot a trade, with drawing tools</li>
+            <li class="is-sub is-extra"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Showcase: your best trades in one gallery</li>
+            <li class="is-sub is-extra"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Study Room: unlimited notes and folders, 12 pictures a note</li>
+            <li class="is-sub is-extra"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Study Boards: your models, videos, PDFs and good and bad trades on one board, 2 GB for videos and PDFs</li>
+            <li class="is-sub is-extra"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Share Study notes, folders and boards: people read or work with you, or open a link</li>
+            <li class="is-sub is-extra"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Study AI: 2 free runs a week of the Study Assistant or Board Polish</li>
+            <li class="is-sub is-extra"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Daily and weekly goals</li>
+            <li class="is-sub is-extra"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Economic news calendar, filtered your way</li>
+            <li class="is-sub is-extra"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Your own break-even range for win rate</li>
+            <li class="is-sub is-extra"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Consistency and payout rules for 35 firms: days to payout, buffer, what you can withdraw</li>
+            <li class="is-sub is-extra"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>1 strategy</li>
+            <li class="is-sub is-extra"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Tradovate auto sync</li>
+            <li class="is-sub is-extra"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Circuit breaker and loss protocol</li>
+            <li class="is-sub is-extra"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Monthly and yearly recap, shareable as a story video</li>
+            <li class="is-sub is-extra"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Pass certificate for every evaluation you pass</li>
+            <li class="is-sub is-extra"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Payout certificates, for verified traders</li>
+            <li class="is-sub is-extra"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Four themes: Midnight, Onyx, Platinum and Light, with your own colours</li>
+            <li class="is-sub is-extra"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Day and night looks that switch by themselves at your hours</li>
+            <li class="is-sub is-extra"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Gift a month of Prestige or Apex to a friend</li>
+            <li class="is-sub is-extra"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Community: post, share stories, reply, message and join a crew as much as you like</li>
+            <li class="is-sub is-extra"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Community: up to 10 pictures in a post</li>
+            <li class="is-sub is-extra"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Email support</li>
+            <li class="is-sub is-extra"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Mobile app (soon)</li>
+          </ul>
+          <button class="more" type="button" aria-expanded="false">+0 more <svg class="icon" aria-hidden="true"><use href="#i-chev"/></svg></button>
+        </div>
+        <a class="plan__sync" href="#signup"><svg class="icon" aria-hidden="true"><use href="#logo"/></svg><span>Tradovate sync</span><b>Free</b><small>No limit</small></a>
+        <a class="btn btn--black btn--block" href="#signup">Sign up</a>
+      </article>
+
+      <article class="plan plan--prestige rise" style="--d:.08s" aria-labelledby="plan-prestige">
+        <header><h4 id="plan-prestige">Prestige</h4><span class="plan__tag">Most popular paid plan</span></header>
+        <p class="plan__for">For funded traders, copy traders, many accounts.</p>
+        <p class="plan__price"><span class="plan__fig" data-price="prestige" data-kind="now">$14.99</span><s class="plan__was" data-price="prestige" data-kind="was">$24.99</s><span class="plan__per">/ month</span></p>
+        <p class="plan__note">With <b>LIQUID40</b></p>
+        <div class="plan__list">
+          <ul class="feat">
+            <li class="is-sub is-head"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Everything in Essential</li>
+            <li class="is-main"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Full analytics and the P&amp;L calendar</li>
+            <li class="is-main"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Liquid Score and 14 insight patterns</li>
+            <li class="is-main"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Unlimited prop accounts</li>
+            <li class="is-main"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Journal trades from your copy trader</li>
+            <li class="is-main"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Liquid chart: real candles, your levels</li>
+            <li class="is-sub"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Up to 6 pictures a trade</li>
+            <li class="is-sub is-extra"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Unlimited strategies, each measured</li>
+            <li class="is-sub is-extra"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Daily sessions: an entry and P&amp;L for each session</li>
+            <li class="is-sub is-extra"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Weekly journal: reflection, score and streak</li>
+            <li class="is-sub is-extra"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Showcase pinning and automatic A+ logging</li>
+            <li class="is-sub is-extra"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>CSV import from any broker</li>
+            <li class="is-sub is-extra"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Export your whole journal as a CSV</li>
+            <li class="is-sub is-extra"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Share your day, week or month</li>
+            <li class="is-sub is-extra"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Verified checkmark on your name, and in Community</li>
+            <li class="is-sub is-extra"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>A link of your own on your profile card, like your Linktree</li>
+            <li class="is-sub is-extra"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Your own background behind the app, a picture or a video, sharp up to 4K, 6 saved</li>
+            <li class="is-sub is-extra"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>LIQUID originals: backgrounds that move in 3D or with a hover trail</li>
+            <li class="is-sub is-extra"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Smart notifications (7 types)</li>
+            <li class="is-sub is-extra"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Community: #hottake and a gold name</li>
+            <li class="is-sub is-extra"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Community: up to 20 pictures in a post</li>
+            <li class="is-sub is-extra"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Community: post videos up to 60 seconds</li>
+            <li class="is-sub is-extra"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Gold buttons</li>
+            <li class="is-sub is-extra"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Save as many strategies as you like from Community</li>
+            <li class="is-sub is-extra"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Priority support</li>
+          </ul>
+          <button class="more" type="button" aria-expanded="false">+0 more <svg class="icon" aria-hidden="true"><use href="#i-chev"/></svg></button>
+        </div>
+        <div class="plan__promo"><b>LIQUID40</b><strong>40% off</strong><button class="use" type="button" data-copy="LIQUID40">Use it</button></div>
+        <div class="plan__ctas"><a class="btn btn--white" href="#signup">Try Prestige free</a><a class="btn btn--glass" href="#gifts"><svg class="icon" aria-hidden="true"><use href="#i-gift"/></svg>Gift it</a></div>
+        <p class="plan__fine" data-note="prestige">10 days free, then $14.99 a month. Cancel anytime.</p>
+      </article>
+
+      <article class="plan plan--apex rise" style="--d:.16s" aria-labelledby="plan-apex">
+        <header><h4 id="plan-apex">Apex</h4><span class="plan__tag">Best value</span></header>
+        <p class="plan__for">For traders who want an AI coach and less admin.</p>
+        <p class="plan__price"><span class="plan__fig" data-price="apex" data-kind="now">$35.99</span><s class="plan__was" data-price="apex" data-kind="was">$59.99</s><span class="plan__per">/ month</span></p>
+        <p class="plan__note">With <b>LIQUID40</b></p>
+        <div class="plan__list">
+          <ul class="feat">
+            <li class="is-sub is-head"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Everything in Prestige</li>
+            <li class="is-main"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>LiquidCoach: knows every trade you log</li>
+            <li class="is-main"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Prop Firm AI: finds the best plan for you</li>
+            <li class="is-main"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Liquid CoWork: logs trades and payouts</li>
+            <li class="is-main"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>AI trade notes and AI insight analysis</li>
+            <li class="is-main"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Score &amp; Psychology from your journal</li>
+            <li class="is-sub"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>AI notifications and “Said by You”</li>
+            <li class="is-sub is-extra"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>AI read of your monthly recap</li>
+            <li class="is-sub is-extra"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>The Discipline spoke on your Liquid Score</li>
+            <li class="is-sub is-extra"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Study Assistant: takeaways, lessons and a full rewrite of your notes, 1 or 2 credits</li>
+            <li class="is-sub is-extra"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Board Polish: clearer words, sections and connections on your board, 2 credits</li>
+            <li class="is-sub is-extra"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>250 AI credits every month</li>
+            <li class="is-sub is-extra"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Study Room: 30 pictures a note</li>
+            <li class="is-sub is-extra"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Study Boards: 5 GB for videos and PDFs</li>
+            <li class="is-sub is-extra"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>12 saved backgrounds</li>
+            <li class="is-sub is-extra"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Apex profile shimmer</li>
+            <li class="is-sub is-extra"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Amethyst buttons</li>
+            <li class="is-sub is-extra"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Start your own crew in Community</li>
+            <li class="is-sub is-extra"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Main support, answered first</li>
+          </ul>
+          <button class="more" type="button" aria-expanded="false">+0 more <svg class="icon" aria-hidden="true"><use href="#i-chev"/></svg></button>
+        </div>
+        <div class="plan__promo"><b>LIQUID40</b><strong>40% off</strong><button class="use" type="button" data-copy="LIQUID40">Use it</button></div>
+        <div class="plan__ctas"><a class="btn btn--white" href="#signup">Try Apex free</a><a class="btn btn--glass" href="#gifts"><svg class="icon" aria-hidden="true"><use href="#i-gift"/></svg>Gift it</a></div>
+        <p class="plan__fine" data-note="apex">10 days free, then $35.99 a month. Cancel anytime.</p>
+      </article>
+
+    </div>
+  </div>
+</section>
+<section class="section links" id="links" aria-labelledby="links-title">
+  <div class="container links__grid">
+    <div class="links__copy">
+      <h2 class="display-3" id="links-title" data-reveal>Your link page, <span class="sel">free.</span></h2>
+      <p class="lead rise">One page for your socials, prop firm codes and links. Put it in your bio.</p>
+      <p class="urlchip rise" aria-label="Your link would look like liquidjournal.app/@you">liquidjournal.app/@<b>you</b></p>
+      <p class="bonus rise"><span class="tagblue">Bonus</span>Friends who join through your page and pay earn you points toward free Prestige or Apex months.</p>
+      <p class="fine rise">500 points per Prestige friend, 1,000 per Apex friend. 2,500 points buy a Prestige month, 4,500 an Apex month.</p>
+      <p class="fine rise">Points land after a friend has paid, passed the 14-day refund window and journaled on 5 different days.</p>
+      <a class="btn btn--black rise" href="#signup">Claim your link <span class="btn__go"><svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></span></a>
+    </div>
+
+    <div class="links__stage">
+      <img class="links__bg" src="assets/img/vista.svg" alt="" aria-hidden="true" width="1600" height="900" loading="lazy" decoding="async">
+      <div class="devwin" role="img" aria-label="A sample link page shown in a browser: name, stats, socials and three links">
+        <div class="devwin__bar"><i></i><i></i><i></i><span>liquidjournal.app/@yourname</span></div>
+        <div class="devwin__body">
+          <div class="lp">
+            <span class="lp__av">Y</span>
+            <b>@yourname <svg class="icon" aria-hidden="true"><use href="#i-verified"/></svg></b>
+            <small>NQ scalper. Funded three times.</small>
+            <div class="lp__stats"><span><b>64%</b>win rate</span><span><b>+$4,120</b>P&amp;L</span><span><b>312</b>trades</span></div>
+            <span class="lp__btn">My trading setup</span>
+            <span class="lp__btn">Free NQ checklist</span>
+            <span class="lp__btn">Weekly recap on YouTube</span>
+          </div>
+        </div>
+      </div>
+      <div class="devphone" aria-hidden="true">
+        <div class="devphone__screen">
+          <div class="lp lp--phone">
+            <span class="lp__av">Y</span>
+            <b>@yourname <svg class="icon"><use href="#i-verified"/></svg></b>
+            <small>NQ scalper. Funded three times.</small>
+            <span class="lp__btn">Journal with me on Liquid</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<section class="section affiliate" id="affiliate" aria-labelledby="aff-title">
+  <div class="container aff__grid">
+    <div class="aff__card rise">
+      <h2 class="aff__title" id="aff-title" data-reveal>Put Liquid in your bio.<br><span class="hl">Get paid every month.</span></h2>
+      <p class="aff__lead">Earn up to 25% of what your followers pay. Start with 30 days, stay on while it works. Plus your own code for them: 40% off for as long as they stay.</p>
+      <p class="aff__pill"><b>Apex</b> free for as long as you're an affiliate</p>
+      <a class="btn btn--black" href="#signup">Become an affiliate <span class="btn__go"><svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></span></a>
+    </div>
+
+    <div class="aff__profile rise" style="--d:.1s" role="img" aria-label="A sample affiliate profile showing commission tiers of 15%, 20% and 25%">
+      <div class="aff__ban"></div>
+      <span class="aff__av">Y</span>
+      <h3>Your Name</h3>
+      <p class="aff__handle">@yourhandle</p>
+      <p class="aff__meta"><span><svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg>Liquid affiliate</span><span><svg class="icon" aria-hidden="true"><use href="#i-calendar"/></svg>Paid every month</span></p>
+      <dl class="aff__tiers">
+        <div><dt>15%</dt><dd>from the start</dd></div>
+        <div><dt>20%</dt><dd>from 10 paying members</dd></div>
+        <div><dt>25%</dt><dd>from 250 paying members</dd></div>
+        <div><dt>30 days</dt><dd>to start</dd></div>
+      </dl>
+      <p class="aff__code"><small>Your code for them</small><b>YOURCODE40</b><span>40% off</span></p>
+    </div>
+  </div>
+</section>
+<section class="section dock-sec" id="dock" aria-labelledby="dock-title">
+  <div class="container">
+    <div class="dockpanel">
+      <div class="dockpanel__blobs" aria-hidden="true"></div>
+
+      <p class="dm dm--1 rise"><span class="dm__src"><svg class="icon" aria-hidden="true"><use href="#g-camera"/></svg>Sample DM</span>Actually the best journal out there, by far.</p>
+      <p class="dm dm--2 rise" style="--d:.1s"><span class="dm__src"><svg class="icon" aria-hidden="true"><use href="#g-camera"/></svg>Sample DM</span>Thanks, this app is a game changer for me.</p>
+      <p class="dm dm--3 rise" style="--d:.2s"><span class="dm__src"><svg class="icon" aria-hidden="true"><use href="#g-camera"/></svg>Sample DM</span>Just wanted to say keep building. This is genuinely the best journal I have used in the past two years.</p>
+      <p class="dm dm--4 rise" style="--d:.05s"><span class="dm__src"><svg class="icon" aria-hidden="true"><use href="#g-note"/></svg>Sample comment</span>Best journal. Even the free plan has everything you need.</p>
+      <p class="dm dm--5 rise" style="--d:.15s"><span class="dm__src"><svg class="icon" aria-hidden="true"><use href="#g-camera"/></svg>Sample DM</span>Started a couple of days ago and I already prefer it to the custom sheet I built myself.</p>
+
+      <div class="dockcard">
+        <h2 class="dockcard__title" id="dock-title" data-reveal>Keep Liquid in your Dock.</h2>
+        <p>There is no app store and no installer. It takes about ten seconds, and you can drag it back off whenever you want.</p>
+        <a class="btn btn--white btn--lg" href="#install">Put Liquid in my Dock <span class="btn__go btn__go--dark"><svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></span></a>
+      </div>
+
+      <div class="dock" role="group" aria-label="Quick links">
+        <a class="dock__icon dock__icon--discord" href="#discord" aria-label="Join Discord"><svg class="icon" aria-hidden="true"><use href="#g-bubble"/></svg></a>
+        <a class="dock__icon dock__icon--insta" href="#instagram" aria-label="Follow on Instagram"><svg class="icon" aria-hidden="true"><use href="#g-camera"/></svg></a>
+        <a class="dock__icon dock__icon--liquid" href="#top" aria-label="Open Liquid"><svg class="icon" aria-hidden="true"><use href="#logo"/></svg></a>
+        <a class="dock__icon dock__icon--tiktok" href="#tiktok" aria-label="Follow on TikTok"><svg class="icon" aria-hidden="true"><use href="#g-note"/></svg></a>
+        <a class="dock__icon dock__icon--x" href="#x" aria-label="Follow on X"><svg class="icon" aria-hidden="true"><use href="#g-x"/></svg></a>
+      </div>
+      <p class="dockpanel__fine">Sample messages. Some reviewers are founding members and received perks from LiquidJournal.</p>
+    </div>
+  </div>
+</section>
+<section class="section cta" id="cta" aria-labelledby="cta-title">
+  <div class="container cta__grid">
+    <div class="cta__copy">
+      <h2 class="display-3" id="cta-title" data-reveal>A journal you'll <span class="sel">actually</span> want to open.</h2>
+      <p class="lead rise">Every trade, every day, in one place that makes you come back.</p>
+      <div class="cta__btns rise">
+        <a class="btn btn--black" href="#signup">Sign up <span class="btn__go"><svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></span></a>
+        <a class="btn btn--outline" href="#discord"><span class="dico" aria-hidden="true"><svg class="icon"><use href="#g-bubble"/></svg></span>Join the Discord, 900+ members</a>
+      </div>
+      <ul class="cta__checks rise">
+        <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>No card to start</li>
+        <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Cancel any time</li>
+        <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Free forever</li>
+      </ul>
+    </div>
+
+    <div class="cta__phone">
+      <p class="cta__soon">Coming soon to the App Store and Google Play.</p>
+      <div class="phone" aria-hidden="true">
+        <div class="phone__screen">
+          <span class="phone__time">9:41</span>
+          <span class="phone__island"></span>
+          <span class="phone__app"><svg class="icon"><use href="#logo"/></svg><em>1</em></span>
+          <span class="phone__label">LiquidJournal</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+</main>
+<footer class="footer" id="footer">
+  <div class="footer__card">
+    <p class="footer__word" aria-hidden="true">LiquidJournal</p>
+
+    <div class="footer__grid">
+      <div class="footer__brand">
+        <a class="brand" href="#top"><svg class="logo" aria-hidden="true"><use href="#logo"/></svg>LiquidJournal</a>
+        <p>The trading journal that reads your trades back to you.</p>
+        <div class="footer__partner">
+          <span class="footer__ptile" aria-hidden="true">R</span>
+          <div><small>Our partner</small><b>Replica Copier</b><p>Trades you copy with Replica Copier land in your journal by themselves.</p></div>
+        </div>
+      </div>
+
+      <nav class="footer__col" aria-label="Product">
+        <h2>Product</h2>
+        <a href="#pricing">Pricing</a>
+        <a href="#signup">Sign up</a>
+        <a href="#login">Log in</a>
+      </nav>
+      <nav class="footer__col" aria-label="Company">
+        <h2>Company</h2>
+        <a href="#story">About</a>
+        <a href="#affiliate">Become an affiliate</a>
+        <a href="#partners">Partners</a>
+        <a href="#support">Support</a>
+      </nav>
+      <nav class="footer__col" aria-label="Legal">
+        <h2>Legal</h2>
+        <a href="#privacy">Privacy</a>
+        <a href="#terms">Terms</a>
+        <a href="#disclaimer">Risk disclaimer</a>
+      </nav>
+    </div>
+
+    <div class="footer__base">
+      <p>© 2026 LiquidJournal. All rights reserved.</p>
+      <nav class="langs" aria-label="Language">
+        <a href="#en" hreflang="en" lang="en" aria-current="true">English</a>
+        <a href="#es" hreflang="es" lang="es">Español</a>
+        <a href="#de" hreflang="de" lang="de">Deutsch</a>
+        <a href="#fr" hreflang="fr" lang="fr">Français</a>
+        <a href="#pt" hreflang="pt" lang="pt">Português</a>
+        <a href="#ru" hreflang="ru" lang="ru">Русский</a>
+        <a href="#ja" hreflang="ja" lang="ja">日本語</a>
+        <a href="#zh" hreflang="zh" lang="zh">简体中文</a>
+        <a href="#vi" hreflang="vi" lang="vi">Tiếng Việt</a>
+      </nav>
+      <p class="footer__risk">Trading involves risk of loss. Nothing here is financial advice.</p>
+    </div>
+  </div>
+</footer>
+<div class="toast" role="status" aria-live="polite" id="toast"></div>
+<script src="assets/js/main.js" defer></script>
+</body>
+</html>

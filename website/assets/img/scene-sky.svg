@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" role="img" aria-label="">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0b4aa8"/><stop offset="0.3" stop-color="#2273cc"/><stop offset="0.55" stop-color="#6aa6e0"/><stop offset="0.78" stop-color="#bcd6ef"/><stop offset="1" stop-color="#eef5fc"/>
+    </linearGradient>
+    <filter id="cl" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.0028 0.0105" numOctaves="6" seed="17" result="n"/>
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 3.6 -1.72"/>
+    </filter>
+    <filter id="cl2" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.006 0.03" numOctaves="5" seed="5" result="n"/>
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 4.2 -2.15"/>
+    </filter>
+    <linearGradient id="cm" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset="0.22" stop-color="#fff" stop-opacity="0.95"/><stop offset="0.62" stop-color="#fff" stop-opacity="0.95"/><stop offset="0.9" stop-color="#fff" stop-opacity="0"/></linearGradient>
+    <mask id="cmask"><rect width="1600" height="900" fill="url(#cm)"/></mask>
+  </defs>
+  <rect width="1600" height="900" fill="url(#sky)"/>
+  <g mask="url(#cmask)"><rect width="1600" height="900" filter="url(#cl)" opacity="0.78"/><rect width="1600" height="900" filter="url(#cl2)" opacity="0.9"/></g>
+</svg>
